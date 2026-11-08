@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "project": "Золото и предатели",
+  "specVersion": "0.1",
+  "packStatus": "not-generated",
+  "note": "Реестр содержит только существующие игровые файлы. План производства находится в docs/ASSET_CATALOG.md. Пустой список не означает готовый ассет-пак.",
+  "cardExportTarget": {
+    "width": 512,
+    "height": 768,
+    "aspectRatio": "2:3",
+    "embeddedText": false,
+    "preferredFormat": "webp"
+  },
+  "assets": []
+}
