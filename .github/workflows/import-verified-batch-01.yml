@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      ASSET_ARCHIVE: ${{ runner.temp }}/gold-traitors-batch-01.zip
+      ASSET_ARCHIVE: /tmp/gold-traitors-batch-01.zip
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
