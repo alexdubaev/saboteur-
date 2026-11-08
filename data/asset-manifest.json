@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "project": "Золото и предатели",
   "specVersion": "0.1",
-  "packStatus": "not-generated",
-  "note": "Реестр содержит только существующие игровые файлы. План производства находится в docs/ASSET_CATALOG.md. Пустой список не означает готовый ассет-пак.",
+  "packStatus": "partial-draft",
+  "note": "Опубликована только компактная версия перекрёстка. Это не полный ассет-пак. Реестр не содержит путей отсутствующих изображений.",
   "cardExportTarget": {
     "width": 512,
     "height": 768,
@@ -11,5 +11,28 @@
     "embeddedText": false,
     "preferredFormat": "webp"
   },
-  "assets": []
+  "assets": [
+    {
+      "id": "tunnel-cross",
+      "labelRu": "Перекрёсток",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "ports": ["N", "E", "S", "W"],
+      "components": [["N", "E", "S", "W"]],
+      "allowedRotations": [0, 180],
+      "variants": [
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-cross.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 11560,
+          "sha256": "f69f9bfd1b49bcd325dd29af89bf7522c9692350129d90b393b94fd7881025f8",
+          "gitBlobSha": "c6d0f3a891c1f62d82fc6bc68cacc73ff154096f"
+        }
+      ]
+    }
+  ]
 }
