@@ -1,0 +1,47 @@
+name: Import asset batch 01
+on:
+  push:
+    branches: [assets/production-foundation-v1]
+    paths: [.github/workflows/import-asset-batch-01.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow==11.3.0
+      - name: Fetch source and verify exact pixels
+        env:
+          SOURCE_URL: 'https://media.canva.com/v2/image-resize/format:PNG/height:3072/quality:100/uri:ifs%3A%2F%2FM%2Faab4fda8-9181-4f91-ade1-3ef365187e11/watermark:F/width:2048?csig=AAAAAAAAAAAAAAAAAAAAAH3mVJR1SnQ77Ny01yRZZQ5JzyaW3XvnvKuG04bEXBtd&exp=1794180853&osig=AAAAAAAAAAAAAAAAAAAAAEr0h2XfUDELwQ8Xe6Jpa1yrPRPZx-AuNhyFK0DSJdG0&signer=media-rpc&token=AAIAAU0AJGFhYjRmZGE4LTkxODEtNGY5MS1hZGUxLTNlZjM2NTE4N2UxMQAAAAABob2DLQg5UvtoTXWxcXtQ1tHOaGK8hwPvIZmFBAUi-CepJOJelg&x-canva-quality=thumbnail'
+        run: |
+          python - <<'PY'
+          import hashlib, io, os, pathlib, urllib.request
+          from PIL import Image
+          req = urllib.request.Request(os.environ['SOURCE_URL'], headers={'User-Agent': 'AssetPackImporter/1.0'})
+          with urllib.request.urlopen(req, timeout=45) as response:
+              raw = response.read(20_000_001)
+          if len(raw) > 20_000_000:
+              raise RuntimeError('Source exceeds safety limit')
+          image = Image.open(io.BytesIO(raw)).convert('RGB')
+          assert image.size == (2048, 3072), image.size
+          digest = hashlib.sha256(image.tobytes()).hexdigest()
+          assert digest == '308e0def74b1ee57a41ab86dff6a161aced59c87e8eb5996a632f909c8a2a33f', digest
+          dest = pathlib.Path('art-source/batch-01-source-atlas.png')
+          dest.parent.mkdir(parents=True, exist_ok=True)
+          image.save(dest, optimize=True)
+          print('Verified lossless source:', image.size, digest)
+          PY
+      - name: Commit verified source only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add art-source/batch-01-source-atlas.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'assets: add verified lossless source atlas for batch 01'
+            git push origin HEAD:assets/production-foundation-v1
+          fi
