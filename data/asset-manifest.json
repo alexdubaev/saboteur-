@@ -3,7 +3,7 @@
   "project": "Золото и предатели",
   "specVersion": "0.1",
   "packStatus": "partial-draft",
-  "note": "Опубликована только компактная версия перекрёстка. Это не полный ассет-пак. Реестр не содержит путей отсутствующих изображений.",
+  "note": "Партия 01: 13 рисунков, 26 проверенных WebP. Это черновой набор, а не полный ассет-пак. Остальные изображения ещё не поставлены.",
   "cardExportTarget": {
     "width": 512,
     "height": 768,
@@ -13,15 +13,298 @@
   },
   "assets": [
     {
+      "id": "tunnel-straight-ns",
+      "labelRu": "Прямой проход",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-straight-ns.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 30884,
+          "sha256": "252648fad08ce1f8c353a8510c2a540fe408cd607182a00204da5fbc7a7bac7d",
+          "gitBlobSha": "c3ba3b0fdc42c31ec30ef6a73d3c341ef8b6f40d"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-straight-ns.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10872,
+          "sha256": "aaa537125026f79b65896aa062f944cd37ebfc60d0c4628107fc4c1561b749a8",
+          "gitBlobSha": "59db4bdacc0b2562593835d7d24f751c4a7d79f0"
+        }
+      ],
+      "components": [
+        [
+          "N",
+          "S"
+        ]
+      ],
+      "ports": [
+        "N",
+        "S"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-straight-ew",
+      "labelRu": "Поперечный проход",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-straight-ew.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 30144,
+          "sha256": "0b8064b8cec27d86e5da1dd346d18a6f6a1f26079b368035142f365125786da4",
+          "gitBlobSha": "16550f7c6058ac86b7b293a10920a20e021d1764"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-straight-ew.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10450,
+          "sha256": "f38e9965011092f8679b3e108a8b86b1a9b2af37c37b7319a4b1d6bebe672c91",
+          "gitBlobSha": "6260f8b28fa18d78713ef06f4b06ecd5d16a3f1c"
+        }
+      ],
+      "components": [
+        [
+          "E",
+          "W"
+        ]
+      ],
+      "ports": [
+        "E",
+        "W"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-turn-ne",
+      "labelRu": "Поворот",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-turn-ne.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 30698,
+          "sha256": "0ffd5525be7a89c61fd9e2405f4a7e9bfad024ca6f719811296ccd2b4c955dd8",
+          "gitBlobSha": "29e98dc632e21f62f606107ab3dc3112d6c44a64"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-turn-ne.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10756,
+          "sha256": "29b75e48b6e60dea8426208bf90c354bc3adba2ebc9963b54f6dc1843fb5982f",
+          "gitBlobSha": "44d5e944336fe984ff75fbb91e43015a2ce9e875"
+        }
+      ],
+      "components": [
+        [
+          "N",
+          "E"
+        ]
+      ],
+      "ports": [
+        "N",
+        "E"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-turn-nw",
+      "labelRu": "Поворот",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-turn-nw.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 31546,
+          "sha256": "0cf220bed31723eb9e51314901cb6e667649efd124d7ff0e4151c802668ae8c3",
+          "gitBlobSha": "e543b38f8ca266dc778ec0d16da570145d01cf3b"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-turn-nw.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10690,
+          "sha256": "a0926e1b7640722881b2bc579e50e75bb1c7050f1bb1f417822fb73cc9241d72",
+          "gitBlobSha": "8dee3d29101a70756f77a4b2623393f272649725"
+        }
+      ],
+      "components": [
+        [
+          "N",
+          "W"
+        ]
+      ],
+      "ports": [
+        "N",
+        "W"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-tee-nes",
+      "labelRu": "Развилка",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-tee-nes.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 31388,
+          "sha256": "ca19dbdc6a5011f76a388ed015ecd62978b994b732e93e12d6dc0dbe07ce896f",
+          "gitBlobSha": "c3fd0e0793d02bac2b5a483d952893458779e013"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-tee-nes.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 11064,
+          "sha256": "b2dcb91d88965e6af58d5e76e1f5002b3f477b8302ecc113d5f9efa4ac2a1618",
+          "gitBlobSha": "2431c0872a43f21436c3268c8c199966ca015300"
+        }
+      ],
+      "components": [
+        [
+          "N",
+          "E",
+          "S"
+        ]
+      ],
+      "ports": [
+        "N",
+        "E",
+        "S"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-tee-new",
+      "labelRu": "Развилка",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-tee-new.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 31632,
+          "sha256": "69ceca944e24f19fc6d945f0416635135c0a12927dc0239247f10364d273d7cc",
+          "gitBlobSha": "22eef65917b81cfd4d49f512ebc92c24245d8e0a"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-tee-new.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10952,
+          "sha256": "8fcd85a37511e88d0f5fe5dd528e31955bcb4118195b85aa1ab1a114eccd8a6e",
+          "gitBlobSha": "68a8ce7465812acf5b653d7773ba3bdd435d049b"
+        }
+      ],
+      "components": [
+        [
+          "N",
+          "E",
+          "W"
+        ]
+      ],
+      "ports": [
+        "N",
+        "E",
+        "W"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
       "id": "tunnel-cross",
       "labelRu": "Перекрёсток",
       "kind": "tunnel",
       "status": "draft",
       "embeddedText": false,
-      "ports": ["N", "E", "S", "W"],
-      "components": [["N", "E", "S", "W"]],
-      "allowedRotations": [0, 180],
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
       "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-cross.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 31952,
+          "sha256": "5bf71148ea90ea0ef9f4d4e0ebc58fd91dff41da0e8d3e2d8d8e92c6ed920946",
+          "gitBlobSha": "c130c6514b4ab561a9402ec92cd88d1009d132e5"
+        },
         {
           "purpose": "compact",
           "path": "assets/cards/compact/tunnel-cross.webp",
@@ -31,6 +314,266 @@
           "bytes": 11560,
           "sha256": "f69f9bfd1b49bcd325dd29af89bf7522c9692350129d90b393b94fd7881025f8",
           "gitBlobSha": "c6d0f3a891c1f62d82fc6bc68cacc73ff154096f"
+        }
+      ],
+      "components": [
+        [
+          "N",
+          "E",
+          "S",
+          "W"
+        ]
+      ],
+      "ports": [
+        "N",
+        "E",
+        "S",
+        "W"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-dead-end-n",
+      "labelRu": "Тупик",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-dead-end-n.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 30524,
+          "sha256": "0267f072966b4dce63063d23d564afb925b5982b252c30dba7c303ed286373b2",
+          "gitBlobSha": "05f4043b0141d7e259dd065d801f7125aec83b93"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-dead-end-n.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10670,
+          "sha256": "1accf841f1e6ad1540aeeebf971b4eff62e13e43f19f19b8b863c44822af3dca",
+          "gitBlobSha": "b0c565356ef1499dbecb11b57f2c865fa8a560ed"
+        }
+      ],
+      "components": [
+        [
+          "N"
+        ]
+      ],
+      "ports": [
+        "N"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-dead-end-e",
+      "labelRu": "Тупик",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-dead-end-e.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 30276,
+          "sha256": "c4fb7a5802bfeff6e54cbd28d217a773cb02d22bb402895e29917afb087f0d49",
+          "gitBlobSha": "e41d72ce8f27858fabb5afa522aae4fcb3243c96"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-dead-end-e.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10378,
+          "sha256": "063ed4149f3a887410b451eb3ab086f16a4cebf3d855eb600f1b7746afced50c",
+          "gitBlobSha": "ed679c7ffc22b9233b3a3f03d5239a0ee512cade"
+        }
+      ],
+      "components": [
+        [
+          "E"
+        ]
+      ],
+      "ports": [
+        "E"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-separated-n-s",
+      "labelRu": "Раздельные тупики",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-separated-n-s.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 30988,
+          "sha256": "c25c491b2419c6fda73ee8bf46db0ebffcb6e92be8d394c4fa1ecc62f6016bad",
+          "gitBlobSha": "3d4236e32041da177fc5ccfc70d56d0c1a6c4336"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-separated-n-s.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10824,
+          "sha256": "58a45d261e494c6c96e33392b79bbaa8a13cd62ddcef08fa9782a0b110d3a7be",
+          "gitBlobSha": "0ac262746daa2707c642d2d19473e717def32243"
+        }
+      ],
+      "components": [
+        [
+          "N"
+        ],
+        [
+          "S"
+        ]
+      ],
+      "ports": [
+        "N",
+        "S"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "tunnel-separated-e-w",
+      "labelRu": "Раздельные тупики",
+      "kind": "tunnel",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/tunnels/tunnel-separated-e-w.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 30414,
+          "sha256": "1213b2733dda3b9f4cff49f4e9a591ed00c07d519a36fdc5035ec05815ced9ac",
+          "gitBlobSha": "a2086dd8d5d60c082c5d06f87f3cbf14b39767f6"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/tunnel-separated-e-w.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 10872,
+          "sha256": "8c17a3e607b5c6385d9fb729ea1af5ece6fce97ac0163cce38fb70b0c67a3074",
+          "gitBlobSha": "a0959b04c9655977cacb05c4186ee122fd0d444c"
+        }
+      ],
+      "components": [
+        [
+          "E"
+        ],
+        [
+          "W"
+        ]
+      ],
+      "ports": [
+        "E",
+        "W"
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ]
+    },
+    {
+      "id": "action-break-pickaxe",
+      "labelRu": "Сломанная кирка",
+      "kind": "action",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/actions/action-break-pickaxe.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 79118,
+          "sha256": "728b56c17beb65718f452911635b5539eea05768e8a9efba32c5db9b346123f9",
+          "gitBlobSha": "94463ef03b48936a76f4d5c3b8bb35e04edd9178"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/action-break-pickaxe.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 26142,
+          "sha256": "76c98aab15c8bdbb2cb5da46df34701aeb25cf4f5428b31ca27d3c8fc64d8677",
+          "gitBlobSha": "76265e2b85cc80ae5de0dca2bba42e1a04a3101a"
+        }
+      ]
+    },
+    {
+      "id": "action-repair-pickaxe",
+      "labelRu": "Ремонт кирки",
+      "kind": "action",
+      "status": "draft",
+      "embeddedText": false,
+      "batch": "01",
+      "source": "art-source/batch-01-source-atlas.png",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/cards/actions/action-repair-pickaxe.webp",
+          "format": "webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 75010,
+          "sha256": "9e4acfb36045e062bb490b013ee0dd2ba0a20edd2bb3530953c4b48ca201106e",
+          "gitBlobSha": "9d3685cfa893e0d9d4a9552643736c9ec90fb67b"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/cards/compact/action-repair-pickaxe.webp",
+          "format": "webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 25162,
+          "sha256": "6587744f722cb9e04b11f706a1c8350b8ce769ad9c93f6337d744f60628a4e0c",
+          "gitBlobSha": "f0ea14fb48e371d177645b8027624c19845239ee"
         }
       ]
     }
