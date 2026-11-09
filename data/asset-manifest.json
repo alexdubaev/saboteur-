@@ -1,581 +1,682 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "project": "Золото и предатели",
-  "specVersion": "0.1",
-  "packStatus": "partial-draft",
-  "note": "Партия 01: 13 рисунков, 26 проверенных WebP. Это черновой набор, а не полный ассет-пак. Остальные изображения ещё не поставлены.",
-  "cardExportTarget": {
-    "width": 512,
-    "height": 768,
-    "aspectRatio": "2:3",
-    "embeddedText": false,
-    "preferredFormat": "webp"
-  },
+  "release": "asset-production-candidate-v1",
+  "completeForBrowserPrototype": true,
+  "approvedForCommercialLaunch": false,
+  "qualityNote": "Some actions/roles/goals were originally composed from generated source sheets; individual illustration redraw may be needed for premium quality.",
+  "cardsSingleSize": [
+    512,
+    768
+  ],
+  "cardsCompactSize": [
+    256,
+    384
+  ],
+  "embeddedCardText": false,
   "assets": [
     {
-      "id": "tunnel-straight-ns",
-      "labelRu": "Прямой проход",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-straight-ns.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 30884,
-          "sha256": "252648fad08ce1f8c353a8510c2a540fe408cd607182a00204da5fbc7a7bac7d",
-          "gitBlobSha": "c3ba3b0fdc42c31ec30ef6a73d3c341ef8b6f40d"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-straight-ns.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10872,
-          "sha256": "aaa537125026f79b65896aa062f944cd37ebfc60d0c4628107fc4c1561b749a8",
-          "gitBlobSha": "59db4bdacc0b2562593835d7d24f751c4a7d79f0"
-        }
-      ],
-      "components": [
-        [
-          "N",
-          "S"
-        ]
-      ],
-      "ports": [
-        "N",
-        "S"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/board/mine-background-landscape.webp",
+      "bytes": 28282,
+      "sha256": "cffc0505314ffe00f5d6f320220bd5afe748ae730576c1c27b095e52ce72b5c7",
+      "width": 1920,
+      "height": 1080
     },
     {
-      "id": "tunnel-straight-ew",
-      "labelRu": "Поперечный проход",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-straight-ew.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 30144,
-          "sha256": "0b8064b8cec27d86e5da1dd346d18a6f6a1f26079b368035142f365125786da4",
-          "gitBlobSha": "16550f7c6058ac86b7b293a10920a20e021d1764"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-straight-ew.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10450,
-          "sha256": "f38e9965011092f8679b3e108a8b86b1a9b2af37c37b7319a4b1d6bebe672c91",
-          "gitBlobSha": "6260f8b28fa18d78713ef06f4b06ecd5d16a3f1c"
-        }
-      ],
-      "components": [
-        [
-          "E",
-          "W"
-        ]
-      ],
-      "ports": [
-        "E",
-        "W"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/board/mine-background-portrait.webp",
+      "bytes": 22160,
+      "sha256": "c70339813ebae4c480cea188b53de9d4f3eb87953b89226b6ff0a65e5188d0fc",
+      "width": 1080,
+      "height": 1920
     },
     {
-      "id": "tunnel-turn-ne",
-      "labelRu": "Поворот",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-turn-ne.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 30698,
-          "sha256": "0ffd5525be7a89c61fd9e2405f4a7e9bfad024ca6f719811296ccd2b4c955dd8",
-          "gitBlobSha": "29e98dc632e21f62f606107ab3dc3112d6c44a64"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-turn-ne.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10756,
-          "sha256": "29b75e48b6e60dea8426208bf90c354bc3adba2ebc9963b54f6dc1843fb5982f",
-          "gitBlobSha": "44d5e944336fe984ff75fbb91e43015a2ce9e875"
-        }
-      ],
-      "components": [
-        [
-          "N",
-          "E"
-        ]
-      ],
-      "ports": [
-        "N",
-        "E"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/branding/app-icon-192.png",
+      "bytes": 77153,
+      "sha256": "d53538e1945736dac1c0c1d3109738d19792c7151d20d8ff18e26d00b648acea",
+      "width": 192,
+      "height": 192
     },
     {
-      "id": "tunnel-turn-nw",
-      "labelRu": "Поворот",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-turn-nw.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 31546,
-          "sha256": "0cf220bed31723eb9e51314901cb6e667649efd124d7ff0e4151c802668ae8c3",
-          "gitBlobSha": "e543b38f8ca266dc778ec0d16da570145d01cf3b"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-turn-nw.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10690,
-          "sha256": "a0926e1b7640722881b2bc579e50e75bb1c7050f1bb1f417822fb73cc9241d72",
-          "gitBlobSha": "8dee3d29101a70756f77a4b2623393f272649725"
-        }
-      ],
-      "components": [
-        [
-          "N",
-          "W"
-        ]
-      ],
-      "ports": [
-        "N",
-        "W"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/branding/app-icon-512.png",
+      "bytes": 431596,
+      "sha256": "e4864cdd5d7f8b51d591ba9508d03b3239f02ab9a8b96c4fd4710a21b6ee9af5",
+      "width": 512,
+      "height": 512
     },
     {
-      "id": "tunnel-tee-nes",
-      "labelRu": "Развилка",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-tee-nes.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 31388,
-          "sha256": "ca19dbdc6a5011f76a388ed015ecd62978b994b732e93e12d6dc0dbe07ce896f",
-          "gitBlobSha": "c3fd0e0793d02bac2b5a483d952893458779e013"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-tee-nes.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 11064,
-          "sha256": "b2dcb91d88965e6af58d5e76e1f5002b3f477b8302ecc113d5f9efa4ac2a1618",
-          "gitBlobSha": "2431c0872a43f21436c3268c8c199966ca015300"
-        }
-      ],
-      "components": [
-        [
-          "N",
-          "E",
-          "S"
-        ]
-      ],
-      "ports": [
-        "N",
-        "E",
-        "S"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/branding/logo-ru.svg",
+      "bytes": 759,
+      "sha256": "68af7f541b151fc8f00dc238cce671156fbf2febe925a4dcfe3b54b24b5f6aa9"
     },
     {
-      "id": "tunnel-tee-new",
-      "labelRu": "Развилка",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-tee-new.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 31632,
-          "sha256": "69ceca944e24f19fc6d945f0416635135c0a12927dc0239247f10364d273d7cc",
-          "gitBlobSha": "22eef65917b81cfd4d49f512ebc92c24245d8e0a"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-tee-new.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10952,
-          "sha256": "8fcd85a37511e88d0f5fe5dd528e31955bcb4118195b85aa1ab1a114eccd8a6e",
-          "gitBlobSha": "68a8ce7465812acf5b653d7773ba3bdd435d049b"
-        }
-      ],
-      "components": [
-        [
-          "N",
-          "E",
-          "W"
-        ]
-      ],
-      "ports": [
-        "N",
-        "E",
-        "W"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/branding/social-cover.webp",
+      "bytes": 167644,
+      "sha256": "7ba277edf6e14f854280e2bbe09102e9df31d4a01d1fb36095228d2a454cb7fe",
+      "width": 1200,
+      "height": 630
     },
     {
-      "id": "tunnel-cross",
-      "labelRu": "Перекрёсток",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-cross.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 31952,
-          "sha256": "5bf71148ea90ea0ef9f4d4e0ebc58fd91dff41da0e8d3e2d8d8e92c6ed920946",
-          "gitBlobSha": "c130c6514b4ab561a9402ec92cd88d1009d132e5"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-cross.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 11560,
-          "sha256": "f69f9bfd1b49bcd325dd29af89bf7522c9692350129d90b393b94fd7881025f8",
-          "gitBlobSha": "c6d0f3a891c1f62d82fc6bc68cacc73ff154096f"
-        }
-      ],
-      "components": [
-        [
-          "N",
-          "E",
-          "S",
-          "W"
-        ]
-      ],
-      "ports": [
-        "N",
-        "E",
-        "S",
-        "W"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/cards/actions/action-break-cart.webp",
+      "bytes": 57056,
+      "sha256": "fbe2fe8003fa8461f697bd90fcf47aaf43480b8b2568a63f5e064af6d109e58e",
+      "width": 512,
+      "height": 768
     },
     {
-      "id": "tunnel-dead-end-n",
-      "labelRu": "Тупик",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-dead-end-n.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 30524,
-          "sha256": "0267f072966b4dce63063d23d564afb925b5982b252c30dba7c303ed286373b2",
-          "gitBlobSha": "05f4043b0141d7e259dd065d801f7125aec83b93"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-dead-end-n.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10670,
-          "sha256": "1accf841f1e6ad1540aeeebf971b4eff62e13e43f19f19b8b863c44822af3dca",
-          "gitBlobSha": "b0c565356ef1499dbecb11b57f2c865fa8a560ed"
-        }
-      ],
-      "components": [
-        [
-          "N"
-        ]
-      ],
-      "ports": [
-        "N"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/cards/actions/action-break-lantern.webp",
+      "bytes": 56658,
+      "sha256": "72118636c85f5105cec68e6b9a35387b61a608f16f5d26b1c44980a04f512b8b",
+      "width": 512,
+      "height": 768
     },
     {
-      "id": "tunnel-dead-end-e",
-      "labelRu": "Тупик",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-dead-end-e.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 30276,
-          "sha256": "c4fb7a5802bfeff6e54cbd28d217a773cb02d22bb402895e29917afb087f0d49",
-          "gitBlobSha": "e41d72ce8f27858fabb5afa522aae4fcb3243c96"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-dead-end-e.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10378,
-          "sha256": "063ed4149f3a887410b451eb3ab086f16a4cebf3d855eb600f1b7746afced50c",
-          "gitBlobSha": "ed679c7ffc22b9233b3a3f03d5239a0ee512cade"
-        }
-      ],
-      "components": [
-        [
-          "E"
-        ]
-      ],
-      "ports": [
-        "E"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/cards/actions/action-break-pickaxe.webp",
+      "bytes": 88318,
+      "sha256": "c397b9bff9c9996f32fd2fb782b55bd7d5364e8e112c19936b98684a12337b86",
+      "width": 512,
+      "height": 768
     },
     {
-      "id": "tunnel-separated-n-s",
-      "labelRu": "Раздельные тупики",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-separated-n-s.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 30988,
-          "sha256": "c25c491b2419c6fda73ee8bf46db0ebffcb6e92be8d394c4fa1ecc62f6016bad",
-          "gitBlobSha": "3d4236e32041da177fc5ccfc70d56d0c1a6c4336"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-separated-n-s.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10824,
-          "sha256": "58a45d261e494c6c96e33392b79bbaa8a13cd62ddcef08fa9782a0b110d3a7be",
-          "gitBlobSha": "0ac262746daa2707c642d2d19473e717def32243"
-        }
-      ],
-      "components": [
-        [
-          "N"
-        ],
-        [
-          "S"
-        ]
-      ],
-      "ports": [
-        "N",
-        "S"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/cards/actions/action-collapse.webp",
+      "bytes": 56306,
+      "sha256": "2e8d6d3c376ede7aafe078c809f7e94bb9b4fbd368ab08668931108d5589bfbb",
+      "width": 512,
+      "height": 768
     },
     {
-      "id": "tunnel-separated-e-w",
-      "labelRu": "Раздельные тупики",
-      "kind": "tunnel",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/tunnels/tunnel-separated-e-w.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 30414,
-          "sha256": "1213b2733dda3b9f4cff49f4e9a591ed00c07d519a36fdc5035ec05815ced9ac",
-          "gitBlobSha": "a2086dd8d5d60c082c5d06f87f3cbf14b39767f6"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/tunnel-separated-e-w.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 10872,
-          "sha256": "8c17a3e607b5c6385d9fb729ea1af5ece6fce97ac0163cce38fb70b0c67a3074",
-          "gitBlobSha": "a0959b04c9655977cacb05c4186ee122fd0d444c"
-        }
-      ],
-      "components": [
-        [
-          "E"
-        ],
-        [
-          "W"
-        ]
-      ],
-      "ports": [
-        "E",
-        "W"
-      ],
-      "allowedRotations": [
-        0,
-        180
-      ]
+      "path": "assets/cards/actions/action-repair-cart.webp",
+      "bytes": 53832,
+      "sha256": "101876033e3dcf3dda0996fb5a742ec46615b497fc7932a646d76416113d2d96",
+      "width": 512,
+      "height": 768
     },
     {
-      "id": "action-break-pickaxe",
-      "labelRu": "Сломанная кирка",
-      "kind": "action",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/actions/action-break-pickaxe.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 79118,
-          "sha256": "728b56c17beb65718f452911635b5539eea05768e8a9efba32c5db9b346123f9",
-          "gitBlobSha": "94463ef03b48936a76f4d5c3b8bb35e04edd9178"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/action-break-pickaxe.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 26142,
-          "sha256": "76c98aab15c8bdbb2cb5da46df34701aeb25cf4f5428b31ca27d3c8fc64d8677",
-          "gitBlobSha": "76265e2b85cc80ae5de0dca2bba42e1a04a3101a"
-        }
-      ]
+      "path": "assets/cards/actions/action-repair-lantern-or-cart.webp",
+      "bytes": 57716,
+      "sha256": "682ea4005c8173a52ecb97d212d72274e402acfb934c54a175638777854514d8",
+      "width": 512,
+      "height": 768
     },
     {
-      "id": "action-repair-pickaxe",
-      "labelRu": "Ремонт кирки",
-      "kind": "action",
-      "status": "draft",
-      "embeddedText": false,
-      "batch": "01",
-      "source": "art-source/batch-01-source-atlas.png",
-      "variants": [
-        {
-          "purpose": "standard",
-          "path": "assets/cards/actions/action-repair-pickaxe.webp",
-          "format": "webp",
-          "width": 512,
-          "height": 768,
-          "bytes": 75010,
-          "sha256": "9e4acfb36045e062bb490b013ee0dd2ba0a20edd2bb3530953c4b48ca201106e",
-          "gitBlobSha": "9d3685cfa893e0d9d4a9552643736c9ec90fb67b"
-        },
-        {
-          "purpose": "compact",
-          "path": "assets/cards/compact/action-repair-pickaxe.webp",
-          "format": "webp",
-          "width": 256,
-          "height": 384,
-          "bytes": 25162,
-          "sha256": "6587744f722cb9e04b11f706a1c8350b8ce769ad9c93f6337d744f60628a4e0c",
-          "gitBlobSha": "f0ea14fb48e371d177645b8027624c19845239ee"
-        }
-      ]
+      "path": "assets/cards/actions/action-repair-lantern.webp",
+      "bytes": 51014,
+      "sha256": "6c3c1ae19687a904095785b038fc5f97757042ac07ea9d87a516b3c008d1f483",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/actions/action-repair-pickaxe-or-cart.webp",
+      "bytes": 53234,
+      "sha256": "bca3aae1d38299436b2de21497735479ec0b4a79a20124e4496860dd1e33f2cb",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/actions/action-repair-pickaxe-or-lantern.webp",
+      "bytes": 52168,
+      "sha256": "034390b7895c935197195b7b481b508eca69e6ddd2dc7acb907f6b496e757ff7",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/actions/action-repair-pickaxe.webp",
+      "bytes": 84302,
+      "sha256": "bb3c70140121ac88d734b283c6134c771b602e2566ff305e7d7f161fa85f0282",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/actions/action-scout.webp",
+      "bytes": 61220,
+      "sha256": "390062721e15ab1b332edf4791c309d1da196d6288601a94ab594035a221e3fe",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/backs/deck-back.webp",
+      "bytes": 44904,
+      "sha256": "73578a6e1d1ac154d93b885a2d6bb67eaaa5fc6a384b6e4fe5220b70fc20ef5f",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/backs/reward-back.webp",
+      "bytes": 34624,
+      "sha256": "2af892f2499bcd251191ff37edbf23df2273cdcd6ebd10ff9c41a908f96013e0",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/backs/role-back.webp",
+      "bytes": 34490,
+      "sha256": "acaaa049a6b2a7d750335f81939de5c1ac3d9d3dbea594df85a4cef0d1a33e57",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/compact/action-break-cart.webp",
+      "bytes": 20178,
+      "sha256": "877d56907dc1fdda849da7a0e5770552af9620cad0dc9605f017a7fcb6102908",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-break-lantern.webp",
+      "bytes": 20736,
+      "sha256": "0dc0c8d2470a06cf7fab4998b09b1262978610dc7cc048b8bbd863bb4ca1e427",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-break-pickaxe.webp",
+      "bytes": 26142,
+      "sha256": "76c98aab15c8bdbb2cb5da46df34701aeb25cf4f5428b31ca27d3c8fc64d8677",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-collapse.webp",
+      "bytes": 20404,
+      "sha256": "19801df2772b3240bd44088bcac655961001631d6d20b89c9077c9ad933eba38",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-repair-cart.webp",
+      "bytes": 19550,
+      "sha256": "a4df1dba2ad989f7cd2e0bcaa053976d42c83c44ba1c490c5218519f7c85b730",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-repair-lantern-or-cart.webp",
+      "bytes": 20856,
+      "sha256": "dfc49dac041342ae2e29003091e6e27bf9c3ea6a7b3a1b641dabb0e1d2478250",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-repair-lantern.webp",
+      "bytes": 18580,
+      "sha256": "6300f5ed90613a72fcb27b5d50c65c651a5cf2e1661a9d6416e6047dc3e25682",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-repair-pickaxe-or-cart.webp",
+      "bytes": 19066,
+      "sha256": "617d6a0670591ab38b3a00b3006a2a2ec23f577b7b02920c57d735c799067d29",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-repair-pickaxe-or-lantern.webp",
+      "bytes": 18958,
+      "sha256": "2f7f122b027504ec6a6533c3d441a98d142846b9912be24efc56179caef397ef",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-repair-pickaxe.webp",
+      "bytes": 25162,
+      "sha256": "6587744f722cb9e04b11f706a1c8350b8ce769ad9c93f6337d744f60628a4e0c",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/action-scout.webp",
+      "bytes": 21920,
+      "sha256": "1ad98cb8940ff592a06f26055086731945cd5309f05339659451025977dd6cdb",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/board-start.webp",
+      "bytes": 12780,
+      "sha256": "d62a3fd54d66f218d8124f970bd6fa328dd65566e560b79d786140be13119af4",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/deck-back.webp",
+      "bytes": 16552,
+      "sha256": "a013d674f05b63ca5844f369c2e416c33890da5c360c44969f9b5a011dabda44",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/goal-empty-a.webp",
+      "bytes": 13532,
+      "sha256": "81bcb639f1d040a16904b6d35ca0fc66bd7ed38529d93b3264144df5b2744eb2",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/goal-empty-b.webp",
+      "bytes": 16042,
+      "sha256": "b57160bee993552650c1202bff26ac33da1955ac260fdb5c51e132de15524eb1",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/goal-gold.webp",
+      "bytes": 19192,
+      "sha256": "1a87449064d5d8a17289a69f4ebd420c1decec3ed5ad526f78e9092acf349275",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/goal-hidden.webp",
+      "bytes": 17974,
+      "sha256": "b70a7ad55b253a61b4f8830a2baff83498ee0e5cc019a482596fc7345a0855aa",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/reward-back.webp",
+      "bytes": 12460,
+      "sha256": "32ccfc2585e55796407aabba3eb7d3f271f20b85b9be83bbe20a6932f99013bb",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/reward-gold-one.webp",
+      "bytes": 12638,
+      "sha256": "cd95bdae24f7301984bf2d6c750c1e6c7cf58b6ede763cd02bf6b32573672016",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/reward-gold-three.webp",
+      "bytes": 15428,
+      "sha256": "4345885b19f6bbd1d2f86a37678ebda4b616871c774ad118f52a1b59fa282462",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/reward-gold-two.webp",
+      "bytes": 13484,
+      "sha256": "ed17944faf195e7771b36c276a7c751534233cb60fd7015c312969365bf7a53d",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/role-back.webp",
+      "bytes": 12514,
+      "sha256": "22a088d2cc9c028578549eb96f09ef6f93614c874bc0d73e40053f19438362c5",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/role-prospector.webp",
+      "bytes": 18590,
+      "sha256": "6bcb4832c5ebd0a4a1cb74323ebba96e84f4d7a8395f5b9101890e81799b42a2",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/role-traitor.webp",
+      "bytes": 13234,
+      "sha256": "bd9efe5a0fa9181ec634ae61f4abe31b63aac8ca1add91b66663edbbb783570e",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-cross.webp",
+      "bytes": 11560,
+      "sha256": "f69f9bfd1b49bcd325dd29af89bf7522c9692350129d90b393b94fd7881025f8",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-dead-end-e.webp",
+      "bytes": 10378,
+      "sha256": "063ed4149f3a887410b451eb3ab086f16a4cebf3d855eb600f1b7746afced50c",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-dead-end-n.webp",
+      "bytes": 10670,
+      "sha256": "1accf841f1e6ad1540aeeebf971b4eff62e13e43f19f19b8b863c44822af3dca",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-separated-e-w.webp",
+      "bytes": 10872,
+      "sha256": "8c17a3e607b5c6385d9fb729ea1af5ece6fce97ac0163cce38fb70b0c67a3074",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-separated-n-s.webp",
+      "bytes": 10824,
+      "sha256": "58a45d261e494c6c96e33392b79bbaa8a13cd62ddcef08fa9782a0b110d3a7be",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-straight-ew.webp",
+      "bytes": 10450,
+      "sha256": "f38e9965011092f8679b3e108a8b86b1a9b2af37c37b7319a4b1d6bebe672c91",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-straight-ns.webp",
+      "bytes": 10872,
+      "sha256": "aaa537125026f79b65896aa062f944cd37ebfc60d0c4628107fc4c1561b749a8",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-tee-nes.webp",
+      "bytes": 11064,
+      "sha256": "b2dcb91d88965e6af58d5e76e1f5002b3f477b8302ecc113d5f9efa4ac2a1618",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-tee-new.webp",
+      "bytes": 10952,
+      "sha256": "8fcd85a37511e88d0f5fe5dd528e31955bcb4118195b85aa1ab1a114eccd8a6e",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-turn-ne.webp",
+      "bytes": 10756,
+      "sha256": "29b75e48b6e60dea8426208bf90c354bc3adba2ebc9963b54f6dc1843fb5982f",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/compact/tunnel-turn-nw.webp",
+      "bytes": 10690,
+      "sha256": "a0926e1b7640722881b2bc579e50e75bb1c7050f1bb1f417822fb73cc9241d72",
+      "width": 256,
+      "height": 384
+    },
+    {
+      "path": "assets/cards/goals/board-start.webp",
+      "bytes": 42078,
+      "sha256": "ba1f746ee3b2772fb6f0e5a0dca4dfa4aaedb1212c50e2fdf1624291b6270ef0",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/goals/goal-empty-a.webp",
+      "bytes": 38840,
+      "sha256": "50e656c37b94a4b3603da5c4e5d51237da6871643f5a4793544afb697bfe525a",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/goals/goal-empty-b.webp",
+      "bytes": 45602,
+      "sha256": "2484dcb872f5f2c0fa2ccedb94881f158ec2449e65d44afa8f45a8da26668476",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/goals/goal-gold.webp",
+      "bytes": 54466,
+      "sha256": "3cf84d9e1b035fc8f83ce90ae8371884eaffa6c56c8e53db0d69c76004408fb6",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/goals/goal-hidden.webp",
+      "bytes": 51802,
+      "sha256": "1acab3b77ee2eb853f827e21fff0bede92331f296e33f1911335e3489241063c",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/rewards/reward-gold-one.webp",
+      "bytes": 36096,
+      "sha256": "a0517c3234e98a49e00c9fca1e7fc0f10a6e06a85c03206dbd5b0d5be6378d66",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/rewards/reward-gold-three.webp",
+      "bytes": 45474,
+      "sha256": "37036fa66a09fb2513ae6c32f4ee7d1226ac80774d5fd3c77d4c2873f983352b",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/rewards/reward-gold-two.webp",
+      "bytes": 38988,
+      "sha256": "a457e68a004ed98360cbd006aa4c17327fbd4ee51049551dd9fd418715448d6f",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/roles/role-prospector.webp",
+      "bytes": 51582,
+      "sha256": "5ca68d93110758833fbdb60be0c709491c335002be63c39670a7f94e57d92fa6",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/roles/role-traitor.webp",
+      "bytes": 37184,
+      "sha256": "e62414520cca77ebf5fe0d8beac8d4c78aaab151c3ddfb069fd27cda07defd10",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-cross.webp",
+      "bytes": 31952,
+      "sha256": "5bf71148ea90ea0ef9f4d4e0ebc58fd91dff41da0e8d3e2d8d8e92c6ed920946",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-dead-end-e.webp",
+      "bytes": 30276,
+      "sha256": "c4fb7a5802bfeff6e54cbd28d217a773cb02d22bb402895e29917afb087f0d49",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-dead-end-n.webp",
+      "bytes": 30524,
+      "sha256": "0267f072966b4dce63063d23d564afb925b5982b252c30dba7c303ed286373b2",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-separated-e-w.webp",
+      "bytes": 30414,
+      "sha256": "1213b2733dda3b9f4cff49f4e9a591ed00c07d519a36fdc5035ec05815ced9ac",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-separated-n-s.webp",
+      "bytes": 30988,
+      "sha256": "c25c491b2419c6fda73ee8bf46db0ebffcb6e92be8d394c4fa1ecc62f6016bad",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-straight-ew.webp",
+      "bytes": 30144,
+      "sha256": "0b8064b8cec27d86e5da1dd346d18a6f6a1f26079b368035142f365125786da4",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-straight-ns.webp",
+      "bytes": 30884,
+      "sha256": "252648fad08ce1f8c353a8510c2a540fe408cd607182a00204da5fbc7a7bac7d",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-tee-nes.webp",
+      "bytes": 31388,
+      "sha256": "ca19dbdc6a5011f76a388ed015ecd62978b994b732e93e12d6dc0dbe07ce896f",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-tee-new.webp",
+      "bytes": 31632,
+      "sha256": "69ceca944e24f19fc6d945f0416635135c0a12927dc0239247f10364d273d7cc",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-turn-ne.webp",
+      "bytes": 30698,
+      "sha256": "0ffd5525be7a89c61fd9e2405f4a7e9bfad024ca6f719811296ccd2b4c955dd8",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/cards/tunnels/tunnel-turn-nw.webp",
+      "bytes": 31546,
+      "sha256": "0cf220bed31723eb9e51314901cb6e667649efd124d7ff0e4151c802668ae8c3",
+      "width": 512,
+      "height": 768
+    },
+    {
+      "path": "assets/ui/icons/arrow-back.svg",
+      "bytes": 392,
+      "sha256": "f2ec3fc6fa123fb3d189c6ead10f5289d839e4bac002c19d2dd4ce5e9e19d8e0"
+    },
+    {
+      "path": "assets/ui/icons/arrow-next.svg",
+      "bytes": 393,
+      "sha256": "f5184e8b3140d2e5b28c5e298dfd5c19c5908d806d2e02544c95fa1e40bc27b2"
+    },
+    {
+      "path": "assets/ui/icons/cards.svg",
+      "bytes": 435,
+      "sha256": "1631e6dddb4d7eb9821fc5173bcd32d2a346af4db97a3fdb924fd22fe197a865"
+    },
+    {
+      "path": "assets/ui/icons/cart.svg",
+      "bytes": 467,
+      "sha256": "fe917cedeb1833cc767805d1d7f9ba144901203460534eaf5a6bafa31977edfb"
+    },
+    {
+      "path": "assets/ui/icons/chat.svg",
+      "bytes": 488,
+      "sha256": "e8daed4fff86bbc203bb97490d2b1a8c18538e341645ec86c86a458883a565ef"
+    },
+    {
+      "path": "assets/ui/icons/close.svg",
+      "bytes": 390,
+      "sha256": "35cc6ae4595fef08f8406ee41180909716fc921534e56885be1888cc14600215"
+    },
+    {
+      "path": "assets/ui/icons/collapse.svg",
+      "bytes": 401,
+      "sha256": "04b9ce3dccf9a18332b3977540e3f64f56846e2bd6df62b61563cabb7501abd0"
+    },
+    {
+      "path": "assets/ui/icons/confirm.svg",
+      "bytes": 383,
+      "sha256": "6e82a2b8a516bafd669b18a6b6eafd68a8e99b666f043992282c3188e3caeddb"
+    },
+    {
+      "path": "assets/ui/icons/copy.svg",
+      "bytes": 433,
+      "sha256": "9d0d0d6e669faf1f7642761f7df742c0d77e97f6cf342aef1ad5dc000a9be150"
+    },
+    {
+      "path": "assets/ui/icons/gold.svg",
+      "bytes": 428,
+      "sha256": "da64ee55be4c360294e1fa9643abef0f9e00b01d28c2a95ba15ac1fd842dbd01"
+    },
+    {
+      "path": "assets/ui/icons/home.svg",
+      "bytes": 400,
+      "sha256": "8815faeb47b6302c884d9e3ea1fe2f2e08e9d64095ff4d8f5f3554a4cd9798f4"
+    },
+    {
+      "path": "assets/ui/icons/info.svg",
+      "bytes": 415,
+      "sha256": "4e079bb02418d8b9ca4bb21466135389187a773d9f15e9a604e87cf15df2c1fa"
+    },
+    {
+      "path": "assets/ui/icons/invite.svg",
+      "bytes": 443,
+      "sha256": "ac8eba1e0c18fccbdb8129b702781338b84273c4c3e9ce30731177aa66761880"
+    },
+    {
+      "path": "assets/ui/icons/lantern.svg",
+      "bytes": 420,
+      "sha256": "41669e412368e075878cee69856b344c6c245ccdb9003d7fc20b3424d5922fe2"
+    },
+    {
+      "path": "assets/ui/icons/lock.svg",
+      "bytes": 446,
+      "sha256": "6b1758ae8533ea559b36fc88876d0664d630dd2a2447a4ad200e5790717fc6b6"
+    },
+    {
+      "path": "assets/ui/icons/pickaxe.svg",
+      "bytes": 407,
+      "sha256": "9e7d9cfd650599c6a1c436a0e5408f9a140df50cc06f77aee3bd0e9f61febabd"
+    },
+    {
+      "path": "assets/ui/icons/rotate.svg",
+      "bytes": 401,
+      "sha256": "7f638f7124e5a660835e91999ab6cd7b0b8606e7290e00c487806a97f86401af"
+    },
+    {
+      "path": "assets/ui/icons/scout.svg",
+      "bytes": 461,
+      "sha256": "92a78dc7425323cf2441b42500d0509b0f51d79cd3d2f6f2338054d4e9028468"
+    },
+    {
+      "path": "assets/ui/icons/settings.svg",
+      "bytes": 474,
+      "sha256": "613070153df6cd98c5847d0c588b4e4aba7ec33986143999d7b2adc84ffb6c79"
+    },
+    {
+      "path": "assets/ui/icons/volume.svg",
+      "bytes": 408,
+      "sha256": "328a6fc4e518efd7130e556891a2bf5ae5eb3154945116643054a2bb56b04a69"
+    },
+    {
+      "path": "assets/ui/icons/zoom-in.svg",
+      "bytes": 428,
+      "sha256": "5b34cd91fbc9d3cff79e541a789024c9bfcf23b41605b211c6ab7b505784dc57"
+    },
+    {
+      "path": "assets/ui/icons/zoom-out.svg",
+      "bytes": 419,
+      "sha256": "6d55c64d347364df0f8af8fdff61a7e23b918460ca25fd9a5f09a84a394175c1"
+    },
+    {
+      "path": "assets/ui/materials/parchment.webp",
+      "bytes": 15422,
+      "sha256": "580cb6d0c24478dfdb70160c8d99bbdfb0eb2b0970457e7b37157ffb692713fb",
+      "width": 720,
+      "height": 330
+    },
+    {
+      "path": "assets/ui/materials/path-warm.webp",
+      "bytes": 14874,
+      "sha256": "247164abdd46581be0f2282547c986dce9b5812c8bcac0759fa0d51876b03544",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "path": "assets/ui/materials/rock-cool.webp",
+      "bytes": 13414,
+      "sha256": "43412e208f4ee91e346f144ea34cee9c726623a1ee94d6285097f6fc3dd5daf5",
+      "width": 512,
+      "height": 512
     }
-  ]
+  ],
+  "cardArtworkCount": 35,
+  "cardFileCount": 70
 }
