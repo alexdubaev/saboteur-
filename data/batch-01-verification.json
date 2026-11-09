@@ -1,0 +1,11 @@
+{
+  "batch": "01",
+  "archiveSha256": "599f4228f7c1a26f2b71d455f86fce47b3149630f50b49a28ccb29a4069d78e5",
+  "assets": 13,
+  "webpFiles": 26,
+  "webpBytes": 664966,
+  "checks": 78,
+  "result": "pass",
+  "artisticStatus": "draft",
+  "fullPackComplete": false
+}

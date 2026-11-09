@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "drawDeckTotal": 67,
+  "cards": [
+    {
+      "id": "tunnel-straight-ns",
+      "kind": "tunnel",
+      "copies": 7,
+      "connections": [
+        [
+          "N",
+          "S"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-straight-ns.webp"
+    },
+    {
+      "id": "tunnel-straight-ew",
+      "kind": "tunnel",
+      "copies": 4,
+      "connections": [
+        [
+          "E",
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-straight-ew.webp"
+    },
+    {
+      "id": "tunnel-turn-ne",
+      "kind": "tunnel",
+      "copies": 5,
+      "connections": [
+        [
+          "N",
+          "E"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-turn-ne.webp"
+    },
+    {
+      "id": "tunnel-turn-nw",
+      "kind": "tunnel",
+      "copies": 4,
+      "connections": [
+        [
+          "N",
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-turn-nw.webp"
+    },
+    {
+      "id": "tunnel-tee-nes",
+      "kind": "tunnel",
+      "copies": 5,
+      "connections": [
+        [
+          "N",
+          "E",
+          "S"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-tee-nes.webp"
+    },
+    {
+      "id": "tunnel-tee-new",
+      "kind": "tunnel",
+      "copies": 3,
+      "connections": [
+        [
+          "N",
+          "E",
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-tee-new.webp"
+    },
+    {
+      "id": "tunnel-cross",
+      "kind": "tunnel",
+      "copies": 3,
+      "connections": [
+        [
+          "N",
+          "E",
+          "S",
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-cross.webp"
+    },
+    {
+      "id": "tunnel-dead-end-n",
+      "kind": "tunnel",
+      "copies": 3,
+      "connections": [
+        [
+          "N"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-dead-end-n.webp"
+    },
+    {
+      "id": "tunnel-dead-end-e",
+      "kind": "tunnel",
+      "copies": 3,
+      "connections": [
+        [
+          "E"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-dead-end-e.webp"
+    },
+    {
+      "id": "tunnel-separated-n-s",
+      "kind": "tunnel",
+      "copies": 2,
+      "connections": [
+        [
+          "N"
+        ],
+        [
+          "S"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-n-s.webp"
+    },
+    {
+      "id": "tunnel-separated-e-w",
+      "kind": "tunnel",
+      "copies": 1,
+      "connections": [
+        [
+          "E"
+        ],
+        [
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-e-w.webp"
+    },
+    {
+      "id": "action-break-pickaxe",
+      "kind": "action",
+      "copies": 3,
+      "asset": "assets/cards/actions/action-break-pickaxe.webp"
+    },
+    {
+      "id": "action-break-lantern",
+      "kind": "action",
+      "copies": 3,
+      "asset": "assets/cards/actions/action-break-lantern.webp"
+    },
+    {
+      "id": "action-break-cart",
+      "kind": "action",
+      "copies": 3,
+      "asset": "assets/cards/actions/action-break-cart.webp"
+    },
+    {
+      "id": "action-repair-pickaxe",
+      "kind": "action",
+      "copies": 2,
+      "asset": "assets/cards/actions/action-repair-pickaxe.webp"
+    },
+    {
+      "id": "action-repair-lantern",
+      "kind": "action",
+      "copies": 2,
+      "asset": "assets/cards/actions/action-repair-lantern.webp"
+    },
+    {
+      "id": "action-repair-cart",
+      "kind": "action",
+      "copies": 2,
+      "asset": "assets/cards/actions/action-repair-cart.webp"
+    },
+    {
+      "id": "action-repair-pickaxe-or-lantern",
+      "kind": "action",
+      "copies": 1,
+      "asset": "assets/cards/actions/action-repair-pickaxe-or-lantern.webp"
+    },
+    {
+      "id": "action-repair-lantern-or-cart",
+      "kind": "action",
+      "copies": 1,
+      "asset": "assets/cards/actions/action-repair-lantern-or-cart.webp"
+    },
+    {
+      "id": "action-repair-pickaxe-or-cart",
+      "kind": "action",
+      "copies": 1,
+      "asset": "assets/cards/actions/action-repair-pickaxe-or-cart.webp"
+    },
+    {
+      "id": "action-collapse",
+      "kind": "action",
+      "copies": 3,
+      "asset": "assets/cards/actions/action-collapse.webp"
+    },
+    {
+      "id": "action-scout",
+      "kind": "action",
+      "copies": 6,
+      "asset": "assets/cards/actions/action-scout.webp"
+    }
+  ],
+  "notes": "Workable playtest deck, balance to be validated in playtests."
+}
