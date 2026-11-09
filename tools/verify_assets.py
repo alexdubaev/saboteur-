@@ -40,7 +40,7 @@ for c in [c for c in cards['cards'] if c['kind']=='tunnel']:
   lum=sum((p[0]*.3+p[1]*.59+p[2]*.11) for p in pix)/len(pix)
   if (s in opened and lum<70) or (s not in opened and lum>165):
    problems.append(f'pixel-port check {c["id"]}:{s} opened={s in opened} luminosity={lum:.1f}')
-report={'unique_card_types':len(cards['cards'])+11,'game_deck_cards':67,'webp_cards':70,'svg_icons':22,'asset_count':len(manifest['assets']),'errors':problems}
+report={'unique_card_types':len(cards['cards'])+13,'game_deck_cards':67,'webp_cards':70,'svg_icons':22,'asset_count':len(manifest['assets']),'errors':problems}
 (root/'data/asset-verification.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
 print(json.dumps(report,ensure_ascii=False))
 if problems:sys.exit(2)
