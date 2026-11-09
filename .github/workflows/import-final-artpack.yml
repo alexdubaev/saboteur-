@@ -1,0 +1,68 @@
+name: Import final game asset pack
+on:
+  push:
+    branches: [assets/production-foundation-v1]
+    paths: [.github/workflows/import-final-artpack.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: final-artpack-import
+  cancel-in-progress: false
+jobs:
+  import:
+    if: github.repository == 'alexdubaev/saboteur-' && github.ref == 'refs/heads/assets/production-foundation-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Get previously verified archive
+        run: |
+          curl --fail --location --retry 3 --max-time 180 'https://media.base44.com/files/public/6af0cf8f1e7c1043015802ed/11b6ee109_gold-traitors-final-artpack-2026-11-09.zip' --output "$RUNNER_TEMP/final-artpack.zip"
+          echo "7905604467c8c9cfc61122f8a373b28faf6b8a62ed19d064284399dc778367bf  $RUNNER_TEMP/final-artpack.zip" | sha256sum --check --status
+          echo 'Archive sha256 verification OK.'
+      - name: Verify safe archive paths and unpack assets
+        run: |
+          python - <<'PY'
+          import os,zipfile,pathlib
+          p=pathlib.Path(os.environ['RUNNER_TEMP'])/'final-artpack.zip'
+          with zipfile.ZipFile(p) as z:
+            bad=z.testzip()
+            assert not bad, f'CRC mismatch in {bad}'
+            for name in z.namelist():
+              q=pathlib.PurePosixPath(name)
+              assert not q.is_absolute() and '..' not in q.parts and not name.startswith('.git/')
+            print('Archive entries verified:',len(z.namelist()))
+            z.extractall('.')
+          PY
+      - name: Verify all asset files and card geometry
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/verify_assets.py
+          python - <<'PY'
+          import json,pathlib,hashlib
+          p=pathlib.Path('data/asset-manifest.json')
+          d=json.loads(p.read_text())
+          assert len(d['assets']) >= 100
+          for a in d['assets']:
+            f=pathlib.Path(a['path'])
+            assert f.is_file(),a['path']
+            assert hashlib.sha256(f.read_bytes()).hexdigest()==a['sha256'],a['path']
+          print('Verified manifest entries:',len(d['assets']))
+          PY
+      - name: Commit all verified assets and documentation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets art-source docs data tools preview
+          if git diff --cached --quiet; then
+            echo 'No new changes.'
+          else
+            git commit -m 'assets: deliver complete browser-game art pack and production docs'
+            git push origin HEAD:refs/heads/assets/production-foundation-v1
+          fi
