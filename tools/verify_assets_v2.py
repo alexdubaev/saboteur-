@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import itertools
 import json
+import re
 import sys
 from collections import Counter
 from io import BytesIO
@@ -15,6 +16,9 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageStat
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = "data/asset-manifest.json"
+BOARD_MANIFEST_PATH = "data/board-art-v2.json"
+BOARD_TILES_DIR = "assets/board/tiles"
+BOARD_SOURCE_DIR = "board-art-v2-candidates"
 ZIP_ROOT = "gold-traitors-project/"
 CARD_SIZES = {"standard": (512, 768), "compact": (256, 384)}
 OPPOSITE = dict(zip("NESW", "SWNE"))
@@ -68,15 +72,9 @@ def package_entries(manifest):
             "Expected 40 unique card arts and 27 additional WebP")
     entries = list(other)
     for card in cards:
-        variants = card["variants"]
-        require(Counter(variant["purpose"] for variant in variants) == Counter(CARD_SIZES.keys()),
-                f"{card['id']}: expected one standard and one compact asset")
         require(card["embeddedText"] is False and card["sourceSize"] == [1024, 1536],
                 f"{card['id']}: unexpected source size or embedded text metadata")
-        for variant in variants:
-            require((variant["width"], variant["height"]) == CARD_SIZES[variant["purpose"]],
-                    f"{variant['path']}: unexpected card size in manifest")
-            entries.append(variant)
+        entries.extend(card_variants(card))
     for entry in entries:
         safe_path(entry["path"], "assets", ".webp")
     require(len({entry["path"].casefold() for entry in entries}) == 107, "Expected 107 unique asset paths")
@@ -86,6 +84,65 @@ def package_entries(manifest):
 def active_data():
     config = read_json("data/game-config.json")
     return read_json(config["cardCatalog"])["cards"], read_json(config["developmentRuleset"])["board"]
+
+
+def card_variants(card):
+    variants = card["variants"]
+    require(Counter(variant["purpose"] for variant in variants) == Counter(CARD_SIZES.keys()),
+            f"{card['id']}: expected one standard and one compact asset")
+    for variant in variants:
+        require((variant["width"], variant["height"]) == CARD_SIZES[variant["purpose"]],
+                f"{variant['path']}: unexpected card size in manifest")
+    return variants
+
+
+def board_geometry(board):
+    origin, goals = board["origin"], board["goalAssets"]
+    result = [(origin["assetId"], origin["connections"], [0])]
+    result.extend((asset_id, [board["publicGoalPorts"]], [0])
+                  for asset_id in [goals["ore"], *goals["barrenOptions"]])
+    return result
+
+
+def board_tile_path(art_id, purpose):
+    layout = BOARD_TILES_DIR if purpose == "standard" else f"{BOARD_TILES_DIR}/compact"
+    return f"{layout}/{art_id}.webp"
+
+
+def board_entries(manifest, board, source_dir=None):
+    cards = manifest["cards"]
+    require(manifest["schemaVersion"] == 1, "Expected board art manifest schemaVersion 1")
+    require(Counter(card["id"] for card in cards) == Counter(art_id for art_id, _, _ in board_geometry(board)),
+            "Expected one derivative for each active start and revealed goal art ID")
+    entries = []
+    for card in cards:
+        art_id = card["id"]
+        source = f"{art_id}.png"
+        require(card["source"] == f"{BOARD_SOURCE_DIR}/{source}" and re.fullmatch(r"[a-f0-9]{64}", card["sourceSha256"]),
+                f"{art_id}: unexpected source path or SHA-256")
+        require(isinstance(card["status"], str) and card["status"].strip(), f"{art_id}: missing art status")
+        if source_dir:
+            data = (source_dir / source).read_bytes()
+            require(sha256(data) == card["sourceSha256"], f"{source}: board source SHA-256 mismatch")
+            raster(data, (1024, 1536), source, "PNG")
+        for variant in card_variants(card):
+            purpose = variant["purpose"]
+            require(variant["path"] == board_tile_path(art_id, purpose),
+                    f"{art_id} {purpose}: unexpected derivative path")
+            entries.append(variant)
+    return entries
+
+
+def check_entry(entry):
+    path = entry["path"]
+    data = (ROOT / path).read_bytes()
+    require(len(data) == entry["bytes"] and sha256(data) == entry["sha256"],
+            f"{path}: byte count or SHA-256 differs from the manifest")
+    return raster(data, (entry["width"], entry["height"]), path, "WEBP")
+
+
+def card_budget(purpose):
+    return (120 if purpose == "standard" else 45) * 1024
 
 
 def check_package(manifest, entries, owner_zip, owner_preview):
@@ -104,12 +161,9 @@ def check_package(manifest, entries, owner_zip, owner_preview):
     oversize = []
     for entry in entries:
         path = entry["path"]
-        data = (ROOT / path).read_bytes()
-        require(len(data) == entry["bytes"] and sha256(data) == entry["sha256"],
-                f"{path}: byte count or SHA-256 differs from the manifest")
-        raster(data, (entry["width"], entry["height"]), path, "WEBP")
+        check_entry(entry)
         if "purpose" in entry:
-            limit = (120 if entry["purpose"] == "standard" else 45) * 1024
+            limit = card_budget(entry["purpose"])
             if entry["bytes"] > limit:
                 oversize.append(f"{path} ({entry['bytes']} B, +{entry['bytes'] - limit} B)")
     if owner_zip:
@@ -235,28 +289,18 @@ def measure_seams(tiles, port_width):
             f"max mean RGB difference {max_difference[True]:.3f} open, {max_difference[False]:.3f} closed")
 
 
-def check_geometry(manifest, board_scope):
-    catalog, board = active_data()
+def check_geometry(manifest, tiles, board_scope):
     by_id = {card["id"]: card for card in manifest["cards"]}
-    tiles = [(card["id"], card["connections"], card["allowedRotations"])
-             for card in catalog if card["kind"] == "tunnel"]
-    require(len(tiles) == 16 and all(rotations == [0, 180] for _, _, rotations in tiles),
-            "Expected 16 catalog tunnel geometries with 0° and 180° rotations")
-    if board_scope:
-        origin = board["origin"]
-        goals = board["goalAssets"]
-        tiles = [(origin["assetId"], origin["connections"], [0])]
-        tiles.extend((asset_id, [board["publicGoalPorts"]], [0])
-                     for asset_id in [goals["ore"], *goals["barrenOptions"]])
     errors = []
-    for purpose, size in CARD_SIZES.items():
+    for purpose in CARD_SIZES:
         visual_tiles = []
         port_widths = []
         port_width = 160 if purpose == "standard" else 80
         for art_id, groups, rotations in tiles:
             variant = next(v for v in by_id[art_id]["variants"] if v["purpose"] == purpose)
-            path = variant["path"]
-            painted = raster((ROOT / path).read_bytes(), size, path, "WEBP")
+            painted = check_entry(variant)
+            if board_scope:
+                require(variant["bytes"] <= card_budget(purpose), f"{variant['path']}: exceeds card budget")
             for rotation in rotations:
                 rotated = painted.transpose(Image.Transpose.ROTATE_180) if rotation else painted
                 mapping = OPPOSITE if rotation else {port: port for port in OPPOSITE}
@@ -269,8 +313,8 @@ def check_geometry(manifest, board_scope):
         print(f"{purpose}: {len(visual_tiles) * 4} edge checks")
         if not board_scope:
             print(f"{purpose}: {measure_seams(visual_tiles, port_width)}")
-            if port_widths:
-                print(f"{purpose}: opening widths {min(port_widths)}–{max(port_widths)} px")
+        if port_widths:
+            print(f"{purpose}: opening widths {min(port_widths)}–{max(port_widths)} px")
     return errors
 
 
@@ -308,21 +352,35 @@ def main():
     parser.add_argument("scope", choices=("package", "tunnels", "board", "dist"))
     parser.add_argument("--owner-zip", type=Path, help="Compare package and source bytes with owner ZIP")
     parser.add_argument("--owner-preview", type=Path, help="Compare the preserved JPG with its ZIP member")
+    parser.add_argument("--source-dir", type=Path, help="Compare normalized board inputs with preserved PNGs")
     parser.add_argument("--dist", type=Path, default=ROOT / "apps/web/dist")
     args = parser.parse_args()
     if (args.owner_zip or args.owner_preview) and args.scope != "package":
         parser.error("Owner archive checks apply to package scope")
     if args.owner_preview and not args.owner_zip:
         parser.error("--owner-preview requires --owner-zip")
+    if args.source_dir and args.scope != "board":
+        parser.error("--source-dir applies to board scope")
     try:
         manifest = read_json(MANIFEST_PATH)
         entries = package_entries(manifest)
         if args.scope == "package":
             errors = check_package(manifest, entries, args.owner_zip, args.owner_preview)
-        elif args.scope == "dist":
-            errors = check_dist(entries, args.dist)
+        elif args.scope == "tunnels":
+            catalog, _ = active_data()
+            tiles = [(card["id"], card["connections"], card["allowedRotations"])
+                     for card in catalog if card["kind"] == "tunnel"]
+            require(len(tiles) == 16 and all(rotations == [0, 180] for _, _, rotations in tiles),
+                    "Expected 16 catalog tunnel geometries with 0° and 180° rotations")
+            errors = check_geometry(manifest, tiles, board_scope=False)
         else:
-            errors = check_geometry(manifest, args.scope == "board")
+            _, board = active_data()
+            art = read_json(BOARD_MANIFEST_PATH)
+            replacements = board_entries(art, board, args.source_dir)
+            if args.scope == "board":
+                errors = check_geometry(art, board_geometry(board), board_scope=True)
+            else:
+                errors = check_dist(entries + replacements, args.dist)
     except (BadZipFile, KeyError, OSError, ValueError) as error:
         print(f"Asset verification error: {error}", file=sys.stderr)
         return 1
