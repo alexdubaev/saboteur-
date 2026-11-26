@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  # tsx uses esbuild's locked platform binary through optional dependencies.
+  esbuild: false
