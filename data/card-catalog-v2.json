@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 2,
+  "kind": "geometry-and-effect-catalog",
+  "note": "Справочник собственных графических ID и общих игровых примитивов, не состав колоды. Наличие файла проверяется отдельно по актуальному asset-manifest.json; некоторые изображения есть только в локальной поставке.",
+  "cards": [
+    {
+      "id": "tunnel-straight-ns",
+      "kind": "tunnel",
+      "labelRu": "Прямой вертикальный",
+      "connections": [
+        [
+          "N",
+          "S"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-straight-ns.webp",
+      "compactAsset": "assets/cards/compact/tunnel-straight-ns.webp"
+    },
+    {
+      "id": "tunnel-straight-ew",
+      "kind": "tunnel",
+      "labelRu": "Прямой горизонтальный",
+      "connections": [
+        [
+          "E",
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-straight-ew.webp",
+      "compactAsset": "assets/cards/compact/tunnel-straight-ew.webp"
+    },
+    {
+      "id": "tunnel-turn-ne",
+      "kind": "tunnel",
+      "labelRu": "Поворот вверх–вправо",
+      "connections": [
+        [
+          "N",
+          "E"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-turn-ne.webp",
+      "compactAsset": "assets/cards/compact/tunnel-turn-ne.webp"
+    },
+    {
+      "id": "tunnel-turn-nw",
+      "kind": "tunnel",
+      "labelRu": "Поворот вверх–влево",
+      "connections": [
+        [
+          "N",
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-turn-nw.webp",
+      "compactAsset": "assets/cards/compact/tunnel-turn-nw.webp"
+    },
+    {
+      "id": "tunnel-tee-nes",
+      "kind": "tunnel",
+      "labelRu": "Вертикальная развилка",
+      "connections": [
+        [
+          "N",
+          "E",
+          "S"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-tee-nes.webp",
+      "compactAsset": "assets/cards/compact/tunnel-tee-nes.webp"
+    },
+    {
+      "id": "tunnel-tee-new",
+      "kind": "tunnel",
+      "labelRu": "Горизонтальная развилка",
+      "connections": [
+        [
+          "N",
+          "E",
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-tee-new.webp",
+      "compactAsset": "assets/cards/compact/tunnel-tee-new.webp"
+    },
+    {
+      "id": "tunnel-cross",
+      "kind": "tunnel",
+      "labelRu": "Перекрёсток",
+      "connections": [
+        [
+          "N",
+          "E",
+          "S",
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-cross.webp",
+      "compactAsset": "assets/cards/compact/tunnel-cross.webp"
+    },
+    {
+      "id": "tunnel-dead-end-n",
+      "kind": "tunnel",
+      "labelRu": "Вертикальный тупик",
+      "connections": [
+        [
+          "N"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-dead-end-n.webp",
+      "compactAsset": "assets/cards/compact/tunnel-dead-end-n.webp"
+    },
+    {
+      "id": "tunnel-dead-end-e",
+      "kind": "tunnel",
+      "labelRu": "Горизонтальный тупик",
+      "connections": [
+        [
+          "E"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-dead-end-e.webp",
+      "compactAsset": "assets/cards/compact/tunnel-dead-end-e.webp"
+    },
+    {
+      "id": "tunnel-separated-n-s",
+      "kind": "tunnel",
+      "labelRu": "Раздельные тупики N–S",
+      "connections": [
+        [
+          "N"
+        ],
+        [
+          "S"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-n-s.webp",
+      "compactAsset": "assets/cards/compact/tunnel-separated-n-s.webp"
+    },
+    {
+      "id": "tunnel-separated-e-w",
+      "kind": "tunnel",
+      "labelRu": "Раздельные тупики E–W",
+      "connections": [
+        [
+          "E"
+        ],
+        [
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-e-w.webp",
+      "compactAsset": "assets/cards/compact/tunnel-separated-e-w.webp"
+    },
+    {
+      "id": "tunnel-separated-n-e",
+      "kind": "tunnel",
+      "labelRu": "Раздельные тупики N–E",
+      "connections": [
+        [
+          "N"
+        ],
+        [
+          "E"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-n-e.webp",
+      "compactAsset": "assets/cards/compact/tunnel-separated-n-e.webp"
+    },
+    {
+      "id": "tunnel-separated-n-w",
+      "kind": "tunnel",
+      "labelRu": "Раздельные тупики N–W",
+      "connections": [
+        [
+          "N"
+        ],
+        [
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-n-w.webp",
+      "compactAsset": "assets/cards/compact/tunnel-separated-n-w.webp"
+    },
+    {
+      "id": "tunnel-separated-n-e-s",
+      "kind": "tunnel",
+      "labelRu": "Три тупика N–E–S",
+      "connections": [
+        [
+          "N"
+        ],
+        [
+          "E"
+        ],
+        [
+          "S"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-n-e-s.webp",
+      "compactAsset": "assets/cards/compact/tunnel-separated-n-e-s.webp"
+    },
+    {
+      "id": "tunnel-separated-n-e-w",
+      "kind": "tunnel",
+      "labelRu": "Три тупика N–E–W",
+      "connections": [
+        [
+          "N"
+        ],
+        [
+          "E"
+        ],
+        [
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-n-e-w.webp",
+      "compactAsset": "assets/cards/compact/tunnel-separated-n-e-w.webp"
+    },
+    {
+      "id": "tunnel-separated-n-e-s-w",
+      "kind": "tunnel",
+      "labelRu": "Четыре раздельных тупика",
+      "connections": [
+        [
+          "N"
+        ],
+        [
+          "E"
+        ],
+        [
+          "S"
+        ],
+        [
+          "W"
+        ]
+      ],
+      "allowedRotations": [
+        0,
+        180
+      ],
+      "asset": "assets/cards/tunnels/tunnel-separated-n-e-s-w.webp",
+      "compactAsset": "assets/cards/compact/tunnel-separated-n-e-s-w.webp"
+    },
+    {
+      "id": "action-break-pickaxe",
+      "kind": "action",
+      "labelRu": "Сломанная кирка",
+      "effect": "break",
+      "targetKind": "otherSeat",
+      "tools": [
+        "pickaxe"
+      ],
+      "asset": "assets/cards/actions/action-break-pickaxe.webp",
+      "compactAsset": "assets/cards/compact/action-break-pickaxe.webp"
+    },
+    {
+      "id": "action-break-lantern",
+      "kind": "action",
+      "labelRu": "Погасший фонарь",
+      "effect": "break",
+      "targetKind": "otherSeat",
+      "tools": [
+        "lantern"
+      ],
+      "asset": "assets/cards/actions/action-break-lantern.webp",
+      "compactAsset": "assets/cards/compact/action-break-lantern.webp"
+    },
+    {
+      "id": "action-break-cart",
+      "kind": "action",
+      "labelRu": "Сломанная вагонетка",
+      "effect": "break",
+      "targetKind": "otherSeat",
+      "tools": [
+        "cart"
+      ],
+      "asset": "assets/cards/actions/action-break-cart.webp",
+      "compactAsset": "assets/cards/compact/action-break-cart.webp"
+    },
+    {
+      "id": "action-repair-pickaxe",
+      "kind": "action",
+      "labelRu": "Ремонт кирки",
+      "effect": "repair",
+      "targetKind": "seat",
+      "tools": [
+        "pickaxe"
+      ],
+      "asset": "assets/cards/actions/action-repair-pickaxe.webp",
+      "compactAsset": "assets/cards/compact/action-repair-pickaxe.webp"
+    },
+    {
+      "id": "action-repair-lantern",
+      "kind": "action",
+      "labelRu": "Ремонт фонаря",
+      "effect": "repair",
+      "targetKind": "seat",
+      "tools": [
+        "lantern"
+      ],
+      "asset": "assets/cards/actions/action-repair-lantern.webp",
+      "compactAsset": "assets/cards/compact/action-repair-lantern.webp"
+    },
+    {
+      "id": "action-repair-cart",
+      "kind": "action",
+      "labelRu": "Ремонт вагонетки",
+      "effect": "repair",
+      "targetKind": "seat",
+      "tools": [
+        "cart"
+      ],
+      "asset": "assets/cards/actions/action-repair-cart.webp",
+      "compactAsset": "assets/cards/compact/action-repair-cart.webp"
+    },
+    {
+      "id": "action-repair-pickaxe-or-lantern",
+      "kind": "action",
+      "labelRu": "Ремонт кирки или фонаря",
+      "effect": "repair",
+      "targetKind": "seat",
+      "tools": [
+        "pickaxe",
+        "lantern"
+      ],
+      "asset": "assets/cards/actions/action-repair-pickaxe-or-lantern.webp",
+      "compactAsset": "assets/cards/compact/action-repair-pickaxe-or-lantern.webp"
+    },
+    {
+      "id": "action-repair-lantern-or-cart",
+      "kind": "action",
+      "labelRu": "Ремонт фонаря или вагонетки",
+      "effect": "repair",
+      "targetKind": "seat",
+      "tools": [
+        "lantern",
+        "cart"
+      ],
+      "asset": "assets/cards/actions/action-repair-lantern-or-cart.webp",
+      "compactAsset": "assets/cards/compact/action-repair-lantern-or-cart.webp"
+    },
+    {
+      "id": "action-repair-pickaxe-or-cart",
+      "kind": "action",
+      "labelRu": "Ремонт кирки или вагонетки",
+      "effect": "repair",
+      "targetKind": "seat",
+      "tools": [
+        "pickaxe",
+        "cart"
+      ],
+      "asset": "assets/cards/actions/action-repair-pickaxe-or-cart.webp",
+      "compactAsset": "assets/cards/compact/action-repair-pickaxe-or-cart.webp"
+    },
+    {
+      "id": "action-collapse",
+      "kind": "action",
+      "labelRu": "Обвал",
+      "effect": "collapse",
+      "targetKind": "ordinaryTunnel",
+      "tools": [],
+      "asset": "assets/cards/actions/action-collapse.webp",
+      "compactAsset": "assets/cards/compact/action-collapse.webp"
+    },
+    {
+      "id": "action-scout",
+      "kind": "action",
+      "labelRu": "Разведка",
+      "effect": "scout",
+      "targetKind": "hiddenGoal",
+      "tools": [],
+      "asset": "assets/cards/actions/action-scout.webp",
+      "compactAsset": "assets/cards/compact/action-scout.webp"
+    }
+  ]
+}
