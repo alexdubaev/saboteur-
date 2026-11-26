@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: gold
+      POSTGRES_DB: gold
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the local environment}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55437}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gold -d gold"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${POSTGRES_SUBNET:-172.16.235.0/28}
+
+volumes:
+  postgres-data:
