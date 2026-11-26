@@ -251,5 +251,8 @@
       "asset": "assets/cards/actions/action-scout.webp"
     }
   ],
-  "notes": "Workable playtest deck, balance to be validated in playtests."
+  "notes": "Исторический набор для проверки старой партии ассетов. Не загружать в игровой движок. Активный профиль задаётся game-config.json.",
+  "status": "legacy-inventory-not-active-rules",
+  "activeCatalog": "data/card-catalog-v2.json",
+  "activeConfig": "data/game-config.json"
 }
