@@ -1,7 +1,7 @@
 # 06 — Проверка закрытой альфы
 
 **Требования:** R04, R31, R32, R33, R34, R35, R36, R37, R38, R39, R43
-**Зависит от:** 02, 03, 04, 05
+**Зависит от:** 02, 03, 04
 **Зона:** `scripts/` · `tests/acceptance/` · `README.md` · `docs/ALPHA_RUNBOOK.md` · `docs/ALPHA_ACCEPTANCE.md` · `docs/STATUS.md` · `docs/RULES_DECISIONS.md`
 **Волна:** 3
 **Ревью:** нет

@@ -11,9 +11,9 @@ window.STATE =
   "memoryFile": "AGENTS.md",
   "memoryOwner": "user",
   "skillDir": "C:/Users/Alexandr/.codex/skills/autopilot",
-  "baseCommit": null,
+  "baseCommit": "48629bb",
   "startedAt": "2026-11-27T00:38:40+03:00",
-  "updatedAt": "2026-11-27T00:42:48+03:00",
+  "updatedAt": "2026-11-27T01:36:51+03:00",
   "finishedAt": null,
   "stages": [
     {
@@ -38,32 +38,39 @@ window.STATE =
       "id": "spec",
       "status": "done",
       "startedAt": "2026-11-27T00:39:45+03:00",
-      "finishedAt": "2026-11-27T00:42:00+03:00"
+      "finishedAt": "2026-11-27T00:44:35+03:00",
+      "note": "Все 43 требования имеют секции ТЗ или критерии таска"
     },
     {
       "id": "plan",
-      "status": "active",
-      "startedAt": "2026-11-27T00:42:00+03:00"
+      "status": "done",
+      "startedAt": "2026-11-27T00:42:00+03:00",
+      "finishedAt": "2026-11-27T00:43:15+03:00"
     },
     {
       "id": "build",
-      "status": "pending"
+      "status": "done",
+      "startedAt": "2026-11-27T00:43:15+03:00",
+      "finishedAt": "2026-11-27T01:27:21+03:00"
     },
     {
       "id": "review",
-      "status": "pending"
+      "status": "done",
+      "startedAt": "2026-11-27T01:27:21+03:00",
+      "finishedAt": "2026-11-27T01:27:42+03:00"
     },
     {
       "id": "final",
-      "status": "pending"
+      "status": "active",
+      "startedAt": "2026-11-27T01:27:42+03:00"
     }
   ],
   "requirements": {
     "total": 43,
-    "done": 0,
-    "inTicket": 43,
+    "done": 41,
+    "inTicket": 0,
     "inSpec": 0,
-    "placeholder": 0,
+    "placeholder": 2,
     "deferred": 0,
     "dropped": 0
   },
@@ -90,9 +97,16 @@ window.STATE =
       ],
       "review": "да — фундамент",
       "model": "сильная",
-      "status": "pending",
+      "status": "done",
+      "startedAt": "2026-11-27T00:43:21+03:00",
+      "finishedAt": "2026-11-27T01:10:12+03:00",
       "retries": 0,
-      "repairs": 0
+      "repairs": 0,
+      "tests": {
+        "passed": 1,
+        "failed": 0
+      },
+      "commit": "7ddcdde"
     },
     {
       "id": "02",
@@ -112,10 +126,8 @@ window.STATE =
         "R27",
         "R31"
       ],
-      "blockedBy": [
-        "01"
-      ],
-      "wave": 2,
+      "blockedBy": [],
+      "wave": 1,
       "zone": [
         "packages/game-core/",
         "packages/config/",
@@ -123,9 +135,16 @@ window.STATE =
       ],
       "review": "нет",
       "model": "сильная",
-      "status": "pending",
+      "status": "done",
+      "startedAt": "2026-11-27T00:48:28+03:00",
+      "finishedAt": "2026-11-27T01:03:54+03:00",
       "retries": 0,
-      "repairs": 0
+      "repairs": 0,
+      "tests": {
+        "passed": 16,
+        "failed": 0
+      },
+      "commit": "faa35e7"
     },
     {
       "id": "03",
@@ -159,9 +178,16 @@ window.STATE =
       ],
       "review": "да — сессии и сохранение",
       "model": "сильная",
-      "status": "pending",
+      "status": "done",
+      "startedAt": "2026-11-27T00:52:00+03:00",
+      "finishedAt": "2026-11-27T01:17:55+03:00",
       "retries": 0,
-      "repairs": 0
+      "repairs": 0,
+      "tests": {
+        "passed": 8,
+        "failed": 0
+      },
+      "commit": "8668f4e"
     },
     {
       "id": "04",
@@ -173,10 +199,8 @@ window.STATE =
         "R40",
         "R43"
       ],
-      "blockedBy": [
-        "01"
-      ],
-      "wave": 2,
+      "blockedBy": [],
+      "wave": 1,
       "zone": [
         "assets/",
         "data/asset-manifest.json",
@@ -186,9 +210,19 @@ window.STATE =
       ],
       "review": "нет",
       "model": "обычная",
-      "status": "pending",
+      "status": "done",
+      "startedAt": "2026-11-27T00:47:59+03:00",
+      "finishedAt": "2026-11-27T01:08:25+03:00",
       "retries": 0,
-      "repairs": 0
+      "repairs": 1,
+      "repairFindings": [
+        "Вход и камеры должны пройти строгую геометрию; подготовлены четыре иллюстрации без рамок, исходные WebP сохраняются."
+      ],
+      "tests": {
+        "passed": 3,
+        "failed": 0
+      },
+      "commit": "06d60b9"
     },
     {
       "id": "05",
@@ -217,9 +251,16 @@ window.STATE =
       ],
       "review": "нет",
       "model": "обычная",
-      "status": "pending",
+      "status": "done",
+      "startedAt": "2026-11-27T00:54:07+03:00",
       "retries": 0,
-      "repairs": 0
+      "repairs": 0,
+      "finishedAt": "2026-11-27T01:24:37+03:00",
+      "tests": {
+        "passed": 2,
+        "failed": 0
+      },
+      "commit": "adc0b70"
     },
     {
       "id": "06",
@@ -240,8 +281,7 @@ window.STATE =
       "blockedBy": [
         "02",
         "03",
-        "04",
-        "05"
+        "04"
       ],
       "wave": 3,
       "zone": [
@@ -255,12 +295,22 @@ window.STATE =
       ],
       "review": "нет",
       "model": "сильная",
-      "status": "pending",
+      "status": "done",
       "retries": 0,
-      "repairs": 0
+      "repairs": 0,
+      "startedAt": "2026-11-27T01:15:55+03:00",
+      "finishedAt": "2026-11-27T01:34:04+03:00",
+      "tests": {
+        "passed": 4,
+        "failed": 0
+      },
+      "commit": "23f856b"
     }
   ],
-  "tests": null,
+  "tests": {
+    "passed": 25,
+    "failed": 0
+  },
   "debt": {
     "placeholders": [],
     "assumptions": [],
@@ -273,8 +323,17 @@ window.STATE =
     "deferred": 0,
     "items": []
   },
-  "concerns": [],
-  "blind": null,
+  "concerns": [
+    "Агрегированные метрики /health/metrics в контуре мониторинга; при закрытом HTTPS-прокси маршрутизируются только приложение, /api и /ws."
+  ],
+  "blind": {
+    "checked": 6,
+    "matched": 4,
+    "mismatches": [
+      "E4: пакет, геометрия и сборка проверены; художественная приёмка остаётся открытой.",
+      "E5: технические прогоны прошли; требуются живые партии, физические устройства и LAN/HTTPS с участниками."
+    ]
+  },
   "beats": [
     "2026-11-27T00:38:40+03:00",
     "2026-11-27T00:39:04+03:00",
@@ -285,10 +344,47 @@ window.STATE =
     "2026-11-27T00:42:00+03:00",
     "2026-11-27T00:42:46+03:00",
     "2026-11-27T00:42:47+03:00",
-    "2026-11-27T00:42:48+03:00"
+    "2026-11-27T00:42:48+03:00",
+    "2026-11-27T00:43:13+03:00",
+    "2026-11-27T00:43:15+03:00",
+    "2026-11-27T00:43:21+03:00",
+    "2026-11-27T00:44:35+03:00",
+    "2026-11-27T00:47:57+03:00",
+    "2026-11-27T00:47:58+03:00",
+    "2026-11-27T00:47:59+03:00",
+    "2026-11-27T00:48:26+03:00",
+    "2026-11-27T00:48:27+03:00",
+    "2026-11-27T00:48:28+03:00",
+    "2026-11-27T00:51:59+03:00",
+    "2026-11-27T00:52:00+03:00",
+    "2026-11-27T00:54:07+03:00",
+    "2026-11-27T00:55:03+03:00",
+    "2026-11-27T01:03:54+03:00",
+    "2026-11-27T01:03:55+03:00",
+    "2026-11-27T01:08:25+03:00",
+    "2026-11-27T01:08:27+03:00",
+    "2026-11-27T01:08:38+03:00",
+    "2026-11-27T01:10:12+03:00",
+    "2026-11-27T01:15:52+03:00",
+    "2026-11-27T01:15:53+03:00",
+    "2026-11-27T01:15:54+03:00",
+    "2026-11-27T01:15:55+03:00",
+    "2026-11-27T01:17:55+03:00",
+    "2026-11-27T01:17:56+03:00",
+    "2026-11-27T01:24:37+03:00",
+    "2026-11-27T01:27:21+03:00",
+    "2026-11-27T01:27:42+03:00",
+    "2026-11-27T01:30:42+03:00",
+    "2026-11-27T01:34:04+03:00",
+    "2026-11-27T01:36:50+03:00",
+    "2026-11-27T01:36:51+03:00"
   ],
-  "rev": 12,
-  "waiting": null,
+  "rev": 49,
+  "waiting": {
+    "kind": "stop",
+    "since": "2026-11-27T01:36:51+03:00",
+    "note": "Рабочая локальная сборка проверена. Для полной приёмки нужны живые партии, физические устройства и художественная оценка."
+  },
   "waits": [],
   "log": [
     {
@@ -357,230 +453,537 @@ window.STATE =
       "g": "G3",
       "ok": true,
       "problems": 0
+    },
+    {
+      "t": "2026-11-27T00:43:15+03:00",
+      "k": "stage",
+      "id": "build",
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T00:43:21+03:00",
+      "k": "ticket",
+      "ids": [
+        "01"
+      ],
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T00:44:35+03:00",
+      "k": "gate",
+      "g": "G1",
+      "ok": true,
+      "open": 0,
+      "total": 43
+    },
+    {
+      "t": "2026-11-27T00:44:35+03:00",
+      "k": "stage",
+      "id": "spec",
+      "act": "done"
+    },
+    {
+      "t": "2026-11-27T00:47:57+03:00",
+      "k": "tickets",
+      "n": 6
+    },
+    {
+      "t": "2026-11-27T00:47:58+03:00",
+      "k": "gate",
+      "g": "G3",
+      "ok": true,
+      "problems": 0
+    },
+    {
+      "t": "2026-11-27T00:47:59+03:00",
+      "k": "ticket",
+      "ids": [
+        "04"
+      ],
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T00:48:26+03:00",
+      "k": "tickets",
+      "n": 6
+    },
+    {
+      "t": "2026-11-27T00:48:27+03:00",
+      "k": "gate",
+      "g": "G3",
+      "ok": true,
+      "problems": 0
+    },
+    {
+      "t": "2026-11-27T00:48:28+03:00",
+      "k": "ticket",
+      "ids": [
+        "02"
+      ],
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T00:51:59+03:00",
+      "k": "ticket",
+      "ids": [
+        "01"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T00:52:00+03:00",
+      "k": "ticket",
+      "ids": [
+        "03"
+      ],
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T00:54:07+03:00",
+      "k": "ticket",
+      "ids": [
+        "05"
+      ],
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T00:55:03+03:00",
+      "k": "ticket",
+      "ids": [
+        "04"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 2,
+        "failed": 1
+      }
+    },
+    {
+      "t": "2026-11-27T00:55:03+03:00",
+      "k": "add",
+      "key": "report",
+      "n": 1
+    },
+    {
+      "t": "2026-11-27T01:03:54+03:00",
+      "k": "ticket",
+      "ids": [
+        "02"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 16,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T01:03:55+03:00",
+      "k": "ticket",
+      "ids": [
+        "04"
+      ],
+      "act": "repair",
+      "note": "Вход и камеры должны пройти строгую геометрию; подготовлены четыре иллюстрации без рамок, исходные WebP сохраняются."
+    },
+    {
+      "t": "2026-11-27T01:08:25+03:00",
+      "k": "ticket",
+      "ids": [
+        "04"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 3,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T01:08:27+03:00",
+      "k": "add",
+      "key": "report",
+      "n": 1
+    },
+    {
+      "t": "2026-11-27T01:08:38+03:00",
+      "k": "ticket",
+      "ids": [
+        "01"
+      ],
+      "act": "review"
+    },
+    {
+      "t": "2026-11-27T01:10:12+03:00",
+      "k": "ticket",
+      "ids": [
+        "01"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T01:15:52+03:00",
+      "k": "ticket",
+      "ids": [
+        "03"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 8,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T01:15:53+03:00",
+      "k": "ticket",
+      "ids": [
+        "03"
+      ],
+      "act": "review"
+    },
+    {
+      "t": "2026-11-27T01:15:53+03:00",
+      "k": "tickets",
+      "n": 6
+    },
+    {
+      "t": "2026-11-27T01:15:54+03:00",
+      "k": "gate",
+      "g": "G3",
+      "ok": true,
+      "problems": 0
+    },
+    {
+      "t": "2026-11-27T01:15:55+03:00",
+      "k": "ticket",
+      "ids": [
+        "06"
+      ],
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T01:17:55+03:00",
+      "k": "ticket",
+      "ids": [
+        "03"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 8,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T01:17:56+03:00",
+      "k": "add",
+      "key": "concerns",
+      "n": 1
+    },
+    {
+      "t": "2026-11-27T01:24:37+03:00",
+      "k": "ticket",
+      "ids": [
+        "05"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 2,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T01:27:21+03:00",
+      "k": "ticket",
+      "ids": [
+        "06"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 3,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T01:27:21+03:00",
+      "k": "stage",
+      "id": "review",
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T01:27:42+03:00",
+      "k": "stage",
+      "id": "final",
+      "act": "start"
+    },
+    {
+      "t": "2026-11-27T01:30:42+03:00",
+      "k": "tests",
+      "passed": 25,
+      "failed": 0
+    },
+    {
+      "t": "2026-11-27T01:34:04+03:00",
+      "k": "ticket",
+      "ids": [
+        "06"
+      ],
+      "act": "done",
+      "tests": {
+        "passed": 4,
+        "failed": 0
+      }
+    },
+    {
+      "t": "2026-11-27T01:36:50+03:00",
+      "k": "gate",
+      "g": "G4",
+      "ok": false,
+      "checked": 6,
+      "matched": 4
+    },
+    {
+      "t": "2026-11-27T01:36:50+03:00",
+      "k": "tests",
+      "passed": 25,
+      "failed": 0
+    },
+    {
+      "t": "2026-11-27T01:36:51+03:00",
+      "k": "ask",
+      "kind": "stop",
+      "note": "Рабочая локальная сборка проверена. Для полной приёмки нужны живые партии, физические устройства и художественная оценка."
     }
   ],
   "reqList": [
     {
       "id": "R01",
       "text": "Обнови локальную копию репозитория из ветки main",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R02",
       "text": "Прочитай обновлённый AGENTS.md и docs/FULL_TECHNICAL_SPEC.md версии 2.0",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R03",
       "text": "Старое ТЗ больше не действует",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R04",
       "text": "Сохрани подготовленные локальные графические ассеты",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R05",
       "text": "Используй [$autopilot]",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R06",
       "text": "валидированный immutable Ruleset при создании матча",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R07",
       "text": "ID, версию и SHA-256 канонической сериализации профиля",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R08",
       "text": "16 геометрий (7 соединённых и 9 тупиковых) и 11 действий",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R09",
       "text": "Граф содержит вершины (tileInstanceId, componentIndex)",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R10",
       "text": "Обе жилы одновременно достижимы от входа",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R11",
       "text": "Истёк лимит ходов либо исчерпаны карты без достижения цели",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R12",
       "text": "Роли перераздаются каждый раунд",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R13",
       "text": "личный числовой счёт",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R14",
       "text": "подтверждения всех или тайм-аута 20 секунд",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R15",
       "text": "Невалидный ход не меняет revision, руки, счётчик или RNG",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R16",
       "text": "создание/вход в закрытую комнату, лобби, готовность",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R17",
       "text": "токен в HttpOnly/SameSite cookie",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R18",
       "text": "снимок JSONB с schemaVersion + журнал",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R19",
       "text": "Проверять одинаковый commandId/digest прежде stale revision",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R20",
       "text": "безопасный snapshot",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R21",
       "text": "своя роль, экземпляры руки, разведка, начисления/сумма",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R22",
       "text": "rate limit входа/чат/команд, schema и длины payload",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R23",
       "text": "чат/журнал",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R24",
       "text": "Вертикальный и горизонтальный телефон, компьютер",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R25",
       "text": "Выбор карты, разрешённые клетки, ghost, 180°, отмена/подтвердить",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R26",
       "text": "Управление мышью/тачем/клавиатурой",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R27",
       "text": "Общий счёт, все победители/ничья, повтор/лобби",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R28",
       "text": "Бот получает ровно PlayerView и legalMoves",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R29",
       "text": "Не использовать старые SVG, не включать SVG, archive, source PNG и макеты в web dist",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R30",
       "text": "вход — 4 связанных порта, раскрытая камера v0 — только W",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R31",
       "text": "целевой прогон 100 завершённых матчей каждого размера 3–10 (800)",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R32",
       "text": "Начальная загрузка ≤1,5 МБ и интерактивность ≤3 с",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R33",
       "text": "20 комнат по 10 участников",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R34",
       "text": "миграции, runbook",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R35",
       "text": "Закрытые партии 3, 5–6, 10 мест",
-      "status": "in-ticket"
+      "status": "placeholder",
+      "why": "Определено ТЗ 2.0"
     },
     {
       "id": "R36",
       "text": "отдельно хотя бы одна партия людей",
-      "status": "in-ticket"
+      "status": "placeholder",
+      "why": "Определено ТЗ 2.0"
     },
     {
       "id": "R37",
       "text": "Не реализовывать Telegram/MAX/VK, платежи",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R38",
       "text": "Публикацию и платный запуск не проводить",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R39",
       "text": "На каждом этапе конкретный commit, команды и результат тестов",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R40",
       "text": "сформировать missing-assets/ADR",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R41",
       "text": "Срок закрытой комнаты и сессий документировать",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R42",
       "text": "Не допускать вечного ожидания",
-      "status": "in-ticket"
+      "status": "done"
     },
     {
       "id": "R43",
       "text": "скриншоты реально собранных полей при DPR 1/2/3",
-      "status": "in-ticket"
+      "status": "done"
     }
   ],
   "gates": {
     "G1": {
-      "ok": false,
-      "at": "2026-11-27T00:39:45+03:00",
-      "open": 43,
+      "ok": true,
+      "at": "2026-11-27T00:44:35+03:00",
+      "open": 0,
       "total": 43
     },
     "G2": {
@@ -592,9 +995,19 @@ window.STATE =
     },
     "G3": {
       "ok": true,
-      "at": "2026-11-27T00:42:48+03:00",
+      "at": "2026-11-27T01:15:54+03:00",
       "problems": 0
+    },
+    "G4": {
+      "ok": false,
+      "at": "2026-11-27T01:36:50+03:00",
+      "checked": 6,
+      "matched": 4
     }
   },
-  "result": null
+  "result": null,
+  "report": [
+    "E4: пакет и стыки 16 туннелей проверены; вход и открытые камеры дали 35 расхождений геометрии и требуют исправленных экспортов. Снимки и проверка dist проводятся с реальным UI.",
+    "E4: отдельные восемь WebP входа/камер прошли проверку портов и связности. Оригинальные 107 файлов сохранены; художественная приёмка и снимки работающего поля проверяются отдельно."
+  ]
 }
