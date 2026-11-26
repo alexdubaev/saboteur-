@@ -1,0 +1,14 @@
+.autopilot/serve.*
+
+# Local tooling and credentials
+.env
+.env.*
+!.env.example
+node_modules/
+__pycache__/
+*.pyc
+dist/
+coverage/
+test-results/
+playwright-report/
+*.local.log
