@@ -6,6 +6,17 @@ const screens = [
   { label: "landscape", width: 750, height: 278 },
 ];
 
+function seedRandom(initialSeed: number) {
+  let seed = initialSeed;
+  const randomValues = crypto.getRandomValues.bind(crypto);
+  crypto.getRandomValues = (values) => {
+    if (!(values instanceof Uint32Array) || values.length !== 1) return randomValues(values);
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    values[0] = seed;
+    return values;
+  };
+}
+
 test.describe("тестовая игра с ботами", () => {
   test.skip(!sitesUrl, "SITES_PREVIEW_URL нужен для отдельной статической сборки");
 
@@ -14,15 +25,8 @@ test.describe("тестовая игра с ботами", () => {
       const context = await browser.newContext({ ...devices["iPhone 13"], viewport: { width, height } });
       await context.addInitScript(() => {
         Object.defineProperty(document, "fullscreenEnabled", { value: false, configurable: true });
-        let seed = 41;
-        const randomValues = crypto.getRandomValues.bind(crypto);
-        crypto.getRandomValues = (values) => {
-          if (!(values instanceof Uint32Array) || values.length !== 1) return randomValues(values);
-          seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-          values[0] = seed;
-          return values;
-        };
       });
+      await context.addInitScript(seedRandom, 41);
       const page = await context.newPage();
       const networkCalls: string[] = [];
       const errors: string[] = [];
@@ -156,6 +160,9 @@ test.describe("тестовая игра с ботами", () => {
         await expect(tunnel).toBeAttached();
         await expect(page.getByRole("heading", { name: "Ваш ход", exact: true })).toBeVisible();
         await expect.poll(camera).toEqual(fixedView);
+        const damage = board.getByRole("status");
+        await expect(damage.getByText("Кирка", { exact: true })).toBeInViewport();
+        await expect(damage.getByText("Туннели заблокированы")).toBeInViewport();
         const ownEntry = journal.getByRole("listitem").filter({ hasText: "Старатель проложил туннель" }).first();
         const ownColor = await tunnel.locator("..").evaluate((tile) => getComputedStyle(tile).color);
         await expect(ownEntry.getByText("Старатель", { exact: true })).toHaveCSS("color", ownColor);
@@ -194,4 +201,46 @@ test.describe("тестовая игра с ботами", () => {
       }
     });
   }
+
+  test("поломка кирки отключает строительство и снимается после ремонта", async ({ browser }) => {
+    const context = await browser.newContext({ ...devices["iPhone 13"], viewport: { width: 750, height: 278 } });
+    try {
+      await context.addInitScript(seedRandom, 22);
+      const page = await context.newPage();
+      await page.goto(sitesUrl!);
+      await page.getByRole("button", { name: "Играть с двумя ботами" }).tap();
+      await page.getByRole("button", { name: "Роль понятна" }).tap();
+      const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
+      await expect(turn).toBeVisible();
+      const confirm = page.getByRole("button", { name: "Подтвердить ход" });
+      const board = page.getByRole("region", { name: "Карта шахты" });
+      const hand = page.getByRole("region", { name: "Ваша рука" });
+      const damage = board.getByRole("status");
+      await expect(damage).toHaveCount(0);
+      await hand.getByRole("button", { name: "Раздельные тупики N–E", exact: true }).tap();
+      await board.getByRole("button", { name: "Клетка 0, 1", exact: true }).tap();
+      await confirm.tap();
+      await expect(turn).toBeVisible();
+      await expect(damage).toContainText("Туннели заблокированы");
+      await expect(damage.getByText("Кирка", { exact: true })).toBeVisible();
+      const blockedCard = hand.getByRole("button", { name: "Раздельные тупики N–W", exact: true });
+      await expect(blockedCard).toHaveAccessibleDescription(/Туннели заблокированы.*Кирка/u);
+      await blockedCard.tap();
+      await expect(board.getByRole("button", { name: /^Клетка / })).toHaveCount(0);
+      await expect(hand.getByRole("button", { name: "Повернуть на 180°" })).toBeDisabled();
+      await hand.getByRole("button", { name: "Сбросить в закрытую" }).tap();
+      await confirm.tap();
+      await expect(turn).toBeVisible();
+      await expect(damage.getByText("Кирка", { exact: true })).toBeVisible();
+      await hand.getByRole("button", { name: "Ремонт кирки", exact: true }).tap();
+      await hand.getByRole("combobox", { name: "Цель карты" }).selectOption({ label: "Старатель · Кирка" });
+      await confirm.tap();
+      await expect(turn).toBeVisible();
+      await expect(damage).toHaveCount(0);
+      await hand.getByRole("button", { name: "Четыре раздельных тупика", exact: true }).tap();
+      await expect(board.getByRole("button", { name: "Клетка 0, -1", exact: true })).toBeAttached();
+    } finally {
+      await context.close();
+    }
+  });
 });

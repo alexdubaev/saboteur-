@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import type { CardCommand, Position, PublicBoardTile } from "../../../packages/game-core/src/types.js";
 import { boardArt, junctionArt } from "./art.js";
 import { copy } from "./text.js";
@@ -18,6 +18,7 @@ type BoardProps = {
   last: Position | null;
   choose: (move: CardCommand) => void;
   phone?: boolean;
+  status?: ReactNode;
 };
 
 const tileWidth = 72;
@@ -46,7 +47,7 @@ function TileImage({ id, rotation, large, name }: { id: string; rotation: number
     : <span className="tile-unavailable" aria-label={name}>?</span>;
 }
 
-export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false }: BoardProps) {
+export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false, status }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Position>());
   const start = useRef<Position | null>(null);
@@ -200,7 +201,8 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
   const goals = tiles.filter((tile) => tile.kind === "goal");
 
   return (
-    <section className="mine" aria-label={copy.mine}>
+    <section className={status ? "mine mine-with-status" : "mine"} aria-label={copy.mine}>
+      {status}
       <div
         ref={viewport} className={`board-viewport${panning ? " is-panning" : ""}`} tabIndex={0} role="region"
         aria-label="Поле шахты. Стрелки перемещают поле, плюс и минус меняют масштаб, ноль показывает всё поле."
@@ -242,7 +244,7 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
           {last && !byCell.has(cell(last)) && <div className="board-tile last-tile collapsed-tile" style={{ left: last.x * tileWidth, top: last.y * tileHeight }} aria-label="Последний обвал" />}
         </div>
       </div>
-      <div className="board-title"><Icon name="lantern" /><h2>{copy.mine}</h2></div>
+      {!status && <div className="board-title"><Icon name="lantern" /><h2>{copy.mine}</h2></div>}
       <div className="board-controls" aria-label="Управление картой">
         <button className="icon-button" onClick={() => scaleBy(1.22)} aria-label="Приблизить">{phone ? "+" : <Icon name="zoom-in" />}</button>
         <button className="icon-button" onClick={() => scaleBy(1 / 1.22)} aria-label="Отдалить">{phone ? "−" : <Icon name="zoom-out" />}</button>

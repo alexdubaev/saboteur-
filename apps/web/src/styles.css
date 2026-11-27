@@ -511,3 +511,25 @@ input::placeholder { color: #ad9dbe; }
   .solo-app { --browser-top: 6px; --browser-bottom: 6px; }
 }
 :fullscreen .solo-app { --browser-top: 6px; --browser-bottom: 6px; }
+
+.mine.mine-with-status { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.mine.mine-with-status > .board-viewport { position: relative; inset: auto; min-height: 0; }
+.mine.mine-with-status > .board-controls {
+  position: static; padding: 3px 4px; border-top: 1px solid var(--line);
+}
+.tool-status {
+  display: grid; gap: 3px; padding: 5px 7px; color: #f4d7dc; background: #381e2c;
+  border-bottom: 1px solid #9e5d6c; font-size: .72rem; line-height: 1.35;
+}
+.tool-status-heading, .tool-status ul {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 6px;
+}
+.tool-status strong { color: var(--danger); font-size: .8rem; }
+.tool-status ul { list-style: none; margin: 0; padding: 0; }
+.tool-status li {
+  display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px;
+  border: 1px solid #ab6475; border-radius: 4px; color: #ffe5e8; background: #522635;
+}
+.tool-status .icon { width: 13px; height: 13px; }
+.hand-card.tunnel-blocked img { opacity: .56; }
+.hand-card.tunnel-blocked:not(.selected-card) { border-color: #9e5d6c; background: #381e2c; }

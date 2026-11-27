@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import type { CardCommand, PlayerView, Position, Rotation } from "../../../packages/game-core/src/types.js";
 import type { RoomSnapshot } from "../../../packages/protocol/src/index.js";
 import { cardArt } from "./art.js";
@@ -191,6 +191,9 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   const [modal, setModal] = useState<"role" | "leave" | ScoutModal | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const selected = selection?.revision === match.revision ? selection : null;
+  const toolStatusId = useId();
+  const damagedTools = match.seats.find((seat) => seat.seatId === room.mySeatId)?.brokenTools ?? [];
+  const tunnelsBlocked = damagedTools.length > 0;
   const me = match.turnSeatId === room.mySeatId && match.phase === "TURN";
   const handCard = match.self.hand.find((card) => card.instanceId === selected?.instanceId);
   const moves = match.moves.filter((move): move is CardCommand => "instanceId" in move && move.instanceId === selected?.instanceId);
@@ -203,7 +206,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
     if (selected && !pending) setSelection({ ...selected, staged: move });
   };
   const rotate = () => {
-    if (!selected || !tunnel || pending) return;
+    if (!selected || !tunnel || tunnelsBlocked || pending) return;
     const rotation = selected.rotation === 0 ? 180 : 0;
     const staged = selected.staged;
     const next = staged?.type === "PLAY_TUNNEL"
@@ -234,6 +237,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   const staged = selected?.staged ?? null;
   const hint = !selected ? (me ? "Выберите карту для хода." : "Дождитесь своего хода.")
     : !me ? "Карту можно сыграть в свой ход."
+    : tunnel && tunnelsBlocked ? "Почините инструмент, чтобы строить. Эту карту можно сбросить."
     : seats.length ? "Выберите участника и инструмент, если доступен выбор."
     : boardMoves.length ? "Выберите подсвеченную клетку на карте."
     : tunnel && moves.some((move) => move.type === "PLAY_TUNNEL") ? "Поверните карту, чтобы увидеть доступные клетки."
@@ -250,7 +254,9 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
     const label = cardLabels[card.typeId] ?? "Карта";
     const caption = phone ? shortCardLabels[card.typeId.split("-", 2)[1]] ?? label : label;
     const active = card.instanceId === selected?.instanceId;
-    return <button key={card.instanceId} className={`hand-card${active ? " selected-card" : ""}`} aria-label={label} aria-pressed={active} disabled={pending} title={label}
+    const blocked = tunnelsBlocked && card.typeId.startsWith("tunnel-");
+    return <button key={card.instanceId} className={`hand-card${blocked ? " tunnel-blocked" : ""}${active ? " selected-card" : ""}`}
+      aria-label={label} aria-describedby={blocked ? toolStatusId : undefined} aria-pressed={active} disabled={pending} title={label}
       onClick={() => setSelection(active ? null : { revision: match.revision, instanceId: card.instanceId, rotation: 0, staged: null })}>
       <img src={cardArt(card.assetId)} width={256} height={384} alt="" draggable={false}
         style={{ transform: active && tunnel ? `rotate(${selected.rotation}deg)` : undefined }} />
@@ -266,7 +272,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       {seats.map((move) => <button className="button secondary" key={JSON.stringify(move)} aria-pressed={JSON.stringify(staged) === JSON.stringify(move)} disabled={pending} onClick={() => choose(move)}>{messageForMove(move, snapshot)}</button>)}
     </div>}
     <div className="move-buttons">
-      {(phone || tunnel) && <button className={phone ? "button secondary" : "icon-button"} aria-label="Повернуть на 180°" disabled={pending || !me || !tunnel} onClick={rotate}>{phone ? "Повернуть" : <Icon name="rotate" />}</button>}
+      {(phone || tunnel) && <button className={phone ? "button secondary" : "icon-button"} aria-label="Повернуть на 180°" disabled={pending || !me || !tunnel || tunnelsBlocked} onClick={rotate}>{phone ? "Повернуть" : <Icon name="rotate" />}</button>}
       {(phone || discard) && <button className="button secondary" aria-label={actions.DISCARD} disabled={pending || !discard} onClick={() => { if (discard) choose(discard); }}>{phone ? "Сбросить" : actions.DISCARD}</button>}
       <button className={phone ? "button secondary" : "icon-button"} aria-label={copy.cancel} disabled={pending || !selected} onClick={() => setSelection(null)}>{phone ? "Отмена" : <Icon name="close" />}</button>
       {(phone || staged) && confirmButton}
@@ -317,7 +323,15 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       <Notice text={error} />
       <div className="table-layout">
         <Board key={match.matchId} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose}
-          phone={phone} />
+          phone={phone} status={tunnelsBlocked ? <div className="tool-status" id={toolStatusId} role="status">
+            <div className="tool-status-heading">
+              <strong>Туннели заблокированы</strong>
+              <ul>
+                {damagedTools.map((tool) => <li key={tool}><Icon name={tool} />{tools[tool]}</li>)}
+              </ul>
+            </div>
+            <span>В свой ход можно сыграть действие или сбросить карту.</span>
+          </div> : undefined} />
         {!phone && <aside className="table-side">
           <Crew snapshot={snapshot} authors={authors} />
           {send && <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} authors={authors} compact /></div>}
