@@ -72,6 +72,7 @@ function gameArt(): Plugin {
 
 function sitesWebApp(): Plugin {
   const iconSizes = [192, 512];
+  const iconTitle = "За золотом";
   return {
     name: "sites-web-app",
     transformIndexHtml: {
@@ -79,6 +80,7 @@ function sitesWebApp(): Plugin {
       handler: () => [
         { tag: "link", attrs: { rel: "manifest", href: "/manifest.webmanifest" } },
         { tag: "link", attrs: { rel: "apple-touch-icon", href: "/assets/branding/app-icon-192.png" } },
+        { tag: "meta", attrs: { name: "apple-mobile-web-app-title", content: iconTitle } },
       ],
     },
     async generateBundle() {
@@ -91,7 +93,7 @@ function sitesWebApp(): Plugin {
         type: "asset",
         fileName: "manifest.webmanifest",
         source: JSON.stringify({
-          name: "Золото и предатели", short_name: "Золото и предатели", lang: "ru",
+          name: "Золото и предатели", short_name: iconTitle, lang: "ru",
           start_url: "/", scope: "/", display: "standalone",
           background_color: "#100e20", theme_color: "#100e20", icons,
         }),
