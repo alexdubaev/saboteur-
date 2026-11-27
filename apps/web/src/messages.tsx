@@ -1,10 +1,26 @@
 import { useState, type FormEvent } from "react";
-import type { RoomSnapshot } from "../../../packages/protocol/src/index.js";
+import type { Tool } from "../../../packages/game-core/src/types.js";
+import type { JournalEntry, RoomSnapshot } from "../../../packages/protocol/src/index.js";
 import type { TunnelAuthor } from "./board.js";
 import { copy, journalLabels } from "./text.js";
 import { Icon } from "./ui.js";
 
 const clock = new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" });
+const toolObjects = { pickaxe: "кирку", lantern: "фонарь", cart: "вагонетку" } satisfies Record<Tool, string>;
+
+function journalLabel(entry: JournalEntry, names: ReadonlyMap<string, string>, mySeatId: string): string {
+  if (entry.type !== "PLAY_BREAK" && entry.type !== "PLAY_REPAIR") return journalLabels[entry.type];
+
+  const verb = entry.type === "PLAY_BREAK" ? "сломал" : "починил";
+  const tool = entry.data?.tool;
+  const instrument = typeof tool === "string" && Object.hasOwn(toolObjects, tool) ? toolObjects[tool as Tool] : "инструмент";
+  const target = entry.data?.targetSeatId;
+  if (typeof target !== "string") return `${verb} ${instrument}`;
+  if (target === entry.actorSeatId) return `${verb} себе ${instrument}`;
+  if (target === mySeatId) return `${verb} вам ${instrument}`;
+  const recipient = names.get(target);
+  return recipient ? `${verb} ${instrument} игроку «${recipient}»` : `${verb} ${instrument}`;
+}
 
 export function Messages({ snapshot, send, authors, compact = false, split = false, local = false }: { snapshot: RoomSnapshot; send: (message: string) => Promise<boolean>; authors?: ReadonlyMap<string, TunnelAuthor>; compact?: boolean; split?: boolean; local?: boolean }) {
   const [tab, setTab] = useState<"chat" | "journal">("chat");
@@ -38,7 +54,7 @@ export function Messages({ snapshot, send, authors, compact = false, split = fal
   const journal = (
         <ol className="message-list" aria-label="Ходы и события" aria-live="polite">
           {[...snapshot.journal].reverse().filter((entry) => Object.hasOwn(journalLabels, entry.type)).map((entry) => {
-            const label = journalLabels[entry.type];
+            const label = journalLabel(entry, names, snapshot.room.mySeatId);
             const author = entry.actorSeatId ? authors?.get(entry.actorSeatId) : undefined;
             const name = author?.name ?? (entry.actorSeatId ? names.get(entry.actorSeatId) : undefined);
             return <li key={entry.sequence}><div><span>

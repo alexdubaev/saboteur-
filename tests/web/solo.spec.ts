@@ -54,9 +54,10 @@ test.describe("тестовая игра с ботами", () => {
         await expect(page.getByRole("heading", { name: "Ваш ход", exact: true })).toBeVisible();
         const screenMode = page.getByRole("button", { name: "Во весь экран", exact: true });
         const roleButton = page.locator(".phone-role");
-        const checkHeader = async (wide: boolean) => {
+        const checkHeader = async (showRoleName: boolean) => {
           await expect(screenMode).toBeInViewport({ ratio: 0.98 });
-          await expect(roleButton).toHaveAccessibleName(wide ? roleName : "Роль");
+          await expect(roleButton).toBeInViewport({ ratio: 0.98 });
+          await expect(roleButton).toHaveAccessibleName(showRoleName ? roleName : "Роль");
           const stats = page.getByLabel("Счётчики партии");
           for (const name of ["Раунд", "Ход", "Колода", "Золото"]) {
             await expect(stats.getByText(name, { exact: true })).toBeInViewport();
@@ -70,7 +71,7 @@ test.describe("тестовая игра с ботами", () => {
             await expect(player.getByLabel(/^Карт в руке:/)).toBeInViewport();
           }
         };
-        await checkHeader(label === "landscape");
+        await checkHeader(true);
         await roleButton.tap();
         await expect(role.getByText(roleName, { exact: true })).toBeVisible();
         await role.getByRole("button", { name: "Закрыть" }).tap();
@@ -163,6 +164,7 @@ test.describe("тестовая игра с ботами", () => {
         const damage = board.getByRole("status");
         await expect(damage.getByText("Кирка", { exact: true })).toBeInViewport();
         await expect(damage.getByText("Туннели заблокированы")).toBeInViewport();
+        await expect(journal.getByText("Бот 2 сломал вам кирку")).toBeAttached();
         const ownEntry = journal.getByRole("listitem").filter({ hasText: "Старатель проложил туннель" }).first();
         const ownColor = await tunnel.locator("..").evaluate((tile) => getComputedStyle(tile).color);
         await expect(ownEntry.getByText("Старатель", { exact: true })).toHaveCSS("color", ownColor);
@@ -184,9 +186,14 @@ test.describe("тестовая игра с ботами", () => {
           await expect(sent).toBeInViewport({ ratio: 0.98 });
           await expect(cards.last()).toBeInViewport({ ratio: 0.98 });
           expect(await viewportFits()).toBe(true);
+          await page.setViewportSize({ width: 360, height });
+          await checkHeader(true);
+          expect(await viewportFits()).toBe(true);
+          await page.setViewportSize({ width: 320, height });
+          await checkHeader(false);
           await page.setViewportSize({ width, height });
           await expect(match).toHaveAttribute("data-match", matchId!);
-          await checkHeader(false);
+          await checkHeader(true);
         }
         await page.screenshot({ path: testInfo.outputPath(`${label}.png`), scale: "css" });
         expect(await viewportFits()).toBe(true);
@@ -215,6 +222,7 @@ test.describe("тестовая игра с ботами", () => {
       const confirm = page.getByRole("button", { name: "Подтвердить ход" });
       const board = page.getByRole("region", { name: "Карта шахты" });
       const hand = page.getByRole("region", { name: "Ваша рука" });
+      const journal = page.getByRole("region", { name: "Журнал", exact: true });
       const damage = board.getByRole("status");
       await expect(damage).toHaveCount(0);
       await hand.getByRole("button", { name: "Раздельные тупики N–E", exact: true }).tap();
@@ -237,8 +245,13 @@ test.describe("тестовая игра с ботами", () => {
       await confirm.tap();
       await expect(turn).toBeVisible();
       await expect(damage).toHaveCount(0);
+      await expect(journal.getByText("Старатель починил себе кирку")).toBeAttached();
       await hand.getByRole("button", { name: "Четыре раздельных тупика", exact: true }).tap();
       await expect(board.getByRole("button", { name: "Клетка 0, -1", exact: true })).toBeAttached();
+      await hand.getByRole("button", { name: "Сломанная кирка", exact: true }).tap();
+      await hand.getByRole("combobox", { name: "Цель карты" }).selectOption({ label: "Бот 3" });
+      await confirm.tap();
+      await expect(journal.getByText("Старатель сломал кирку игроку «Бот 3»")).toBeAttached();
     } finally {
       await context.close();
     }

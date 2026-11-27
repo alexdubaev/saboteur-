@@ -502,7 +502,7 @@ input::placeholder { color: #ad9dbe; }
   }
 }
 
-@media (min-width: 720px) {
+@media (min-width: 360px) {
   .phone-role-label { display: none; }
   .phone-role-name { display: inline; color: var(--gold); }
 }
