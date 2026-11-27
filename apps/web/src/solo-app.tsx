@@ -57,7 +57,7 @@ export function SoloApp() {
     return () => window.clearTimeout(timeout);
   }, [active]);
 
-  return <>
+  return <div className="solo-app">
     <header className="site-header">
       <div className="site-name"><Icon name="lantern" />{copy.title}</div>
       <button className="button secondary header-rules" onClick={() => setRulesOpen(true)}><Icon name="info" />{copy.rules}</button>
@@ -83,5 +83,5 @@ export function SoloApp() {
         </figure>
       </main>}
     {rulesOpen && <Rules close={() => setRulesOpen(false)} />}
-  </>;
+  </div>;
 }

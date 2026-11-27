@@ -22,7 +22,7 @@ const tileWidth = 72;
 const tileHeight = 108;
 const cell = (position: Position) => position.x + "," + position.y;
 const same = (a: Position | null, b: Position) => a?.x === b.x && a?.y === b.y;
-const clamped = (scale: number) => Math.max(.33, Math.min(2.6, scale));
+const clamped = (scale: number) => Math.max(.22, Math.min(2.6, scale));
 const delta = (a: Position, b: Position) => Math.hypot(a.x - b.x, a.y - b.y);
 const center = (a: Position, b: Position) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 const zoom = (view: Camera, scale: number, from: Position, to = from): Camera => {
