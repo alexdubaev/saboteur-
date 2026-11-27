@@ -13,6 +13,10 @@ type Selection = { revision: number; instanceId: string; rotation: Rotation; sta
 type ScoutModal = { roundNo: number; goalSlotId?: string };
 const seatColors = ["#62d9ff", "#fbb364", "#a7e86a", "#f890cc", "#baa0ff", "#52e2bb", "#f7e26d", "#ff8282", "#91aaff", "#eee2cf"];
 const phoneLayout = "(max-width: 620px), (orientation: landscape) and (max-height: 520px)";
+const shortCardLabels: Record<string, string> = {
+  straight: "Прямая", turn: "Поворот", tee: "Развилка", cross: "Крест",
+  dead: "Тупик", separated: "Тупики", break: "Поломка", repair: "Ремонт",
+};
 
 function subscribeToPhoneLayout(update: () => void) {
   const query = window.matchMedia(phoneLayout);
@@ -178,13 +182,13 @@ function lastBoardMove(snapshot: MatchSnapshot): Position | null {
   return null;
 }
 
-export function Game({ snapshot, pending, error, run, send, lobby, exit, openRules }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void }) {
+export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; sendLocalMessage?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void }) {
   const { match, room } = snapshot;
   const solo = !send;
   const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches) && solo;
   const leaveLabel = solo ? "Выйти из партии" : copy.leave;
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [modal, setModal] = useState<"role" | "leave" | "cards" | "details" | ScoutModal | null>(null);
+  const [modal, setModal] = useState<"role" | "leave" | "details" | ScoutModal | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const selected = selection?.revision === match.revision ? selection : null;
   const me = match.turnSeatId === room.mySeatId && match.phase === "TURN";
@@ -234,6 +238,7 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit, openRul
     : tunnel && moves.some((move) => move.type === "PLAY_TUNNEL") ? "Поверните карту, чтобы увидеть доступные клетки."
     : "Для карты нет подходящих целей. Её можно сбросить в закрытую.";
   const moveHint = staged ? messageForMove(staged, snapshot) : hint;
+  const phoneTargets = [...seats, ...boardMoves.filter((move) => move.type === "PLAY_SCOUT")];
   const counts = <ul className="match-counts">
     <li title={profile.roleGoals.prospector}><Icon name="gold" /><span>{profile.progress} <b>{linkedOre}/{match.requiredOre}</b></span></li>
     <li><Icon name="pickaxe" /><span>Ходы <b>{match.turnNumber}{match.maxTurns !== null ? `/${match.maxTurns}` : ""}</b></span></li>
@@ -242,31 +247,28 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit, openRul
   </ul>;
   const cards = () => match.self.hand.map((card) => {
     const label = cardLabels[card.typeId] ?? "Карта";
+    const caption = phone ? shortCardLabels[card.typeId.split("-", 2)[1]] ?? label : label;
     const active = card.instanceId === selected?.instanceId;
-    return <button key={card.instanceId} className={`hand-card${active ? " selected-card" : ""}`} aria-label={label} aria-pressed={active} disabled={pending}
-      onClick={() => {
-        setSelection(active && !phone ? null : { revision: match.revision, instanceId: card.instanceId, rotation: active ? selected.rotation : 0, staged: null });
-        if (phone) setModal(null);
-      }}>
+    return <button key={card.instanceId} className={`hand-card${active ? " selected-card" : ""}`} aria-label={label} aria-pressed={active} disabled={pending} title={label}
+      onClick={() => setSelection(active ? null : { revision: match.revision, instanceId: card.instanceId, rotation: 0, staged: null })}>
       <img src={cardArt(card.assetId)} width={256} height={384} alt="" draggable={false}
         style={{ transform: active && tunnel ? `rotate(${selected.rotation}deg)` : undefined }} />
-      <span>{label}</span>
+      <span>{caption}</span>
     </button>;
   });
-  const confirmButton = staged && <button className="button primary" disabled={pending} onClick={() => void confirm()}><Icon name="confirm" />{pending ? "Ожидаем подтверждения…" : copy.confirm}</button>;
-  const actionsPanel = selected && <div className="hand-actions" aria-label="Подготовка хода">
-    {phone && confirmButton}
-    {(seats.length > 0 || (phone && boardMoves.some((move) => move.type === "PLAY_SCOUT"))) && <div className="seat-targets" aria-label="Доступные цели">
-      {seats.length > 0 && <strong>{actions[seats[0].type]}</strong>}
+  const confirmButton = <button className="button primary" aria-label={copy.confirm} disabled={pending || !staged} onClick={() => void confirm()}>
+    {!phone && <Icon name="confirm" />}{pending ? "Ожидаем…" : phone ? "Готово" : copy.confirm}
+  </button>;
+  const actionsPanel = (phone || selected) && <div className="hand-actions" aria-label="Подготовка хода">
+    {!phone && seats.length > 0 && <div className="seat-targets" aria-label="Доступные цели">
+      <strong>{actions[seats[0].type]}</strong>
       {seats.map((move) => <button className="button secondary" key={JSON.stringify(move)} aria-pressed={JSON.stringify(staged) === JSON.stringify(move)} disabled={pending} onClick={() => choose(move)}>{messageForMove(move, snapshot)}</button>)}
-      {phone && boardMoves.flatMap((move) => move.type === "PLAY_SCOUT"
-        ? <button className="button secondary" key={move.goalSlotId} aria-pressed={staged?.type === "PLAY_SCOUT" && staged.goalSlotId === move.goalSlotId} onClick={() => choose(move)}>Камера {move.goalSlotId.replace(/^g/, "")}</button> : [])}
     </div>}
     <div className="move-buttons">
-      {tunnel && <button className="icon-button" aria-label="Повернуть на 180°" disabled={pending || !me} onClick={rotate}><Icon name="rotate" /></button>}
-      {discard && <button className="button secondary" aria-label={actions.DISCARD} disabled={pending} onClick={() => choose(discard)}>{phone ? "Сбросить" : actions.DISCARD}</button>}
-      <button className="icon-button" aria-label={copy.cancel} disabled={pending} onClick={() => setSelection(null)}><Icon name="close" /></button>
-      {!phone && confirmButton}
+      {(phone || tunnel) && <button className={phone ? "button secondary" : "icon-button"} aria-label="Повернуть на 180°" disabled={pending || !me || !tunnel} onClick={rotate}>{phone ? "Повернуть" : <Icon name="rotate" />}</button>}
+      {(phone || discard) && <button className="button secondary" aria-label={actions.DISCARD} disabled={pending || !discard} onClick={() => { if (discard) choose(discard); }}>{phone ? "Сбросить" : actions.DISCARD}</button>}
+      <button className={phone ? "button secondary" : "icon-button"} aria-label={copy.cancel} disabled={pending || !selected} onClick={() => setSelection(null)}>{phone ? "Отмена" : <Icon name="close" />}</button>
+      {(phone || staged) && confirmButton}
     </div>
   </div>;
 
@@ -277,7 +279,22 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit, openRul
         if (event.key === "Escape" && selected) setSelection(null);
         if (event.key.toLowerCase() === "r" && selected && tunnel) rotate();
       }}>
-      {!phone && <header className="match-header">
+      {phone ? <header className="phone-table-header">
+        <div className="phone-turn">
+          <h1 aria-live="polite">{actorLabel}</h1>
+          <span title={`Раунд ${match.roundNo} из ${match.rounds}`}>{match.roundNo}/{match.rounds}</span>
+        </div>
+        <span className="phone-score" aria-label={`${profile.progress} ${linkedOre}/${match.requiredOre} · колода ${match.deckCount}`}>
+          <Icon name="gold" />{linkedOre}/{match.requiredOre}<Icon name="cards" />{match.deckCount}
+        </span>
+        <div className="phone-utilities">
+          <button className="button secondary" aria-label={copy.role} onClick={() => setModal("role")}>Роль</button>
+          {match.self.scoutResults.length > 0 && <button className="icon-button" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" /></button>}
+          {openRules && <button className="icon-button" aria-label={copy.rules} onClick={openRules}><Icon name="info" /></button>}
+          <button className="button secondary" onClick={() => setModal("details")}>Партия</button>
+          <button className="icon-button" aria-label={leaveLabel} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
+        </div>
+      </header> : <header className="match-header">
         <div className="match-progress">
           <span className="eyebrow">Раунд {match.roundNo} из {match.rounds}</span>
           <h1 aria-live="polite">{actorLabel}</h1>
@@ -297,28 +314,31 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit, openRul
         {!phone && <aside className="table-side">
           <Crew snapshot={snapshot} authors={authors} />
           {send && <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} compact /></div>}
+          {sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} split local />}
         </aside>}
         <section className="panel hand" aria-label="Ваша рука">
           {phone ? <>
-            <div className="phone-turn">
-              <h1 aria-live="polite">{actorLabel}</h1>
-              <span>Раунд {match.roundNo}/{match.rounds}</span>
+            <div className="phone-hand-header" aria-live="polite" title={moveHint}>
+              <h2>Рука <span>{match.self.hand.length}</span></h2>
+              <span>{handCard ? cardLabels[handCard.typeId] ?? "Карта" : me ? "Выберите карту" : "Ход соперника"}</span>
+              {phoneTargets.length > 0 && <select aria-label="Цель карты" disabled={pending}
+                value={phoneTargets.findIndex((move) => JSON.stringify(move) === JSON.stringify(staged))}
+                onChange={(event) => { const target = phoneTargets[Number(event.currentTarget.value)]; if (target) choose(target); }}>
+                <option value={-1} disabled>Выбрать цель</option>
+                {phoneTargets.map((move, index) => <option value={index} key={JSON.stringify(move)}>
+                  {move.type === "PLAY_SCOUT" ? `Камера ${move.goalSlotId.replace(/^g/, "")}` : messageForMove(move, snapshot)}
+                </option>)}
+              </select>}
             </div>
-            <div className="phone-menu">
-              <button className={`button ${me && !selected ? "primary" : "secondary"}`} onClick={() => setModal("cards")} disabled={!match.self.hand.length}>Карты · {match.self.hand.length}</button>
-              <button className="button secondary" onClick={() => setModal("details")}>Партия</button>
-            </div>
-            {handCard && <div className="phone-card-name" aria-live="polite"><strong>{cardLabels[handCard.typeId] ?? "Карта"}</strong><span>{moveHint}</span></div>}
+            <div className="hand-cards">{cards()}</div>
             {actionsPanel}
           </> : <>
             <div className="hand-heading"><div><p className="eyebrow">Личные карты</p><h2>Ваша рука <span>{match.self.hand.length}</span></h2></div><p className="soft-note" aria-live="polite">{moveHint}</p></div>
             <div className="hand-body"><div className="hand-cards">{cards()}</div>{actionsPanel}</div>
           </>}
         </section>
+        {phone && sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} split local />}
       </div>
-      {phone && !rolePending && !summary && !final && modal === "cards" && <Dialog title="Ваша рука" className="phone-picker" close={() => setModal(null)}>
-        <div className="phone-picker-grid">{cards()}</div>
-      </Dialog>}
       {phone && !rolePending && !summary && !final && modal === "details" && <Dialog title="Партия" close={() => setModal(null)}>
         {counts}
         <Crew snapshot={snapshot} authors={authors} />

@@ -6,7 +6,7 @@ export function Icon({ name, className = "" }: { name: string; className?: strin
   return <img className={`icon ${className}`} src={iconArt(name)} alt="" aria-hidden="true" width={24} height={24} draggable={false} />;
 }
 
-export function Dialog({ title, children, close, className }: { title: string; children: ReactNode; close?: () => void; className?: string }) {
+export function Dialog({ title, children, close }: { title: string; children: ReactNode; close?: () => void }) {
   const element = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = element.current;
@@ -15,7 +15,7 @@ export function Dialog({ title, children, close, className }: { title: string; c
   }, []);
 
   return (
-    <dialog ref={element} className={className ? `dialog ${className}` : "dialog"} aria-label={title} onCancel={(event) => {
+    <dialog ref={element} className="dialog" aria-label={title} onCancel={(event) => {
       event.preventDefault();
       close?.();
     }}>

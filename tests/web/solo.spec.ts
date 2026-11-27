@@ -54,34 +54,46 @@ test.describe("тестовая игра с ботами", () => {
         const board = page.getByRole("region", { name: "Карта шахты" });
         await expect(board).toBeInViewport({ ratio: 0.99 });
         const entrance = board.getByRole("img", { name: "Вход в шахту" });
-        expect((await entrance.boundingBox())?.width).toBeGreaterThanOrEqual(56);
+        expect((await entrance.boundingBox())?.width).toBeGreaterThanOrEqual(48);
         await board.getByRole("button", { name: "Вся шахта" }).tap();
         const chambers = board.getByRole("img", { name: /^Камера [123]/ });
         await expect(chambers).toHaveCount(3);
         for (const chamber of await chambers.all()) await expect(chamber).toBeInViewport();
         await board.getByRole("button", { name: "К ходу" }).tap();
-        const openHand = page.getByRole("button", { name: /^Карты · / });
-        const picker = page.getByRole("dialog", { name: "Ваша рука" });
-        const cards = picker.locator(".hand-card");
-        await openHand.tap();
+        const hand = page.getByRole("region", { name: "Ваша рука" });
+        const cards = hand.locator(".hand-card");
+        const chat = page.getByRole("region", { name: "Чат", exact: true });
+        const journal = page.getByRole("region", { name: "Журнал", exact: true });
+        const input = chat.getByRole("textbox", { name: "Сообщение" });
+        const tableFits = async () => {
+          await expect(board).toBeInViewport({ ratio: 0.98 });
+          await expect(hand).toBeInViewport({ ratio: 0.98 });
+          await expect(chat).toBeInViewport({ ratio: 0.98 });
+          await expect(journal).toBeInViewport({ ratio: 0.98 });
+          await expect(input).toBeInViewport({ ratio: 0.98 });
+          expect(await page.evaluate(() => window.scrollY)).toBeLessThanOrEqual(1);
+        };
+        await tableFits();
         await expect(cards).toHaveCount(6);
-        expect((await cards.first().boundingBox())?.width).toBeGreaterThanOrEqual(74);
-        await page.screenshot({ path: testInfo.outputPath(`${label}-hand.png`) });
+        for (const card of await cards.all()) await expect(card).toBeInViewport({ ratio: 0.98 });
+        expect((await cards.first().boundingBox())?.width).toBeGreaterThanOrEqual(44);
+        await input.fill("Проверяю путь к золоту");
+        await chat.getByRole("button", { name: "Отправить сообщение" }).tap();
+        const sent = chat.getByText("Проверяю путь к золоту");
+        await expect(sent).toBeInViewport({ ratio: 0.98 });
         const target = board.getByRole("button", { name: /^Клетка / }).filter({ visible: true }).first();
         for (let i = 0; i < 6; i++) {
-          if (i > 0) await openHand.tap();
           await cards.nth(i).tap();
-          await expect(picker).toBeHidden();
           if (await target.count()) break;
           const rotate = page.getByRole("button", { name: "Повернуть на 180°" });
-          if (await rotate.count()) {
+          if (await rotate.isEnabled()) {
             await rotate.tap();
             if (await target.count()) break;
           }
         }
         await expect(target).toBeInViewport({ ratio: 0.98 });
         const targetSize = await target.boundingBox();
-        expect(targetSize?.width).toBeGreaterThanOrEqual(56);
+        expect(targetSize?.width).toBeGreaterThanOrEqual(48);
         expect(targetSize?.height).toBeGreaterThanOrEqual(70);
         const placed = (await target.getAttribute("aria-label"))?.replace("Клетка", "Туннель");
         expect(placed).toBeTruthy();
@@ -91,11 +103,14 @@ test.describe("тестовая игра с ботами", () => {
         const confirm = page.getByRole("button", { name: "Подтвердить ход" });
         await expect(confirm).toBeInViewport({ ratio: 0.98 });
         await expect(page.getByRole("button", { name: "Повернуть на 180°" })).toBeInViewport({ ratio: 0.98 });
-        await page.screenshot({ path: testInfo.outputPath(`${label}-placement.png`) });
+        await tableFits();
+        await page.screenshot({ path: testInfo.outputPath(`${label}-placement.png`), scale: "css" });
         await confirm.tap();
         await expect(match).not.toHaveAttribute("data-revision", revision!);
         await expect(board.getByRole("img", { name: `${placed} · Автор: Старатель` })).toBeAttached();
         await expect(page.getByRole("heading", { name: "Ваш ход", exact: true })).toBeVisible();
+        await expect(journal.getByText("Старатель проложил туннель")).toBeAttached();
+        await expect(sent).toBeInViewport({ ratio: 0.98 });
         if (label === "portrait") {
           const matchId = await match.getAttribute("data-match");
           const playingRevision = await match.getAttribute("data-revision");
@@ -103,17 +118,17 @@ test.describe("тестовая игра с ботами", () => {
           expect(await page.evaluate(() => matchMedia("(orientation: landscape)").matches)).toBe(true);
           await expect(match).toHaveAttribute("data-match", matchId!);
           await expect(match).toHaveAttribute("data-revision", playingRevision!);
-          await expect(board).toBeInViewport({ ratio: 0.99 });
-          await expect(openHand).toBeInViewport({ ratio: 0.99 });
+          await tableFits();
+          await expect(sent).toBeInViewport({ ratio: 0.98 });
+          await expect(cards.last()).toBeInViewport({ ratio: 0.98 });
           expect(await viewportFits()).toBe(true);
           await page.setViewportSize({ width, height });
           await expect(match).toHaveAttribute("data-match", matchId!);
         }
-        await page.screenshot({ path: testInfo.outputPath(`${label}.png`), fullPage: true });
+        await page.screenshot({ path: testInfo.outputPath(`${label}.png`), scale: "css" });
         expect(await viewportFits()).toBe(true);
 
-        await details.tap();
-        await info.getByRole("button", { name: "Выйти из партии" }).tap();
+        await page.getByRole("button", { name: "Выйти из партии" }).tap();
         await page.getByRole("dialog", { name: "Выйти из партии" }).getByRole("button", { name: "В меню" }).tap();
         await expect(page.getByRole("button", { name: "Играть с двумя ботами" })).toBeVisible();
         expect(networkCalls).toEqual([]);

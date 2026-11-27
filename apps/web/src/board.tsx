@@ -75,10 +75,10 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
     const target = positionOf(move);
     return target && (!nearest || delta(target, anchor) < delta(nearest, anchor)) ? target : nearest;
   }, undefined);
-  const point = nearAnchor ?? anchor;
+  const point = nearAnchor && delta(nearAnchor, anchor) === 1 ? center(nearAnchor, anchor) : nearAnchor ?? anchor;
   const scope = `${phone}:${selectedCard ?? ""}`;
   const chosenCamera = camera?.scope === scope ? camera.view : null;
-  const workScale = .86;
+  const workScale = .74;
   const work = {
     scale: workScale,
     x: size.width / 2 - (point.x + .5) * tileWidth * workScale,
@@ -238,8 +238,8 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
       </div>
       <div className="board-title"><Icon name="lantern" /><h2>{copy.mine}</h2></div>
       <div className="board-controls" aria-label="Управление картой">
-        <button className="icon-button" onClick={() => scaleBy(1.22)} aria-label="Приблизить"><Icon name="zoom-in" /></button>
-        <button className="icon-button" onClick={() => scaleBy(1 / 1.22)} aria-label="Отдалить"><Icon name="zoom-out" /></button>
+        <button className="icon-button" onClick={() => scaleBy(1.22)} aria-label="Приблизить">{phone ? "+" : <Icon name="zoom-in" />}</button>
+        <button className="icon-button" onClick={() => scaleBy(1 / 1.22)} aria-label="Отдалить">{phone ? "−" : <Icon name="zoom-out" />}</button>
         {phone ? <>
           <button className="button secondary" onClick={showOverview} aria-pressed={chosenCamera === "overview"}>Вся шахта</button>
           <button className="button secondary" onClick={() => setCamera(null)}>К ходу</button>

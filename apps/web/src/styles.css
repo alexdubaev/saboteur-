@@ -347,64 +347,106 @@ input::placeholder { color: #ad9dbe; }
   .solo-app .role-art { max-height: 38svh; }
 }
 
+.messages-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; min-width: 0; min-height: 0; }
+.message-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 6px; }
+.message-pane h2 { font-size: .82rem; font-weight: 650; line-height: 1.2; }
+.message-pane h2 small { color: var(--quiet); font-size: .66rem; font-weight: 400; }
+.message-pane .message-list { flex: 1 1 auto; min-height: 0; max-height: none; padding: 0; overflow-y: auto; overscroll-behavior: contain; }
+.message-pane .message-list > li { padding: 3px 0; font-size: .73rem; }
+.message-pane .message-list li > div { align-items: baseline; gap: 5px; }
+.message-pane .message-list li p { margin-top: 1px; }
+.message-pane .chat-form { align-items: stretch; gap: 4px; padding: 2px 0 0; }
+.message-pane .chat-input { padding: 3px 5px; min-height: 32px; font-size: .78rem; }
+.message-pane .chat-form button { min-height: 32px; width: 32px; flex-basis: 32px; }
+.message-pane .chat-form button .icon { width: 16px; height: 16px; }
+.solo-game .table-side .messages-split { min-height: 145px; }
+
 .solo-app:has(.phone-game) > .site-header { display: none; }
-.phone-game { padding: max(12px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+.phone-game {
+  --table-control: 34px;
+  --hand-art-height: clamp(51px, 11dvh, 83px);
+  min-height: 100dvh;
+  padding: max(12px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  gap: 5px;
+}
+.phone-table-header, .phone-utilities, .phone-turn, .phone-score { display: flex; align-items: center; gap: 5px; }
+.phone-table-header { justify-content: space-between; flex-wrap: wrap; }
+.phone-turn { flex-wrap: wrap; }
+.phone-turn h1 { font: bold 1rem/1.1 Georgia, serif; }
+.phone-turn span, .phone-score { color: var(--gold); font-size: .72rem; white-space: nowrap; }
+.phone-score .icon { width: 14px; height: 14px; }
+.phone-score .icon:not(:first-child) { margin-inline-start: 4px; }
 .phone-game .table-layout {
+  flex: 1 0 auto; min-height: 0;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(min(44dvh, 260px), 1fr) auto;
-  grid-template-areas: "board" "hand";
-  gap: 8px;
+  grid-template-rows: minmax(175px, 1fr) auto minmax(96px, min(19dvh, 140px));
+  grid-template-areas: "board" "hand" "feed";
+  gap: 5px;
 }
-.phone-game .mine { min-height: 0; }
+.phone-game .mine { height: auto; min-height: 0; border-radius: 7px; }
 .phone-game .board-title { display: none; }
+.phone-game .board-viewport { inset-block-end: calc(var(--table-control) + 4px); }
 .phone-game .board-controls {
-  z-index: 2; inset: 5px auto auto 5px; gap: 4px;
-  max-width: calc(100% - 10px); overflow-x: auto;
+  z-index: 2; inset: auto 2px 2px;
+  gap: 4px; align-items: center; overflow-x: auto;
 }
-.phone-game .board-controls .button { padding-inline: 7px; font-size: .79rem; background: #241832f5; }
-.phone-game .board-controls .icon-button { background: #241832f5; }
-.phone-game .board-controls .icon-button .icon { width: 19px; height: 19px; }
+.phone-game :is(.board-controls, .phone-utilities, .move-buttons) :is(.button, .icon-button) {
+  min-height: var(--table-control); padding: 2px 6px; border-radius: 5px; box-shadow: none; font-size: .75rem;
+}
+.phone-game :is(.board-controls, .phone-utilities) .icon-button {
+  width: var(--table-control); flex-basis: var(--table-control); padding: 0;
+}
+.phone-game .phone-utilities .icon { width: 16px; height: 16px; }
+.phone-game .board-controls .icon-button { font-size: 1rem; }
 .phone-game .board-controls .button[aria-pressed="true"] { color: var(--gold); border-color: #c19c66; }
-.phone-game .button, .phone-game .icon-button, .phone-picker-grid .hand-card { border-radius: 6px; }
-.phone-game button:focus-visible { outline-width: 2px; outline-offset: 2px; }
+.phone-game button:focus-visible { outline-width: 2px; outline-offset: -2px; }
 .phone-game .tile-target { box-shadow: inset 0 0 0 2px #f2cc8b; background: #613b84dd; }
 .phone-game .tile-selected { outline: 2px solid var(--gold); outline-offset: -2px; }
-.phone-game .hand { display: grid; align-content: start; gap: 7px; min-width: 0; padding: 8px; }
-.phone-turn { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 6px; }
-.phone-turn h1 { font: bold clamp(.99rem, 2vw, 1.14rem)/1.15 Georgia, serif; }
-.phone-turn span { font-size: .76rem; color: var(--gold); white-space: nowrap; }
-.phone-menu { display: grid; grid-template-columns: 1.15fr 1fr; gap: 5px; }
-.phone-menu button { min-width: 0; padding-inline: 4px; font-size: .82rem; }
-.phone-card-name { display: grid; gap: 3px; overflow-wrap: anywhere; }
-.phone-card-name strong { color: var(--gold); font-size: .87rem; }
-.phone-card-name span { color: var(--muted); font-size: .8rem; line-height: 1.3; }
+.phone-game .hand { display: grid; align-content: start; gap: 3px; min-width: 0; padding: 4px; border-radius: 7px; }
+.phone-hand-header { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 17px; font-size: .73rem; }
+.phone-hand-header h2 { flex: none; font-size: .79rem; }
+.phone-hand-header h2 span { color: var(--gold); }
+.phone-hand-header > span { color: var(--muted); text-align: right; }
+.phone-hand-header select { min-width: 0; max-width: 48%; padding: 2px; border: 1px solid var(--line); border-radius: 3px; font-size: .73rem; background: var(--surface); }
+.phone-game .hand-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; overflow: visible; padding: 0; }
+.phone-game .hand-card {
+  display: grid; justify-items: center; align-content: start; min-width: 0;
+  border-radius: 5px; padding: 2px; border-color: var(--line); touch-action: manipulation;
+}
+.phone-game .hand-card img { width: 100%; height: var(--hand-art-height); object-fit: contain; border-radius: 2px; }
+.phone-game .hand-card span { width: 100%; margin: 2px 0 0; text-align: center; font-size: .64rem; }
+.phone-game .hand-card.selected-card { border-color: var(--gold); background: #402d3c; box-shadow: inset 0 0 0 1px var(--gold); }
 .phone-game .hand-actions { width: 100%; }
+.phone-game .move-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.phone-game .move-buttons .button { white-space: nowrap; }
+.phone-game .move-buttons .primary:disabled { color: var(--muted); border-color: var(--line); background: var(--surface); }
+.phone-game .messages-split { grid-area: feed; }
+.phone-game .message-pane { border-radius: 7px; padding: 4px; }
+.phone-game .message-pane h2 { padding-bottom: 2px; border-bottom: 1px solid var(--line); }
+.phone-game .chat-pane .message-list li > div { display: none; }
+.phone-game .chat-pane .message-list li p { margin: 0; }
+.phone-game .chat-input { font-size: 16px; }
+.phone-game .chat-input::placeholder { font-size: .73rem; }
 .phone-game .dialog .match-counts { justify-content: start; margin-bottom: 8px; }
 .phone-game .dialog h2 { font-size: 1.16rem; }
-.phone-game .phone-picker { width: min(720px, calc(100% - 22px)); padding: 10px; }
-.phone-picker .dialog-header { margin-bottom: 8px; }
-.phone-picker-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
-.phone-picker-grid .hand-card { display: grid; grid-template-rows: auto 1fr; min-width: 0; padding: 5px; border-color: #49365c; }
-.phone-picker-grid .hand-card img { max-height: 152px; object-fit: contain; }
-.phone-picker-grid .hand-card span { white-space: normal; overflow-wrap: anywhere; font-size: .8rem; line-height: 1.2; }
 
 @media (orientation: landscape) and (max-height: 520px) {
   .phone-game {
-    height: 100dvh; min-height: 0;
-    padding-block: max(44px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-bottom));
+    --table-control: 29px;
+    --hand-art-height: clamp(39px, 16dvh, 86px);
+    flex: 0 0 auto; height: 100dvh; min-height: 278px;
+    padding-block: max(44px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-bottom));
   }
   .phone-game .table-layout {
-    flex: 1 1 0; min-height: 0;
-    grid-template-columns: minmax(0, 1fr) clamp(170px, 27vw, 226px);
-    grid-template-rows: minmax(0, 1fr);
-    grid-template-areas: "board hand";
+    flex: 1 1 0;
+    grid-template-columns: minmax(0, 1.16fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(67px, 1fr);
+    grid-template-areas: "board hand" "board feed";
   }
-  .phone-game .hand { gap: 6px; padding: 7px; overflow-y: auto; overscroll-behavior: contain; }
-  .phone-game .hand-actions { gap: 5px; }
-  .phone-game .move-buttons .button { padding-inline: 7px; }
-  .phone-game .hand-actions > .primary { padding-inline: 6px; font-size: .84rem; }
-  .phone-game .hand-actions > .primary .icon { display: none; }
+  .phone-game .message-pane { padding: 3px 4px; }
+  .phone-game .message-pane h2 { padding-bottom: 1px; font-size: .75rem; line-height: 1.12; }
+  .phone-game .chat-pane .message-list > li { padding-block: 1px; }
+  .phone-game .message-pane .chat-input { height: 26px; min-height: 26px; padding-block: 2px; line-height: 18px; }
+  .phone-game .message-pane .chat-form button { min-height: 26px; width: 29px; flex-basis: 29px; }
   .phone-game .dialog { max-height: calc(100dvh - 76px); }
-  .phone-picker-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .phone-picker-grid .hand-card img { height: clamp(74px, 34svh, 122px); }
 }

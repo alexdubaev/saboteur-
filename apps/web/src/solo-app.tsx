@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { WireCommand } from "../../../packages/protocol/src/index.js";
+import { chatSchema, type ChatMessage, type WireCommand } from "../../../packages/protocol/src/index.js";
 import { corridorArt, logoArt } from "./art.js";
 import { Game, type MatchSnapshot } from "./game.js";
 import { createSoloMatch, type SoloMatch } from "./solo-match.js";
@@ -12,11 +12,13 @@ export function SoloApp() {
   const [active, setActive] = useState<ActiveMatch | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [error, setError] = useState("");
+  const [chat, setChat] = useState<ChatMessage[]>([]);
 
   function start() {
     try {
       const game = createSoloMatch("Старатель");
       setError("");
+      setChat([]);
       setActive({ game, snapshot: game.snapshot() });
     } catch {
       setError("Партию не удалось запустить. Попробуйте снова.");
@@ -25,7 +27,17 @@ export function SoloApp() {
 
   function menu() {
     setError("");
+    setChat([]);
     setActive(null);
+  }
+
+  async function sendLocalMessage(text: string): Promise<boolean> {
+    const author = active?.snapshot.room.seats[0];
+    const parsed = chatSchema.safeParse({ text });
+    if (!author || !parsed.success) return false;
+    const message = { messageId: crypto.randomUUID(), seatId: author.seatId, name: author.name, text: parsed.data.text, at: new Date().toISOString() };
+    setChat((current) => [...current.slice(-99), message]);
+    return true;
   }
 
   async function run(command: WireCommand): Promise<boolean> {
@@ -63,7 +75,8 @@ export function SoloApp() {
       <button className="button secondary header-rules" onClick={() => setRulesOpen(true)}><Icon name="info" />{copy.rules}</button>
     </header>
     {active
-      ? <Game key={active.snapshot.match.matchId} snapshot={active.snapshot} run={run} error={error} pending={false} lobby={menu} exit={menu} openRules={() => setRulesOpen(true)} />
+      ? <Game key={active.snapshot.match.matchId} snapshot={{ ...active.snapshot, chat }} run={run} error={error} pending={false} lobby={menu} exit={menu}
+          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)} />
       : <main className="home-stage">
         <div className="home-copy">
           <div className="home-inner">
