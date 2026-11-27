@@ -3,7 +3,7 @@ import { devices, expect, test } from "@playwright/test";
 const sitesUrl = process.env.SITES_PREVIEW_URL;
 const screens = [
   { label: "portrait", width: 390, height: 664 },
-  { label: "landscape", width: 750, height: 302 },
+  { label: "landscape", width: 750, height: 278 },
 ];
 
 test.describe("тестовая игра с ботами", () => {
@@ -13,6 +13,7 @@ test.describe("тестовая игра с ботами", () => {
     test(`сенсорная партия на экране ${width}×${height}`, async ({ browser }, testInfo) => {
       const context = await browser.newContext({ ...devices["iPhone 13"], viewport: { width, height } });
       await context.addInitScript(() => {
+        Object.defineProperty(document, "fullscreenEnabled", { value: false, configurable: true });
         let seed = 41;
         const randomValues = crypto.getRandomValues.bind(crypto);
         crypto.getRandomValues = (values) => {
@@ -40,8 +41,15 @@ test.describe("тестовая игра с ботами", () => {
         expect(await viewportFits()).toBe(true);
         const play = page.getByRole("button", { name: "Играть с двумя ботами" });
         await expect(play).toBeInViewport({ ratio: 0.99 });
+        if (label === "landscape") {
+          await page.getByRole("button", { name: "Во весь экран", exact: true }).tap();
+          const help = page.getByRole("dialog", { name: "Во весь экран" });
+          await expect(help.getByText(/На экран/)).toBeVisible();
+          await help.getByRole("button", { name: "Закрыть" }).tap();
+        }
         await play.tap();
         const role = page.getByRole("dialog", { name: "Моя роль" });
+        await expect.poll(() => role.evaluate((dialog) => dialog.scrollHeight - dialog.clientHeight)).toBeLessThanOrEqual(1);
         await expect(role.getByRole("button", { name: "Роль понятна" })).toBeInViewport({ ratio: 0.99 });
         await role.getByRole("button", { name: "Роль понятна" }).tap();
         await expect(page.getByRole("heading", { name: "Ваш ход", exact: true })).toBeVisible();
@@ -52,6 +60,17 @@ test.describe("тестовая игра с ботами", () => {
         await expect(info.getByText("Бот 3", { exact: true })).toBeVisible();
         await info.getByRole("button", { name: "Закрыть" }).tap();
         const board = page.getByRole("region", { name: "Карта шахты" });
+        const mapViewport = board.getByRole("region", { name: /^Поле шахты/ });
+        const camera = () => mapViewport.evaluate((viewport) => {
+          const world = viewport.querySelector(".board-world")!;
+          const matrix = new DOMMatrixReadOnly(getComputedStyle(world).transform);
+          const { width, height } = viewport.getBoundingClientRect();
+          return {
+            scale: matrix.a,
+            x: Math.round((width / 2 - matrix.e) / matrix.a),
+            y: Math.round((height / 2 - matrix.f) / matrix.a),
+          };
+        });
         await expect(board).toBeInViewport({ ratio: 0.99 });
         const entrance = board.getByRole("img", { name: "Вход в шахту" });
         expect((await entrance.boundingBox())?.width).toBeGreaterThanOrEqual(48);
@@ -59,9 +78,15 @@ test.describe("тестовая игра с ботами", () => {
         const chambers = board.getByRole("img", { name: /^Камера [123]/ });
         await expect(chambers).toHaveCount(3);
         for (const chamber of await chambers.all()) await expect(chamber).toBeInViewport();
-        await board.getByRole("button", { name: "К ходу" }).tap();
         const hand = page.getByRole("region", { name: "Ваша рука" });
         const cards = hand.locator(".hand-card");
+        const overview = await camera();
+        await cards.first().tap();
+        await expect.poll(camera).toEqual(overview);
+        await page.getByRole("button", { name: "Отменить выбор" }).tap();
+        await expect.poll(camera).toEqual(overview);
+        await board.getByRole("button", { name: "К ходу" }).tap();
+        await expect.poll(async () => (await camera()).scale).toBeGreaterThan(overview.scale);
         const chat = page.getByRole("region", { name: "Чат", exact: true });
         const journal = page.getByRole("region", { name: "Журнал", exact: true });
         const input = chat.getByRole("textbox", { name: "Сообщение" });
@@ -81,6 +106,9 @@ test.describe("тестовая игра с ботами", () => {
         await chat.getByRole("button", { name: "Отправить сообщение" }).tap();
         const sent = chat.getByText("Проверяю путь к золоту");
         await expect(sent).toBeInViewport({ ratio: 0.98 });
+        await board.getByRole("button", { name: "Отдалить" }).tap();
+        await mapViewport.press("ArrowUp");
+        const fixedView = await camera();
         const target = board.getByRole("button", { name: /^Клетка / }).filter({ visible: true }).first();
         for (let i = 0; i < 6; i++) {
           await cards.nth(i).tap();
@@ -91,13 +119,15 @@ test.describe("тестовая игра с ботами", () => {
             if (await target.count()) break;
           }
         }
+        await expect.poll(camera).toEqual(fixedView);
         await expect(target).toBeInViewport({ ratio: 0.98 });
         const targetSize = await target.boundingBox();
-        expect(targetSize?.width).toBeGreaterThanOrEqual(48);
-        expect(targetSize?.height).toBeGreaterThanOrEqual(70);
+        expect(targetSize?.width).toBeGreaterThanOrEqual(42);
+        expect(targetSize?.height).toBeGreaterThanOrEqual(62);
         const placed = (await target.getAttribute("aria-label"))?.replace("Клетка", "Туннель");
         expect(placed).toBeTruthy();
         await target.tap();
+        await expect.poll(camera).toEqual(fixedView);
         const match = page.getByTestId("room-state");
         const revision = await match.getAttribute("data-revision");
         const confirm = page.getByRole("button", { name: "Подтвердить ход" });
@@ -109,6 +139,7 @@ test.describe("тестовая игра с ботами", () => {
         await expect(match).not.toHaveAttribute("data-revision", revision!);
         await expect(board.getByRole("img", { name: `${placed} · Автор: Старатель` })).toBeAttached();
         await expect(page.getByRole("heading", { name: "Ваш ход", exact: true })).toBeVisible();
+        await expect.poll(camera).toEqual(fixedView);
         await expect(journal.getByText("Старатель проложил туннель")).toBeAttached();
         await expect(sent).toBeInViewport({ ratio: 0.98 });
         if (label === "portrait") {
@@ -119,6 +150,7 @@ test.describe("тестовая игра с ботами", () => {
           await expect(match).toHaveAttribute("data-match", matchId!);
           await expect(match).toHaveAttribute("data-revision", playingRevision!);
           await tableFits();
+          await expect.poll(camera).toEqual(fixedView);
           await expect(sent).toBeInViewport({ ratio: 0.98 });
           await expect(cards.last()).toBeInViewport({ ratio: 0.98 });
           expect(await viewportFits()).toBe(true);

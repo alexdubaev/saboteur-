@@ -182,7 +182,7 @@ function lastBoardMove(snapshot: MatchSnapshot): Position | null {
   return null;
 }
 
-export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; sendLocalMessage?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void }) {
+export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; sendLocalMessage?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void; fullscreenControl?: { label: string; toggle: () => void } }) {
   const { match, room } = snapshot;
   const solo = !send;
   const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches) && solo;
@@ -301,6 +301,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
         </div>
         {counts}
         <div className="match-tools">
+          {fullscreenControl && <button className="button secondary" onClick={fullscreenControl.toggle}>{fullscreenControl.label}</button>}
           <button className="button secondary" disabled={!match.self.role} onClick={() => setModal("role")}><Icon name="lock" />{copy.role}</button>
           {match.self.scoutResults.length > 0 && <button className="button secondary" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" />Разведка</button>}
           {send && <button className="icon-button mobile-messages" aria-label={showMessages ? "Скрыть чат и журнал" : "Открыть чат и журнал"} aria-expanded={showMessages} onClick={() => setShowMessages(!showMessages)}><Icon name="chat" /></button>}
@@ -309,8 +310,8 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       </header>}
       <Notice text={error} />
       <div className="table-layout">
-        <Board key={match.roundNo} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose}
-          phone={phone} selectedCard={selected && phone ? `${selected.instanceId}:${selected.rotation}` : undefined} />
+        <Board key={match.matchId} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose}
+          phone={phone} />
         {!phone && <aside className="table-side">
           <Crew snapshot={snapshot} authors={authors} />
           {send && <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} compact /></div>}
@@ -346,6 +347,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
           <button className="button secondary" onClick={() => setModal("role")}>{copy.role}</button>
           {match.self.scoutResults.length > 0 && <button className="button secondary" onClick={() => setModal({ roundNo: match.roundNo })}>Моя разведка</button>}
           {openRules && <button className="button secondary" onClick={() => { setModal(null); openRules(); }}>{copy.rules}</button>}
+          {fullscreenControl && <button className="button secondary" onClick={() => { setModal(null); fullscreenControl.toggle(); }}>{fullscreenControl.label}</button>}
           <button className="button secondary" onClick={() => setModal("leave")}>{leaveLabel}</button>
         </div>
       </Dialog>}

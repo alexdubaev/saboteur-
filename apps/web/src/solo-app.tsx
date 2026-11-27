@@ -4,15 +4,43 @@ import { corridorArt, logoArt } from "./art.js";
 import { Game, type MatchSnapshot } from "./game.js";
 import { createSoloMatch, type SoloMatch } from "./solo-match.js";
 import { copy, errorText } from "./text.js";
-import { Icon, Notice, Rules } from "./ui.js";
+import { Dialog, Icon, Notice, Rules } from "./ui.js";
 
 type ActiveMatch = { game: SoloMatch; snapshot: MatchSnapshot };
 
 export function SoloApp() {
   const [active, setActive] = useState<ActiveMatch | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [fullscreenHelp, setFullscreenHelp] = useState(false);
+  const [fullscreen, setFullscreen] = useState(() => Boolean(document.fullscreenElement));
   const [error, setError] = useState("");
   const [chat, setChat] = useState<ChatMessage[]>([]);
+  const standalone = window.matchMedia("(display-mode: standalone)").matches
+    || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+  const appleMobile = /iPhone|iPad|iPod/u.test(navigator.userAgent);
+  const fullscreenLabel = fullscreen ? "Выйти из полноэкранного режима" : "Во весь экран";
+
+  useEffect(() => {
+    const sync = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+      if (document.fullscreenEnabled && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+        return;
+      }
+    } catch {
+      // The browser or its host can reject a fullscreen request.
+    }
+    setFullscreenHelp(true);
+  }
 
   function start() {
     try {
@@ -76,7 +104,8 @@ export function SoloApp() {
     </header>
     {active
       ? <Game key={active.snapshot.match.matchId} snapshot={{ ...active.snapshot, chat }} run={run} error={error} pending={false} lobby={menu} exit={menu}
-          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)} />
+          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)}
+          fullscreenControl={standalone ? undefined : { label: fullscreenLabel, toggle: () => void toggleFullscreen() }} />
       : <main className="home-stage">
         <div className="home-copy">
           <div className="home-inner">
@@ -86,6 +115,7 @@ export function SoloApp() {
             <div className="entry-form">
               <Notice text={error} />
               <button className="button primary entry-submit" onClick={start}><Icon name="pickaxe" />Играть с двумя ботами</button>
+              {!standalone && <button className="button secondary entry-fullscreen" onClick={() => void toggleFullscreen()}>{fullscreenLabel}</button>}
               <p className="soft-note">Партия проходит в этой вкладке и сбрасывается при обновлении.</p>
             </div>
           </div>
@@ -96,5 +126,9 @@ export function SoloApp() {
         </figure>
       </main>}
     {rulesOpen && <Rules close={() => setRulesOpen(false)} />}
+    {fullscreenHelp && <Dialog title="Во весь экран" close={() => setFullscreenHelp(false)}>
+      {appleMobile ? <p>Откройте игру в Safari. Нажмите «Поделиться», выберите «На экран “Домой”» и включите «Открывать как веб-приложение», если этот пункт есть. Затем запустите игру с её значка.</p>
+        : <p>Откройте игру в отдельной вкладке браузера и нажмите «Во весь экран» ещё раз.</p>}
+    </Dialog>}
   </div>;
 }

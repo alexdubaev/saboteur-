@@ -70,13 +70,43 @@ function gameArt(): Plugin {
   };
 }
 
+function sitesWebApp(): Plugin {
+  const iconSizes = [192, 512];
+  return {
+    name: "sites-web-app",
+    transformIndexHtml: {
+      order: "post",
+      handler: () => [
+        { tag: "link", attrs: { rel: "manifest", href: "/manifest.webmanifest" } },
+        { tag: "link", attrs: { rel: "apple-touch-icon", href: "/assets/branding/app-icon-192.png" } },
+      ],
+    },
+    async generateBundle() {
+      const icons = await Promise.all(iconSizes.map(async (size) => {
+        const fileName = `assets/branding/app-icon-${size}.png`;
+        this.emitFile({ type: "asset", fileName, source: await readFile(join(workspace, fileName)) });
+        return { src: `/${fileName}`, sizes: `${size}x${size}`, type: "image/png" };
+      }));
+      this.emitFile({
+        type: "asset",
+        fileName: "manifest.webmanifest",
+        source: JSON.stringify({
+          name: "Золото и предатели", short_name: "Золото и предатели", lang: "ru",
+          start_url: "/", scope: "/", display: "standalone",
+          background_color: "#100e20", theme_color: "#100e20", icons,
+        }),
+      });
+    },
+  };
+}
+
 export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   if (mode === "sites") {
     const definition = await loadActiveDefinition(workspace);
     return {
       root,
       publicDir: false,
-      plugins: [gameArt(), react()],
+      plugins: [gameArt(), react(), sitesWebApp()],
       define: { __SITES_SOLO_DEFINITION__: JSON.stringify(definition) },
       resolve: {
         alias: [{ find: /^node:crypto$/, replacement: join(root, "src/solo-sha256.ts") }],

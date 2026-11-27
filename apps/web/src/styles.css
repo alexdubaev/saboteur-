@@ -316,8 +316,15 @@ input::placeholder { color: #ad9dbe; }
   .home-logo { margin-block: 11px 8px; }
 }
 
-.solo-app { display: flex; flex-direction: column; min-height: 100dvh; -webkit-text-size-adjust: 100%; }
+.solo-app {
+  --browser-top: 12px;
+  --browser-bottom: 24px;
+  --game-top: max(var(--browser-top), env(safe-area-inset-top));
+  --game-bottom: max(var(--browser-bottom), env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; min-height: 100dvh; -webkit-text-size-adjust: 100%;
+}
 .solo-app > .home-stage { flex: 1 0 auto; min-height: 0; }
+.solo-app .entry-fullscreen { justify-self: start; min-height: 34px; padding-block: 4px; font-size: .85rem; }
 
 @media (max-width: 840px), (orientation: landscape) and (max-height: 520px) {
   .solo-app > .site-header { min-height: 0; padding-block: max(4px, env(safe-area-inset-top)) 4px; }
@@ -366,7 +373,7 @@ input::placeholder { color: #ad9dbe; }
   --table-control: 34px;
   --hand-art-height: clamp(51px, 11dvh, 83px);
   min-height: 100dvh;
-  padding: max(12px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  padding: var(--game-top) max(6px, env(safe-area-inset-right)) var(--game-bottom) max(6px, env(safe-area-inset-left));
   gap: 5px;
 }
 .phone-table-header, .phone-utilities, .phone-turn, .phone-score { display: flex; align-items: center; gap: 5px; }
@@ -429,13 +436,26 @@ input::placeholder { color: #ad9dbe; }
 .phone-game .chat-input::placeholder { font-size: .73rem; }
 .phone-game .dialog .match-counts { justify-content: start; margin-bottom: 8px; }
 .phone-game .dialog h2 { font-size: 1.16rem; }
+.solo-app:has(.phone-game) .dialog {
+  inset-block: var(--game-top) var(--game-bottom);
+  max-height: calc(100dvh - var(--game-top) - var(--game-bottom) - 12px);
+}
+.phone-game .dialog:has(.role-card) { padding: 12px; }
+.phone-game .dialog:has(.role-card) .dialog-header { margin-bottom: 7px; }
+.phone-game .role-card {
+  grid-template-columns: minmax(0, .39fr) minmax(0, 1fr); gap: 10px; margin-block: 0;
+}
+.phone-game .role-art { max-height: clamp(72px, 32dvh, 170px); }
+.phone-game .role-card h3 { margin-top: 3px; font-size: clamp(1.2rem, 3vw, 1.5rem); }
+.phone-game .role-card p { margin-top: 4px; font-size: .88rem; line-height: 1.36; }
+.phone-game .role-card .button { margin-top: 8px; min-height: 38px; padding-block: 4px; }
 
 @media (orientation: landscape) and (max-height: 520px) {
+  .solo-app { --browser-top: 18px; --browser-bottom: 36px; }
   .phone-game {
-    --table-control: 29px;
-    --hand-art-height: clamp(39px, 16dvh, 86px);
-    flex: 0 0 auto; height: 100dvh; min-height: 278px;
-    padding-block: max(44px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-bottom));
+    --table-control: clamp(25px, 9.2dvh, 29px);
+    --hand-art-height: clamp(35px, calc(20dvh - 16px), 86px);
+    flex: 0 0 auto; height: 100dvh; min-height: 260px;
   }
   .phone-game .table-layout {
     flex: 1 1 0;
@@ -445,8 +465,13 @@ input::placeholder { color: #ad9dbe; }
   }
   .phone-game .message-pane { padding: 3px 4px; }
   .phone-game .message-pane h2 { padding-bottom: 1px; font-size: .75rem; line-height: 1.12; }
-  .phone-game .chat-pane .message-list > li { padding-block: 1px; }
+  .phone-game .chat-pane .message-list > li { padding-block: 0; }
+  .phone-game .message-pane .chat-form { padding-block-start: 1px; }
   .phone-game .message-pane .chat-input { height: 26px; min-height: 26px; padding-block: 2px; line-height: 18px; }
   .phone-game .message-pane .chat-form button { min-height: 26px; width: 29px; flex-basis: 29px; }
-  .phone-game .dialog { max-height: calc(100dvh - 76px); }
 }
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .solo-app { --browser-top: 6px; --browser-bottom: 6px; }
+}
+:fullscreen .solo-app { --browser-top: 6px; --browser-bottom: 6px; }

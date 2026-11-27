@@ -6,6 +6,7 @@ import { Icon } from "./ui.js";
 
 type BoardMove = Extract<CardCommand, { type: "PLAY_TUNNEL" | "PLAY_COLLAPSE" | "PLAY_SCOUT" }>;
 type Camera = { x: number; y: number; scale: number };
+type FixedView = { center: Position; scale: number; overview: boolean };
 type Bounds = { minX: number; maxX: number; minY: number; maxY: number };
 export type TunnelAuthor = { name: string; color: string };
 type BoardProps = {
@@ -17,7 +18,6 @@ type BoardProps = {
   last: Position | null;
   choose: (move: CardCommand) => void;
   phone?: boolean;
-  selectedCard?: string;
 };
 
 const tileWidth = 72;
@@ -46,13 +46,13 @@ function TileImage({ id, rotation, large, name }: { id: string; rotation: number
     : <span className="tile-unavailable" aria-label={name}>?</span>;
 }
 
-export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false, selectedCard }: BoardProps) {
+export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Position>());
   const start = useRef<Position | null>(null);
   const dragged = useRef(false);
   const [panning, setPanning] = useState(false);
-  const [camera, setCamera] = useState<{ scope: string; view: Camera | "overview" } | null>(null);
+  const [fixedView, setFixedView] = useState<FixedView | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const bounds = tiles.reduce<Bounds>((frame, tile) => ({
     minX: Math.min(frame.minX, tile.x), maxX: Math.max(frame.maxX, tile.x),
@@ -76,15 +76,17 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
     return target && (!nearest || delta(target, anchor) < delta(nearest, anchor)) ? target : nearest;
   }, undefined);
   const point = nearAnchor && delta(nearAnchor, anchor) === 1 ? center(nearAnchor, anchor) : nearAnchor ?? anchor;
-  const scope = `${phone}:${selectedCard ?? ""}`;
-  const chosenCamera = camera?.scope === scope ? camera.view : null;
   const workScale = .74;
   const work = {
     scale: workScale,
     x: size.width / 2 - (point.x + .5) * tileWidth * workScale,
     y: size.height / 2 - (point.y + .5) * tileHeight * workScale,
   };
-  const view = chosenCamera === "overview" ? fit : chosenCamera ?? (phone ? work : fit);
+  const view = fixedView ? {
+    scale: fixedView.scale,
+    x: size.width / 2 - fixedView.center.x * fixedView.scale,
+    y: size.height / 2 - fixedView.center.y * fixedView.scale,
+  } : phone ? work : fit;
   const current = useRef(view);
   useEffect(() => { current.current = view; }, [view]);
   const large = tileWidth * view.scale * window.devicePixelRatio > 256;
@@ -103,12 +105,16 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
     return () => observer.disconnect();
   }, []);
 
-  const updateCamera = useCallback((change: (previous: Camera) => Camera) => {
-    current.current = change(current.current);
-    setCamera({ scope, view: current.current });
-  }, [scope]);
+  const updateCamera = useCallback((change: (previous: Camera) => Camera, overview = false) => {
+    const next = change(current.current);
+    current.current = next;
+    setFixedView({
+      scale: next.scale, overview,
+      center: { x: (size.width / 2 - next.x) / next.scale, y: (size.height / 2 - next.y) / next.scale },
+    });
+  }, [size]);
 
-  const showOverview = () => setCamera({ scope, view: "overview" });
+  const showOverview = () => updateCamera(() => fit, true);
 
   useEffect(() => {
     const node = viewport.current;
@@ -241,8 +247,8 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
         <button className="icon-button" onClick={() => scaleBy(1.22)} aria-label="Приблизить">{phone ? "+" : <Icon name="zoom-in" />}</button>
         <button className="icon-button" onClick={() => scaleBy(1 / 1.22)} aria-label="Отдалить">{phone ? "−" : <Icon name="zoom-out" />}</button>
         {phone ? <>
-          <button className="button secondary" onClick={showOverview} aria-pressed={chosenCamera === "overview"}>Вся шахта</button>
-          <button className="button secondary" onClick={() => setCamera(null)}>К ходу</button>
+          <button className="button secondary" onClick={showOverview} aria-pressed={fixedView?.overview ?? false}>Вся шахта</button>
+          <button className="button secondary" onClick={() => setFixedView(null)} aria-pressed={!fixedView} title="Вернуть автослежение за ходами">К ходу</button>
         </> : <>
           <button className="icon-button" onClick={showOverview} aria-label="Показать всё поле"><Icon name="settings" /></button>
           <button className="icon-button" onClick={() => { const origin = tiles.find((tile) => tile.kind === "origin"); if (origin) focusTile(origin); }} aria-label="Ко входу"><Icon name="home" /></button>
