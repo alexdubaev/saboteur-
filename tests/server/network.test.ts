@@ -303,6 +303,7 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     const initialMatchId = current.match?.matchId;
     const summaries: number[] = [];
     let scouted = false;
+    let placed = false;
     for (let steps = 0; steps < 200; steps++) {
       switch (current.match?.phase) {
         case "ROLE_REVEAL":
@@ -312,7 +313,16 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
           const actor = bySeat.get(current.match.turnSeatId ?? "") ?? "";
           const actorView = await snapshot(current, actor);
           const scout = scouted ? undefined : actorView.match?.moves.find((move) => move.type === "PLAY_SCOUT");
-          current = await command(actorView, actor, scout?.type === "PLAY_SCOUT" ? scout : firstDiscard(actorView));
+          const tunnel = placed || scout ? undefined : actorView.match?.moves.find((move) => move.type === "PLAY_TUNNEL");
+          current = await command(actorView, actor, scout ?? tunnel ?? firstDiscard(actorView));
+          if (tunnel?.type === "PLAY_TUNNEL") {
+            placed = true;
+            const spectator = await snapshot(current, cookies.find((cookie) => cookie !== actor) ?? "");
+            const tile = (view: RoomSnapshot) => view.match?.board.find(({ x, y }) => x === tunnel.x && y === tunnel.y);
+            expect(tile(current)).toMatchObject({ kind: "tunnel", placedBySeatId: actorView.room.mySeatId });
+            expect(tile(spectator)).toEqual(tile(current));
+            expect(spectator.match?.board.filter(({ kind }) => kind !== "tunnel").some(({ placedBySeatId }) => placedBySeatId)).toBe(false);
+          }
           if (scout && current.match?.phase === "TURN") {
             scouted = true;
             expect(current.match.self.scoutResults).toHaveLength(1);
@@ -339,6 +349,7 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     }
 
     expect(scouted).toBe(true);
+    expect(placed).toBe(true);
     expect(summaries).toEqual([1, 2, 3]);
     expect(current.match?.phase).toBe("MATCH_FINISHED");
     expect(current.match?.finalScores).toHaveLength(3);

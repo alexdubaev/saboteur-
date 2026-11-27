@@ -165,7 +165,13 @@ test("изолированные гости играют три раунда и 
           await synchronize();
           for (const [index, page] of guests.entries()) {
             const mine = page.getByRole("region", { name: "Карта шахты" });
-            await expect(mine.getByRole("img", { name: /^Туннель / })).toHaveCount(1);
+            const author = names[active.indexOf(true)];
+            const tunnel = mine.getByRole("img", { name: new RegExp(`^Туннель .* · Автор: ${author}$`) });
+            await expect(tunnel).toBeVisible();
+            const frameColor = await tunnel.evaluate((image) => getComputedStyle(image.parentElement!, "::before").borderTopColor);
+            const nameColor = await page.getByRole("region", { name: "Участники" }).getByText(author, { exact: true })
+              .locator(".seat-color").evaluate((dot) => getComputedStyle(dot).backgroundColor);
+            expect(frameColor).toBe(nameColor);
             const lastGoal = (await mine.getByRole("img", { name: /^Камера 3 / }).boundingBox())!;
             const toolbar = (await mine.getByLabel("Управление картой").boundingBox())!;
             const coversGoal = toolbar.x < lastGoal.x + lastGoal.width &&

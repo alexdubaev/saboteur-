@@ -184,6 +184,7 @@ export type CommitResult =
   | { ok: false; code: CommandErrorCode };
 
 export type PublicBoardTile = Position & {
+  placedBySeatId?: string;
   rotation: Rotation;
   assetId: string;
   kind: "origin" | "tunnel" | "goal";

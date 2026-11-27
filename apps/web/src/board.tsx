@@ -7,8 +7,10 @@ import { Icon } from "./ui.js";
 type BoardMove = Extract<CardCommand, { type: "PLAY_TUNNEL" | "PLAY_COLLAPSE" | "PLAY_SCOUT" }>;
 type Camera = { x: number; y: number; scale: number };
 type Bounds = { minX: number; maxX: number; minY: number; maxY: number };
+export type TunnelAuthor = { name: string; color: string };
 type BoardProps = {
   tiles: PublicBoardTile[];
+  authors: ReadonlyMap<string, TunnelAuthor>;
   moves: BoardMove[];
   staged: CardCommand | null;
   asset: string | undefined;
@@ -42,7 +44,7 @@ function TileImage({ id, rotation, large, name }: { id: string; rotation: number
     : <span className="tile-unavailable" aria-label={name}>?</span>;
 }
 
-export function Board({ tiles, moves, staged, asset, last, choose }: BoardProps) {
+export function Board({ tiles, authors, moves, staged, asset, last, choose }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Position>());
   const start = useRef<Position | null>(null);
@@ -188,17 +190,18 @@ export function Board({ tiles, moves, staged, asset, last, choose }: BoardProps)
           {tiles.map((tile) => {
             const key = cell(tile);
             const action = moveByCell.get(key);
-            const name = labelTile(tile);
+            const author = tile.kind === "tunnel" && tile.placedBySeatId ? authors.get(tile.placedBySeatId) : undefined;
+            const name = author ? `${labelTile(tile)} · Автор: ${author.name}` : labelTile(tile);
             const selected = stagedPosition && same(stagedPosition, tile);
-            const className = `board-tile tile-${tile.kind}${same(last, tile) ? " last-tile" : ""}${selected ? " tile-selected" : ""}`;
-            const style = { left: tile.x * tileWidth, top: tile.y * tileHeight };
+            const className = `board-tile tile-${tile.kind}${same(last, tile) ? " last-tile" : ""}${selected ? " tile-selected" : ""}${author ? " tile-authored" : ""}`;
+            const style = { left: tile.x * tileWidth, top: tile.y * tileHeight, color: author?.color };
             const content = <>
               <TileImage id={tile.assetId} rotation={tile.rotation} large={large} name={action ? "" : name} />
 
               {tile.goalSlotId && <span className="tile-label">{tile.revealed ? tile.assetId === "goal-gold" ? "Жила" : "Порода" : `Камера ${tile.goalSlotId.replace(/^g/, "")}`}</span>}
             </>;
             return action
-              ? <button key={key} className={`${className} tile-target`} style={style} onClick={() => choose(action)} aria-label={name} aria-pressed={Boolean(selected)}>{content}</button>
+              ? <button key={key} className={`${className} tile-target`} style={style} title={author ? name : undefined} onClick={() => choose(action)} aria-label={name} aria-pressed={Boolean(selected)}>{content}</button>
               : <div key={key} className={className} style={style} title={name}>{content}</div>;
           })}
           {moves.filter((action): action is Extract<BoardMove, { type: "PLAY_TUNNEL" }> => action.type === "PLAY_TUNNEL" && !byCell.has(cell(action))).map((action) => {

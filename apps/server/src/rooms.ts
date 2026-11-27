@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, randomInt, randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { applyCommand, newMatch, playerView, startRound } from "../../../packages/game-core/src/index.js";
+import { cellKey } from "../../../packages/game-core/src/graph.js";
 import type { Command, CommitResult, Definition, MatchEvent, MatchState, Rng } from "../../../packages/game-core/src/types.js";
 import { chooseBotMove } from "../../../packages/bots/src/index.js";
 import type { ChatMessage, CommandAck, CommandEnvelope, JournalEntry, RoomSnapshot } from "../../../packages/protocol/src/index.js";
@@ -178,20 +179,43 @@ export class Rooms {
         SELECT sequence, actor_seat_id AS "actorSeatId", type, revision, created_at AS at, public_data AS data
         FROM journal_events WHERE room_id = $1 ORDER BY sequence DESC LIMIT 100
       `, [roomId]);
+      const tunnelAuthors = new Map<string, string>();
+      if (match?.state.board.length) {
+        const placements = await client.query<Pick<JournalEntry, "actorSeatId" | "type" | "data">>(`
+          SELECT actor_seat_id AS "actorSeatId", type, public_data AS data
+          FROM journal_events
+          WHERE room_id = $1 AND match_id = $2 AND type IN ('ROUND_SETUP', 'PLAY_TUNNEL')
+          ORDER BY sequence DESC
+        `, [roomId, match.match_id]);
+        for (const { actorSeatId, type, data } of placements.rows) {
+          if (type === "ROUND_SETUP") break;
+          if (!actorSeatId || typeof data?.x !== "number" || typeof data.y !== "number") continue;
+          const key = cellKey(data.x, data.y);
+          if (!tunnelAuthors.has(key)) tunnelAuthors.set(key, actorSeatId);
+        }
+      }
       const visibleSeats = seats.map((seat) => ({
         seatId: seat.seat_id, name: seat.name, avatarId: seat.avatar_id, ready: seat.ready,
         present: seat.user_id === null || this.present(roomId, seat.seat_id), bot: seat.user_id === null,
       }));
       const visibleChat = chat.rows.reverse();
       const visibleJournal = journal.rows.reverse().map(({ data, ...entry }) => data ? { ...entry, data } : entry);
-      return new Map(userSeats.map((seat) => [seat.user_id as string, {
-        room: {
-          roomId, code: room.code, hostSeatId: room.host_seat_id, mySeatId: seat.seat_id, seats: visibleSeats,
-          turnTimeoutSeconds: room.turn_timeout_seconds, deadlineAt: match?.deadline_at?.toISOString() ?? null,
-        },
-        match: match && playerView(match.state, seat.seat_id),
-        chat: visibleChat, journal: visibleJournal, sequence: room.sequence,
-      }]));
+      return new Map(userSeats.map((seat) => {
+        const view = match && playerView(match.state, seat.seat_id);
+        for (const tile of view?.board ?? []) {
+          if (tile.kind !== "tunnel") continue;
+          const author = tunnelAuthors.get(cellKey(tile.x, tile.y));
+          if (author) tile.placedBySeatId = author;
+        }
+        return [seat.user_id as string, {
+          room: {
+            roomId, code: room.code, hostSeatId: room.host_seat_id, mySeatId: seat.seat_id, seats: visibleSeats,
+            turnTimeoutSeconds: room.turn_timeout_seconds, deadlineAt: match?.deadline_at?.toISOString() ?? null,
+          },
+          match: view,
+          chat: visibleChat, journal: visibleJournal, sequence: room.sequence,
+        }];
+      }));
     });
   }
 

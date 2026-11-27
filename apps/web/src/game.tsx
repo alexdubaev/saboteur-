@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { CardCommand, PlayerView, Position, Rotation } from "../../../packages/game-core/src/types.js";
 import type { RoomSnapshot } from "../../../packages/protocol/src/index.js";
 import { cardArt } from "./art.js";
-import { Board } from "./board.js";
+import { Board, type TunnelAuthor } from "./board.js";
 import type { RunCommand } from "./lobby.js";
 import { Messages } from "./messages.js";
 import { actions, cardLabels, copy, reasons, roles, tools } from "./text.js";
@@ -10,6 +10,8 @@ import { Avatar, Dialog, Icon, Notice } from "./ui.js";
 
 export type MatchSnapshot = RoomSnapshot & { match: PlayerView };
 type Selection = { revision: number; instanceId: string; rotation: Rotation; staged: CardCommand | null };
+type ScoutModal = { roundNo: number; goalSlotId?: string };
+const seatColors = ["#62d9ff", "#fbb364", "#a7e86a", "#f890cc", "#baa0ff", "#52e2bb", "#f7e26d", "#ff8282", "#91aaff", "#eee2cf"];
 
 function Deadline({ at }: { at: string }) {
   const remaining = () => Math.max(0, Math.ceil((Date.parse(at) - Date.now()) / 1000));
@@ -45,19 +47,20 @@ function RoleCard({ snapshot, mandatory, close, run, pending, error }: { snapsho
   );
 }
 
-function ScoutNotes({ snapshot, close }: { snapshot: MatchSnapshot; close: () => void }) {
+function ScoutNotes({ snapshot, goalSlotId, close }: { snapshot: MatchSnapshot; goalSlotId?: string; close: () => void }) {
+  const results = snapshot.match.self.scoutResults.filter((result) => !goalSlotId || result.goalSlotId === goalSlotId);
   return (
     <Dialog title="Моя разведка" close={close}>
       <p>Видно только вам.</p>
-      <ul className="result-grid scouts">
-        {snapshot.match.self.scoutResults.map((scout) => (
+      {results.length === 0 ? <p role="status">Ждём результат разведки…</p> : <ul className="result-grid">
+        {results.map((scout) => (
           <li key={scout.goalSlotId}>
             <img className="summary-art" src={cardArt(scout.assetId)} width={256} height={384} alt="" />
             <strong>Камера {scout.goalSlotId.replace(/^g/, "")}</strong>
             <span>{scout.content === "ore" ? "Золотая жила" : "Пустая порода"}</span>
           </li>
         ))}
-      </ul>
+      </ul>}
     </Dialog>
   );
 }
@@ -115,7 +118,7 @@ function MatchResults({ snapshot, run, pending, error, lobby }: { snapshot: Matc
   );
 }
 
-function Crew({ snapshot }: { snapshot: MatchSnapshot }) {
+function Crew({ snapshot, authors }: { snapshot: MatchSnapshot; authors: ReadonlyMap<string, TunnelAuthor> }) {
   const { room, match } = snapshot;
   return (
     <section className="panel match-crew" aria-label={copy.crew}>
@@ -129,7 +132,7 @@ function Crew({ snapshot }: { snapshot: MatchSnapshot }) {
             <li key={seat.seatId} className={active ? "current-seat" : ""}>
               <Avatar {...seat} />
               <div className="seat-name">
-                <strong>{seat.name}</strong>
+                <strong><span className="seat-color" style={{ backgroundColor: authors.get(seat.seatId)?.color }} aria-hidden="true" />{seat.name}</strong>
                 <small>{[own && "Вы", active && "Ходит", seat.bot && "Бот", !seat.present && !seat.bot && "Нет связи"].filter(Boolean).join(" · ") || "В шахте"}</small>
               </div>
               <div className="seat-icons">
@@ -168,7 +171,7 @@ function lastBoardMove(snapshot: MatchSnapshot): Position | null {
 export function Game({ snapshot, pending, error, run, send, lobby, exit }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void }) {
   const { match, room } = snapshot;
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [modal, setModal] = useState<"role" | "scout" | "leave" | null>(null);
+  const [modal, setModal] = useState<"role" | "leave" | ScoutModal | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const selected = selection?.revision === match.revision ? selection : null;
   const me = match.turnSeatId === room.mySeatId && match.phase === "TURN";
@@ -192,8 +195,15 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
     setSelection({ ...selected, rotation, staged: next ?? null });
   };
   const confirm = async () => {
-    if (selected?.staged && await run(selected.staged)) setSelection(null);
+    const move = selected?.staged;
+    if (!move || !await run(move)) return;
+    setSelection(null);
+    if (move.type === "PLAY_SCOUT") setModal({ roundNo: match.roundNo, goalSlotId: move.goalSlotId });
   };
+  const scout = modal && typeof modal === "object" && modal.roundNo === match.roundNo ? modal : null;
+  const names = new Map(room.seats.map((seat) => [seat.seatId, seat.name]));
+  const authors = new Map(match.seats.map(({ seatId }, index) =>
+    [seatId, { name: names.get(seatId) ?? "Участник", color: seatColors[index] }] as const));
   const current = room.seats.find((seat) => seat.seatId === match.turnSeatId);
   const rolePending = match.phase === "ROLE_REVEAL" && !match.self.roleAcknowledged;
   const summary = match.phase === "ROUND_SUMMARY";
@@ -213,7 +223,7 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
   return (
     <main className="game-shell" data-testid="room-state" data-room={room.roomId} data-match={match.matchId} data-revision={match.revision}
       onKeyDown={(event) => {
-        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLDialogElement || modal || rolePending || summary || final) return;
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLDialogElement || typeof modal === "string" || scout || rolePending || summary || final) return;
         if (event.key === "Escape" && selected) setSelection(null);
         if (event.key.toLowerCase() === "r" && selected && tunnel) rotate();
       }}>
@@ -230,16 +240,16 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
         </ul>
         <div className="match-tools">
           <button className="button secondary" disabled={!match.self.role} onClick={() => setModal("role")}><Icon name="lock" />{copy.role}</button>
-          {match.self.scoutResults.length > 0 && <button className="icon-button" aria-label="Моя разведка" onClick={() => setModal("scout")}><Icon name="scout" /></button>}
+          {match.self.scoutResults.length > 0 && <button className="button secondary" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" />Разведка</button>}
           <button className="icon-button mobile-messages" aria-label={showMessages ? "Скрыть чат и журнал" : "Открыть чат и журнал"} aria-expanded={showMessages} onClick={() => setShowMessages(!showMessages)}><Icon name="chat" /></button>
           <button className="icon-button" aria-label={copy.leave} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
         </div>
       </header>
       <Notice text={error} />
       <div className="table-layout">
-        <Board key={match.roundNo} tiles={match.board} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose} />
+        <Board key={match.roundNo} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose} />
         <aside className="table-side">
-          <Crew snapshot={snapshot} />
+          <Crew snapshot={snapshot} authors={authors} />
           <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} compact /></div>
         </aside>
         <section className="panel hand" aria-label="Ваша рука">
@@ -275,14 +285,14 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
         </section>
       </div>
       {rolePending || (modal === "role" && !summary && !final) ? <RoleCard snapshot={snapshot} mandatory={rolePending} close={() => setModal(null)} run={run} pending={pending} error={error} /> : null}
-      {!rolePending && !summary && !final && modal === "scout" && <ScoutNotes snapshot={snapshot} close={() => setModal(null)} />}
+      {!rolePending && !final && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
       {!rolePending && !summary && !final && modal === "leave" && <Dialog title={copy.leave} close={() => setModal(null)}>
         <p>Вернитесь на этот адрес, чтобы снова занять своё место.</p>
         <div className="dialog-actions"><button className="button secondary" onClick={exit}>В меню</button>
         {isHost && <button className="button secondary" disabled={pending} onClick={async () => { if (await run({ type: "ABANDON" })) setModal(null); }}>Остановить экспедицию</button>}</div>
         <Notice text={error} />
       </Dialog>}
-      {summary && <RoundResults snapshot={snapshot} run={run} pending={pending} error={error} />}
+      {summary && !scout && <RoundResults snapshot={snapshot} run={run} pending={pending} error={error} />}
       {final && <MatchResults snapshot={snapshot} run={run} pending={pending} error={error} lobby={lobby} />}
     </main>
   );
