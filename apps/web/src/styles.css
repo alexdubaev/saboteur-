@@ -376,13 +376,32 @@ input::placeholder { color: #ad9dbe; }
   padding: var(--game-top) max(6px, env(safe-area-inset-right)) var(--game-bottom) max(6px, env(safe-area-inset-left));
   gap: 5px;
 }
-.phone-table-header, .phone-utilities, .phone-turn, .phone-score { display: flex; align-items: center; gap: 5px; }
-.phone-table-header { justify-content: space-between; flex-wrap: wrap; }
-.phone-turn { flex-wrap: wrap; }
-.phone-turn h1 { font: bold 1rem/1.1 Georgia, serif; }
-.phone-turn span, .phone-score { color: var(--gold); font-size: .72rem; white-space: nowrap; }
-.phone-score .icon { width: 14px; height: 14px; }
-.phone-score .icon:not(:first-child) { margin-inline-start: 4px; }
+.phone-table-header {
+  display: grid; align-items: center; gap: 4px 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "turn tools" "stats stats" "crew crew";
+}
+.phone-turn { grid-area: turn; font: bold 1rem/1.1 Georgia, serif; }
+.phone-utilities { grid-area: tools; display: flex; align-items: center; justify-content: end; gap: 4px; }
+.phone-utilities .button { white-space: nowrap; }
+.phone-role-name { display: none; }
+.phone-score { grid-area: stats; display: flex; flex-wrap: wrap; gap: 3px 8px; margin: 0; font-size: .72rem; }
+.phone-score > div { display: inline-flex; gap: 3px; }
+.phone-score dt { color: var(--muted); }
+.phone-score dd { margin: 0; color: var(--gold); font-weight: 650; font-variant-numeric: tabular-nums; }
+.phone-game .phone-crew { grid-area: crew; border: 0; background: transparent; padding: 0; overflow: visible; }
+.phone-game .phone-crew ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; overflow: visible; }
+.phone-game .phone-crew li {
+  display: flex; justify-content: space-between; align-items: center; column-gap: 3px;
+  min-height: 20px; padding: 1px 3px; border: 1px solid var(--line); border-radius: 4px;
+}
+.phone-game .phone-crew .seat-name { display: block; min-width: 0; flex: 0 1 auto; }
+.phone-game .phone-crew strong { display: block; font-size: .7rem; }
+.phone-game .phone-crew .seat-icons { gap: 2px; }
+.phone-game .phone-crew .seat-cards { font-size: .68rem; }
+.phone-game .phone-crew .icon { width: 10px; height: 10px; }
+.phone-game .phone-crew .broken-tool b { font-size: .66rem; }
+.journal-actor { font-weight: 650; }
 .phone-game .table-layout {
   flex: 1 0 auto; min-height: 0;
   grid-template-columns: minmax(0, 1fr);
@@ -454,9 +473,14 @@ input::placeholder { color: #ad9dbe; }
   .solo-app { --browser-top: 18px; --browser-bottom: 36px; }
   .phone-game {
     --table-control: clamp(25px, 9.2dvh, 29px);
-    --hand-art-height: clamp(35px, calc(20dvh - 16px), 86px);
+    --hand-art-height: clamp(33px, calc(20dvh - 18px), 86px);
     flex: 0 0 auto; height: 100dvh; min-height: 260px;
   }
+  .phone-table-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "turn stats tools" "crew crew crew";
+  }
+  .phone-score { justify-content: center; gap: 2px 6px; }
   .phone-game .table-layout {
     flex: 1 1 0;
     grid-template-columns: minmax(0, 1.16fr) minmax(0, 1fr);
@@ -469,6 +493,18 @@ input::placeholder { color: #ad9dbe; }
   .phone-game .message-pane .chat-form { padding-block-start: 1px; }
   .phone-game .message-pane .chat-input { height: 26px; min-height: 26px; padding-block: 2px; line-height: 18px; }
   .phone-game .message-pane .chat-form button { min-height: 26px; width: 29px; flex-basis: 29px; }
+}
+
+@media (min-width: 650px) {
+  .phone-table-header {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "turn stats crew tools";
+  }
+}
+
+@media (min-width: 720px) {
+  .phone-role-label { display: none; }
+  .phone-role-name { display: inline; color: var(--gold); }
 }
 
 @media (display-mode: standalone), (display-mode: fullscreen) {

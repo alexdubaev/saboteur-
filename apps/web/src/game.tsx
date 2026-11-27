@@ -132,11 +132,11 @@ function MatchResults({ snapshot, run, pending, error, lobby, solo }: { snapshot
   );
 }
 
-function Crew({ snapshot, authors }: { snapshot: MatchSnapshot; authors: ReadonlyMap<string, TunnelAuthor> }) {
+function Crew({ snapshot, authors, compact = false }: { snapshot: MatchSnapshot; authors: ReadonlyMap<string, TunnelAuthor>; compact?: boolean }) {
   const { room, match } = snapshot;
   return (
-    <section className="panel match-crew" aria-label={copy.crew}>
-      <div className="panel-heading"><h2>{copy.crew}</h2><span>{room.seats.length}</span></div>
+    <section className={`panel match-crew${compact ? " phone-crew" : ""}`} aria-label={copy.crew}>
+      {!compact && <div className="panel-heading"><h2>{copy.crew}</h2><span>{room.seats.length}</span></div>}
       <ul>
         {room.seats.map((seat) => {
           const info = match.seats.find(({ seatId }) => seatId === seat.seatId);
@@ -144,10 +144,10 @@ function Crew({ snapshot, authors }: { snapshot: MatchSnapshot; authors: Readonl
           const own = seat.seatId === room.mySeatId;
           return (
             <li key={seat.seatId} className={active ? "current-seat" : ""}>
-              <Avatar {...seat} />
+              {!compact && <Avatar {...seat} />}
               <div className="seat-name">
-                <strong><span className="seat-color" style={{ backgroundColor: authors.get(seat.seatId)?.color }} aria-hidden="true" />{seat.name}</strong>
-                <small>{[own && "Вы", active && "Ходит", seat.bot && "Бот", !seat.present && !seat.bot && "Нет связи"].filter(Boolean).join(" · ") || "В шахте"}</small>
+                <strong><span className="seat-color" style={{ backgroundColor: authors.get(seat.seatId)?.color }} aria-hidden="true" />{own && compact ? "Вы" : seat.name}</strong>
+                {!compact && <small>{[own && "Вы", active && "Ходит", seat.bot && "Бот", !seat.present && !seat.bot && "Нет связи"].filter(Boolean).join(" · ") || "В шахте"}</small>}
               </div>
               <div className="seat-icons">
                 <span className="seat-cards" aria-label={`Карт в руке: ${info?.handCount ?? 0}`}><Icon name="cards" />{info?.handCount ?? 0}</span>
@@ -182,13 +182,13 @@ function lastBoardMove(snapshot: MatchSnapshot): Position | null {
   return null;
 }
 
-export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; sendLocalMessage?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void; fullscreenControl?: { label: string; toggle: () => void } }) {
+export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; sendLocalMessage?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void; fullscreenControl?: { label: string; active: boolean; toggle: () => void } }) {
   const { match, room } = snapshot;
   const solo = !send;
   const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches) && solo;
   const leaveLabel = solo ? "Выйти из партии" : copy.leave;
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [modal, setModal] = useState<"role" | "leave" | "details" | ScoutModal | null>(null);
+  const [modal, setModal] = useState<"role" | "leave" | ScoutModal | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const selected = selection?.revision === match.revision ? selection : null;
   const me = match.turnSeatId === room.mySeatId && match.phase === "TURN";
@@ -228,6 +228,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   const actorLabel = me ? "Ваш ход" : current ? `Ходит ${current.name}` : match.phase === "ROLE_REVEAL" ? "Участники смотрят роли" : "Подготовка шахты";
   const linkedOre = match.board.filter((tile) => tile.kind === "goal" && tile.revealed && tile.reachable && tile.assetId === "goal-gold").length;
   const profile = profileFor(match.requiredOre);
+  const roleName = match.self.role ? roles[match.self.role] : null;
   const isHost = room.hostSeatId === room.mySeatId;
   const deadline = room.deadlineAt;
   const staged = selected?.staged ?? null;
@@ -280,18 +281,23 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
         if (event.key.toLowerCase() === "r" && selected && tunnel) rotate();
       }}>
       {phone ? <header className="phone-table-header">
-        <div className="phone-turn">
-          <h1 aria-live="polite">{actorLabel}</h1>
-          <span title={`Раунд ${match.roundNo} из ${match.rounds}`}>{match.roundNo}/{match.rounds}</span>
-        </div>
-        <span className="phone-score" aria-label={`${profile.progress} ${linkedOre}/${match.requiredOre} · колода ${match.deckCount}`}>
-          <Icon name="gold" />{linkedOre}/{match.requiredOre}<Icon name="cards" />{match.deckCount}
-        </span>
+        <h1 className="phone-turn" aria-live="polite">{actorLabel}</h1>
+        <dl className="phone-score" aria-label="Счётчики партии">
+          <div><dt>Раунд</dt><dd>{match.roundNo}/{match.rounds}</dd></div>
+          <div><dt>Ход</dt><dd>{match.turnNumber}{match.maxTurns !== null ? `/${match.maxTurns}` : ""}</dd></div>
+          <div><dt>Колода</dt><dd>{match.deckCount}</dd></div>
+          <div><dt>{profile.progress}</dt><dd>{linkedOre}/{match.requiredOre}</dd></div>
+        </dl>
+        <Crew snapshot={snapshot} authors={authors} compact />
         <div className="phone-utilities">
-          <button className="button secondary" aria-label={copy.role} onClick={() => setModal("role")}>Роль</button>
+          <button className="button secondary phone-role" title={copy.role} aria-haspopup="dialog" disabled={!roleName} onClick={() => setModal("role")}>
+            <span className="phone-role-label">Роль</span>
+            {roleName && <span className="phone-role-name">{roleName}</span>}
+          </button>
+          {fullscreenControl && <button className="button secondary" aria-label={fullscreenControl.label} aria-pressed={fullscreenControl.active}
+            onClick={fullscreenControl.toggle}>{fullscreenControl.active ? "Свернуть" : "Экран"}</button>}
           {match.self.scoutResults.length > 0 && <button className="icon-button" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" /></button>}
           {openRules && <button className="icon-button" aria-label={copy.rules} onClick={openRules}><Icon name="info" /></button>}
-          <button className="button secondary" onClick={() => setModal("details")}>Партия</button>
           <button className="icon-button" aria-label={leaveLabel} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
         </div>
       </header> : <header className="match-header">
@@ -302,7 +308,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
         {counts}
         <div className="match-tools">
           {fullscreenControl && <button className="button secondary" onClick={fullscreenControl.toggle}>{fullscreenControl.label}</button>}
-          <button className="button secondary" disabled={!match.self.role} onClick={() => setModal("role")}><Icon name="lock" />{copy.role}</button>
+          <button className="button secondary" title={copy.role} disabled={!roleName} onClick={() => setModal("role")}><Icon name="lock" />{solo && roleName ? roleName : copy.role}</button>
           {match.self.scoutResults.length > 0 && <button className="button secondary" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" />Разведка</button>}
           {send && <button className="icon-button mobile-messages" aria-label={showMessages ? "Скрыть чат и журнал" : "Открыть чат и журнал"} aria-expanded={showMessages} onClick={() => setShowMessages(!showMessages)}><Icon name="chat" /></button>}
           <button className="icon-button" aria-label={leaveLabel} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
@@ -314,8 +320,8 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
           phone={phone} />
         {!phone && <aside className="table-side">
           <Crew snapshot={snapshot} authors={authors} />
-          {send && <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} compact /></div>}
-          {sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} split local />}
+          {send && <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} authors={authors} compact /></div>}
+          {sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} authors={authors} split local />}
         </aside>}
         <section className="panel hand" aria-label="Ваша рука">
           {phone ? <>
@@ -338,19 +344,8 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
             <div className="hand-body"><div className="hand-cards">{cards()}</div>{actionsPanel}</div>
           </>}
         </section>
-        {phone && sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} split local />}
+        {phone && sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} authors={authors} split local />}
       </div>
-      {phone && !rolePending && !summary && !final && modal === "details" && <Dialog title="Партия" close={() => setModal(null)}>
-        {counts}
-        <Crew snapshot={snapshot} authors={authors} />
-        <div className="dialog-actions">
-          <button className="button secondary" onClick={() => setModal("role")}>{copy.role}</button>
-          {match.self.scoutResults.length > 0 && <button className="button secondary" onClick={() => setModal({ roundNo: match.roundNo })}>Моя разведка</button>}
-          {openRules && <button className="button secondary" onClick={() => { setModal(null); openRules(); }}>{copy.rules}</button>}
-          {fullscreenControl && <button className="button secondary" onClick={() => { setModal(null); fullscreenControl.toggle(); }}>{fullscreenControl.label}</button>}
-          <button className="button secondary" onClick={() => setModal("leave")}>{leaveLabel}</button>
-        </div>
-      </Dialog>}
       {rolePending || (modal === "role" && !summary && !final) ? <RoleCard snapshot={snapshot} mandatory={rolePending} close={() => setModal(null)} run={run} pending={pending} error={error} /> : null}
       {!rolePending && !final && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
       {!rolePending && !summary && !final && modal === "leave" && <Dialog title={leaveLabel} close={() => setModal(null)}>

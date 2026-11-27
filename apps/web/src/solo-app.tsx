@@ -18,7 +18,7 @@ export function SoloApp() {
   const standalone = window.matchMedia("(display-mode: standalone)").matches
     || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
   const appleMobile = /iPhone|iPad|iPod/u.test(navigator.userAgent);
-  const fullscreenLabel = fullscreen ? "Выйти из полноэкранного режима" : "Во весь экран";
+  const fullscreenLabel = fullscreen ? "Выйти из полноэкранного режима" : standalone ? "Режим экрана" : "Во весь экран";
 
   useEffect(() => {
     const sync = () => setFullscreen(Boolean(document.fullscreenElement));
@@ -32,7 +32,7 @@ export function SoloApp() {
         await document.exitFullscreen();
         return;
       }
-      if (document.fullscreenEnabled && document.documentElement.requestFullscreen) {
+      if (!standalone && document.fullscreenEnabled && document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen();
         return;
       }
@@ -105,7 +105,7 @@ export function SoloApp() {
     {active
       ? <Game key={active.snapshot.match.matchId} snapshot={{ ...active.snapshot, chat }} run={run} error={error} pending={false} lobby={menu} exit={menu}
           sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)}
-          fullscreenControl={standalone ? undefined : { label: fullscreenLabel, toggle: () => void toggleFullscreen() }} />
+          fullscreenControl={{ label: fullscreenLabel, active: fullscreen, toggle: () => void toggleFullscreen() }} />
       : <main className="home-stage">
         <div className="home-copy">
           <div className="home-inner">
@@ -115,7 +115,7 @@ export function SoloApp() {
             <div className="entry-form">
               <Notice text={error} />
               <button className="button primary entry-submit" onClick={start}><Icon name="pickaxe" />Играть с двумя ботами</button>
-              {!standalone && <button className="button secondary entry-fullscreen" onClick={() => void toggleFullscreen()}>{fullscreenLabel}</button>}
+              <button className="button secondary entry-fullscreen" onClick={() => void toggleFullscreen()}>{fullscreenLabel}</button>
               <p className="soft-note">Партия проходит в этой вкладке и сбрасывается при обновлении.</p>
             </div>
           </div>
@@ -126,8 +126,9 @@ export function SoloApp() {
         </figure>
       </main>}
     {rulesOpen && <Rules close={() => setRulesOpen(false)} />}
-    {fullscreenHelp && <Dialog title="Во весь экран" close={() => setFullscreenHelp(false)}>
-      {appleMobile ? <p>Откройте игру в Safari. Нажмите «Поделиться», выберите «На экран “Домой”» и включите «Открывать как веб-приложение», если этот пункт есть. Затем запустите игру с её значка.</p>
+    {fullscreenHelp && <Dialog title={standalone ? "Режим экрана" : "Во весь экран"} close={() => setFullscreenHelp(false)}>
+      {standalone ? <p>Игра открыта как отдельное веб-приложение. Чтобы вернуться к виду с панелями браузера, откройте эту же ссылку в обычной вкладке.</p>
+        : appleMobile ? <p>Откройте игру в Safari. Нажмите «Поделиться», выберите «На экран “Домой”» и включите «Открывать как веб-приложение», если этот пункт есть. Затем запустите игру с её значка.</p>
         : <p>Откройте игру в отдельной вкладке браузера и нажмите «Во весь экран» ещё раз.</p>}
     </Dialog>}
   </div>;

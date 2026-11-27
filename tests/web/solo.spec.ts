@@ -41,24 +41,39 @@ test.describe("тестовая игра с ботами", () => {
         expect(await viewportFits()).toBe(true);
         const play = page.getByRole("button", { name: "Играть с двумя ботами" });
         await expect(play).toBeInViewport({ ratio: 0.99 });
-        if (label === "landscape") {
-          await page.getByRole("button", { name: "Во весь экран", exact: true }).tap();
-          const help = page.getByRole("dialog", { name: "Во весь экран" });
-          await expect(help.getByText(/На экран/)).toBeVisible();
-          await help.getByRole("button", { name: "Закрыть" }).tap();
-        }
         await play.tap();
         const role = page.getByRole("dialog", { name: "Моя роль" });
         await expect.poll(() => role.evaluate((dialog) => dialog.scrollHeight - dialog.clientHeight)).toBeLessThanOrEqual(1);
         await expect(role.getByRole("button", { name: "Роль понятна" })).toBeInViewport({ ratio: 0.99 });
+        const roleName = await role.getByRole("heading", { level: 3 }).innerText();
         await role.getByRole("button", { name: "Роль понятна" }).tap();
         await expect(page.getByRole("heading", { name: "Ваш ход", exact: true })).toBeVisible();
-        const details = page.getByRole("button", { name: "Партия", exact: true });
-        await details.tap();
-        const info = page.getByRole("dialog", { name: "Партия" });
-        await expect(info.getByText("Бот 2", { exact: true })).toBeVisible();
-        await expect(info.getByText("Бот 3", { exact: true })).toBeVisible();
-        await info.getByRole("button", { name: "Закрыть" }).tap();
+        const screenMode = page.getByRole("button", { name: "Во весь экран", exact: true });
+        const roleButton = page.locator(".phone-role");
+        const checkHeader = async (wide: boolean) => {
+          await expect(screenMode).toBeInViewport({ ratio: 0.98 });
+          await expect(roleButton).toHaveAccessibleName(wide ? roleName : "Роль");
+          const stats = page.getByLabel("Счётчики партии");
+          for (const name of ["Раунд", "Ход", "Колода", "Золото"]) {
+            await expect(stats.getByText(name, { exact: true })).toBeInViewport();
+          }
+          const crew = page.getByRole("region", { name: "Участники" });
+          for (const name of ["Вы", "Бот 2", "Бот 3"]) {
+            const player = crew.getByRole("listitem").filter({ hasText: name });
+            const label = player.getByText(name, { exact: true });
+            await expect(label).toBeInViewport();
+            expect(await label.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+            await expect(player.getByLabel(/^Карт в руке:/)).toBeInViewport();
+          }
+        };
+        await checkHeader(label === "landscape");
+        await roleButton.tap();
+        await expect(role.getByText(roleName, { exact: true })).toBeVisible();
+        await role.getByRole("button", { name: "Закрыть" }).tap();
+        await screenMode.tap();
+        const help = page.getByRole("dialog", { name: "Во весь экран" });
+        await expect(help.getByText(/На экран/)).toBeVisible();
+        await help.getByRole("button", { name: "Закрыть" }).tap();
         const board = page.getByRole("region", { name: "Карта шахты" });
         const mapViewport = board.getByRole("region", { name: /^Поле шахты/ });
         const camera = () => mapViewport.evaluate((viewport) => {
@@ -137,10 +152,17 @@ test.describe("тестовая игра с ботами", () => {
         await page.screenshot({ path: testInfo.outputPath(`${label}-placement.png`), scale: "css" });
         await confirm.tap();
         await expect(match).not.toHaveAttribute("data-revision", revision!);
-        await expect(board.getByRole("img", { name: `${placed} · Автор: Старатель` })).toBeAttached();
+        const tunnel = board.getByRole("img", { name: `${placed} · Автор: Старатель` });
+        await expect(tunnel).toBeAttached();
         await expect(page.getByRole("heading", { name: "Ваш ход", exact: true })).toBeVisible();
         await expect.poll(camera).toEqual(fixedView);
-        await expect(journal.getByText("Старатель проложил туннель")).toBeAttached();
+        const ownEntry = journal.getByRole("listitem").filter({ hasText: "Старатель проложил туннель" }).first();
+        const ownColor = await tunnel.locator("..").evaluate((tile) => getComputedStyle(tile).color);
+        await expect(ownEntry.getByText("Старатель", { exact: true })).toHaveCSS("color", ownColor);
+        const botTunnel = board.getByRole("img", { name: /^Туннель .* · Автор: Бот 3$/ }).first();
+        const botEntry = journal.getByRole("listitem").filter({ hasText: "Бот 3 проложил туннель" }).first();
+        const botColor = await botTunnel.locator("..").evaluate((tile) => getComputedStyle(tile).color);
+        await expect(botEntry.getByText("Бот 3", { exact: true })).toHaveCSS("color", botColor);
         await expect(sent).toBeInViewport({ ratio: 0.98 });
         if (label === "portrait") {
           const matchId = await match.getAttribute("data-match");
@@ -150,12 +172,14 @@ test.describe("тестовая игра с ботами", () => {
           await expect(match).toHaveAttribute("data-match", matchId!);
           await expect(match).toHaveAttribute("data-revision", playingRevision!);
           await tableFits();
+          await checkHeader(true);
           await expect.poll(camera).toEqual(fixedView);
           await expect(sent).toBeInViewport({ ratio: 0.98 });
           await expect(cards.last()).toBeInViewport({ ratio: 0.98 });
           expect(await viewportFits()).toBe(true);
           await page.setViewportSize({ width, height });
           await expect(match).toHaveAttribute("data-match", matchId!);
+          await checkHeader(false);
         }
         await page.screenshot({ path: testInfo.outputPath(`${label}.png`), scale: "css" });
         expect(await viewportFits()).toBe(true);

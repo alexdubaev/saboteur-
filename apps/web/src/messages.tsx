@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 import type { RoomSnapshot } from "../../../packages/protocol/src/index.js";
+import type { TunnelAuthor } from "./board.js";
 import { copy, journalLabels } from "./text.js";
 import { Icon } from "./ui.js";
 
 const clock = new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" });
 
-export function Messages({ snapshot, send, compact = false, split = false, local = false }: { snapshot: RoomSnapshot; send: (message: string) => Promise<boolean>; compact?: boolean; split?: boolean; local?: boolean }) {
+export function Messages({ snapshot, send, authors, compact = false, split = false, local = false }: { snapshot: RoomSnapshot; send: (message: string) => Promise<boolean>; authors?: ReadonlyMap<string, TunnelAuthor>; compact?: boolean; split?: boolean; local?: boolean }) {
   const [tab, setTab] = useState<"chat" | "journal">("chat");
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -38,8 +39,11 @@ export function Messages({ snapshot, send, compact = false, split = false, local
         <ol className="message-list" aria-label="Ходы и события" aria-live="polite">
           {[...snapshot.journal].reverse().filter((entry) => Object.hasOwn(journalLabels, entry.type)).map((entry) => {
             const label = journalLabels[entry.type];
-            const name = entry.actorSeatId ? names.get(entry.actorSeatId) : null;
-            return <li key={entry.sequence}><div><span>{name ? `${name} ${label}` : label}</span><time dateTime={entry.at}>{clock.format(new Date(entry.at))}</time></div></li>;
+            const author = entry.actorSeatId ? authors?.get(entry.actorSeatId) : undefined;
+            const name = author?.name ?? (entry.actorSeatId ? names.get(entry.actorSeatId) : undefined);
+            return <li key={entry.sequence}><div><span>
+              {name && <><strong className="journal-actor" style={{ color: author?.color }}>{name}</strong>{" "}</>}{label}
+            </span><time dateTime={entry.at}>{clock.format(new Date(entry.at))}</time></div></li>;
           })}
           {!snapshot.journal.some((entry) => Object.hasOwn(journalLabels, entry.type)) && <li className="soft-note">{copy.noJournal}</li>}
         </ol>
