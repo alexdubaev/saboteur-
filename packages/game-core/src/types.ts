@@ -38,6 +38,7 @@ export type Ruleset = {
   readonly rounds: number;
   readonly handSizeByPlayers: Readonly<Record<string, number>>;
   readonly traitorCountByPlayers: Readonly<Record<string, number>>;
+  readonly traitorlessChancePercentByPlayers?: Readonly<Record<string, number>>;
   readonly deck: Readonly<{
     tunnelCopies: number;
     actionCopies: number;
@@ -57,7 +58,7 @@ export type Ruleset = {
     actionsPerTurn: 1;
     drawAfterNonterminalMove: 1;
     refillDiscard: false;
-    maxTurnsFormula: Readonly<{ perPlayer: number; constant: number }>;
+    maxTurnsFormula: Readonly<{ perPlayer: number; constant: number }> | null;
     skipEmptyHand: true;
     timeoutDefaultSeconds: number | null;
     timeoutPolicy: "discard-first-by-instance-order";
@@ -138,7 +139,7 @@ export type Graph = {
 };
 
 export type Outcome = {
-  winner: "prospectors" | "traitors";
+  winner: "prospectors" | "traitors" | "none";
   reason: "ore" | "turn-limit" | "exhaustion";
   connectedOre: number;
   finisherSeatId: string | null;
@@ -161,7 +162,7 @@ export type MatchState = {
   roundStarterSeatId: string | null;
   turnSeatId: string | null;
   turnNumber: number;
-  maxTurns: number;
+  maxTurns: number | null;
   outcome: Outcome | null;
   rewards: RewardEntry[];
   summaryAcknowledged: string[];
@@ -200,7 +201,8 @@ export type PublicView = {
   rounds: number;
   turnSeatId: string | null;
   turnNumber: number;
-  maxTurns: number;
+  maxTurns: number | null;
+  requiredOre: number;
   deckCount: number;
   seats: { seatId: string; handCount: number; brokenTools: Tool[]; role?: Role }[];
   board: PublicBoardTile[];

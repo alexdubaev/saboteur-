@@ -102,13 +102,16 @@ function setupRound(state: MatchState, events: MatchEvent[], rng: Rng): void {
   state.roundStarterSeatId = state.seats[starterIndex].seatId;
   state.turnSeatId = null;
   state.turnNumber = 0;
-  state.maxTurns = rules.turn.maxTurnsFormula.perPlayer * count + rules.turn.maxTurnsFormula.constant;
+  const turnBudget = rules.turn.maxTurnsFormula;
+  state.maxTurns = turnBudget ? turnBudget.perPlayer * count + turnBudget.constant : null;
   state.discard = [];
   state.board = [];
   state.outcome = null;
   state.summaryAcknowledged = [];
 
-  const traitors = rules.traitorCountByPlayers[String(count)];
+  const traitorlessChance = rules.traitorlessChancePercentByPlayers?.[String(count)] ?? 0;
+  const traitors = traitorlessChance > 0 && randomIndex(rng, 100) < traitorlessChance
+    ? 0 : rules.traitorCountByPlayers[String(count)];
   const roles = shuffle(Array.from({ length: count }, (_, index): Role => index < traitors ? "traitor" : "prospector"), rng);
   const contents = shuffle(rules.board.goalContents, rng);
   const { barrenOptions, ore } = rules.board.goalAssets;

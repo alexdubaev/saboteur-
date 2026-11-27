@@ -6,7 +6,7 @@ const prospectorPolicies = {
 
 const traitorPolicies = {
   "turn-budget-or-exhaustion-without-goal": (state: MatchState): Outcome["reason"] | null => {
-    if (state.turnNumber >= state.maxTurns) return "turn-limit";
+    if (state.maxTurns !== null && state.turnNumber >= state.maxTurns) return "turn-limit";
     if (state.deck.length === 0 && state.seats.every(seat => seat.hand.length === 0)) return "exhaustion";
     return null;
   },
@@ -35,7 +35,9 @@ export function evaluateOutcome(state: MatchState, finisherSeatId: string | null
     return { winner: "prospectors", reason: "ore", connectedOre, finisherSeatId };
   }
   const reason = traitorPolicies[traitors.type](state);
-  return reason ? { winner: "traitors", reason, connectedOre, finisherSeatId } : null;
+  if (!reason) return null;
+  const winner = state.seats.some(seat => seat.role === "traitor") ? "traitors" : "none";
+  return { winner, reason, connectedOre, finisherSeatId };
 }
 
 export function settleRewards(state: MatchState): MatchState {

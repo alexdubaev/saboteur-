@@ -29,19 +29,19 @@ function readJson(path: string): unknown {
   return JSON.parse(readFileSync(new URL(path, root), "utf8"));
 }
 
-test("the closed alpha selects the active v2 catalog and a 40 + 26 card deck", () => {
+test("the closed alpha selects the active v2 catalog and a 40 + 27 card deck", () => {
   const config = gameConfigSchema.parse(readJson("data/game-config.json"));
   expect(config).toMatchObject({
-    developmentRuleset: "data/rulesets/playtest-expedition-v0.json",
+    developmentRuleset: "data/rulesets/playtest-gold-trail-v1.json",
     cardCatalog: "data/card-catalog-v2.json",
     releaseEnabled: false,
     releaseRuleset: null,
   });
 
   const profile = rulesetSchema.parse(readJson(config.developmentRuleset));
-  expect(profile.id).toBe("playtest-expedition-v0");
+  expect(profile.id).toBe("playtest-gold-trail-v1");
   expect(profile.catalog).toBe(config.cardCatalog);
-  expect(profile.deck).toMatchObject({ tunnelCopies: 40, actionCopies: 26, total: 66 });
+  expect(profile.deck).toMatchObject({ tunnelCopies: 40, actionCopies: 27, total: 67 });
 
   const { cards } = catalogSchema.parse(readJson(config.cardCatalog));
   const cardKinds = new Map(cards.map(({ id, kind }) => [id, kind]));
@@ -55,6 +55,6 @@ test("the closed alpha selects the active v2 catalog and a 40 + 26 card deck", (
     if (!kind) throw new Error(`Unknown card type in active deck: ${id}`);
     counts[kind] += copies;
   }
-  expect(counts).toEqual({ tunnel: 40, action: 26 });
-  expect(counts.tunnel + counts.action).toBe(66);
+  expect(counts).toEqual({ tunnel: 40, action: 27 });
+  expect(counts.tunnel + counts.action).toBe(67);
 });

@@ -27,8 +27,9 @@ function playMatch(definition: Definition, seats: number, seed: number) {
   const botRng = seededRng(seed ^ 0x9e3779b9);
   const matchId = "simulation-" + seats + "-" + seed;
   let state = committed(startRound(newMatch(definition, { matchId, seatIds }, rng), rng));
-  const roundWins = { prospectors: 0, traitors: 0 };
-  const maxCommits = definition.ruleset.rounds * (state.maxTurns + 2 * seats) + 1;
+  const roundWins = { prospectors: 0, traitors: 0, none: 0 };
+  const maxRoundTurns = Math.min(state.maxTurns ?? definition.ruleset.deck.total, definition.ruleset.deck.total);
+  const maxCommits = definition.ruleset.rounds * (maxRoundTurns + 2 * seats) + 1;
   let turns = 0;
   for (let index = 0; index < maxCommits; index++) {
     if (state.phase === "MATCH_FINISHED") {
@@ -43,7 +44,7 @@ function playMatch(definition: Definition, seats: number, seed: number) {
       actor = seatIds.find(seatId => !state.summaryAcknowledged.includes(seatId));
     }
     if (!actor) throw new Error("No acting seat during " + state.phase);
-    const move = chooseBotMove(playerView(state, actor), botRng);
+    const move = chooseBotMove(playerView(state, actor), botRng, definition);
     if (!move) throw new Error("Bot has no legal move during " + state.phase);
     const previousPhase = state.phase;
     state = committed(applyCommand(state, actor, move, rng));
@@ -78,7 +79,7 @@ async function main(): Promise<void> {
   for (let seats = definition.ruleset.players.min; seats <= definition.ruleset.players.max; seats++) {
     const started = performance.now();
     const seedAt = (index: number) => (baseSeed + seats * 100_000 + index) >>> 0;
-    const roundWins = { prospectors: 0, traitors: 0 };
+    const roundWins = { prospectors: 0, traitors: 0, none: 0 };
     let tiedMatches = 0;
     let turns = 0;
     for (let index = 0; index < sample; index++) {
@@ -87,13 +88,14 @@ async function main(): Promise<void> {
         const result = playMatch(definition, seats, seed);
         roundWins.prospectors += result.roundWins.prospectors;
         roundWins.traitors += result.roundWins.traitors;
+        roundWins.none += result.roundWins.none;
         turns += result.turns;
         if (result.tied) tiedMatches++;
       } catch (error) {
         throw new Error("Simulation failed for " + seats + " seats and seed " + seed, { cause: error });
       }
     }
-    const totalRounds = roundWins.prospectors + roundWins.traitors;
+    const totalRounds = roundWins.prospectors + roundWins.traitors + roundWins.none;
     results.push({
       seats, completedMatches: sample, firstSeed: seedAt(0), lastSeed: seedAt(sample - 1),
       roundWins, prospectorWinRate: roundWins.prospectors / totalRounds,

@@ -195,6 +195,6 @@ export function App() {
         <Lobby snapshot={state} run={run} send={send} pending={blocked} leave={() => void leave()} />
       </> : <Menu session={session} invite={invitation} pending={pending} error={error} enter={(...args) => void enter(...args)}
         resume={session && resume ? () => void mutation(async () => attach(await request<RoomSnapshot>(roomPath(resume)))) : undefined} />}
-    {rules && <Rules close={() => setRules(false)} />}
+    {rules && <Rules requiredOre={finalLobby ? undefined : state?.match?.requiredOre} close={() => setRules(false)} />}
   </>;
 }

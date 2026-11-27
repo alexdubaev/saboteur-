@@ -7,11 +7,13 @@ test("меню использует утверждённый растровый 
   await expect(logo).toHaveJSProperty("complete", true);
   expect(await logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await page.getByRole("button", { name: "Правила" }).click();
-  await expect(page.getByRole("dialog", { name: "Правила экспедиции" })).toBeVisible();
+  const rules = page.getByRole("dialog", { name: "Правила экспедиции" });
+  await expect(rules.getByText("Путь к золоту · v1")).toBeVisible();
+  await expect(rules.getByText(/в 20% раундов все становятся старателями/)).toBeVisible();
 });
 
 test("изолированные гости играют три раунда и возвращаются после потери связи", async ({ browser }, testInfo) => {
-  test.setTimeout(150_000);
+  test.setTimeout(240_000);
   const contexts = await Promise.all([
     browser.newContext({ viewport: { width: 1920, height: 1080 } }),
     browser.newContext({ viewport: { width: 360, height: 800 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }),
@@ -78,7 +80,10 @@ test("изолированные гости играют три раунда и 
       expect(privateView.seats.every((seat: object) => !Object.hasOwn(seat, "role") && !Object.hasOwn(seat, "hand"))).toBe(true);
       expect(identities.has(privateView.self.seatId)).toBe(false);
       identities.add(privateView.self.seatId);
-      expect(privateView.self.hand).toHaveLength(5);
+      expect(privateView.self.hand).toHaveLength(6);
+      expect(privateView.requiredOre).toBe(1);
+      expect(privateView.maxTurns).toBeNull();
+      expect(privateView.board.filter((tile: { kind: string }) => tile.kind === "goal").map((tile: { x: number }) => tile.x)).toEqual([8, 8, 8]);
       for (const card of privateView.self.hand) {
         expect(instances.has(card.instanceId)).toBe(false);
         instances.add(card.instanceId);
@@ -126,7 +131,7 @@ test("изолированные гости играют три раунда и 
         await expect(portrait.getByText("Связь потеряна. Переподключаемся…")).toBeHidden({ timeout: 20_000 });
         await synchronize();
       }
-      for (let step = 0; step < 24; step++) {
+      for (let step = 0; step < 67; step++) {
         if (await host.getByRole("dialog", { name: `Итоги раунда ${round}` }).isVisible()) break;
         await synchronize();
         const active = await Promise.all(guests.map((page) => page.getByRole("heading", { name: "Ваш ход", exact: true }).isVisible()));

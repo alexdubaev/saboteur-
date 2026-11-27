@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "developmentRuleset": "data/rulesets/playtest-expedition-v0.json",
+  "developmentRuleset": "data/rulesets/playtest-gold-trail-v1.json",
   "cardCatalog": "data/card-catalog-v2.json",
   "releaseRuleset": null,
   "releaseEnabled": false,
@@ -9,5 +9,5 @@
     "data/cards.json",
     "archive/"
   ],
-  "note": "Конфигурация E1–E5 для закрытых тестов. Профиль версии 0 — предложение, не финальное решение владельца. Не использовать старые количества и правила как активные."
+  "note": "Новые партии закрытой альфы используют профиль с одной золотой камерой. Сохранённые матчи продолжаются по профилю, записанному при старте."
 }

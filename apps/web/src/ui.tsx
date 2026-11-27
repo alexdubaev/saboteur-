@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { iconArt } from "./art.js";
-import { copy } from "./text.js";
+import { copy, profileFor } from "./text.js";
 
 export function Icon({ name, className = "" }: { name: string; className?: string }) {
   return <img className={`icon ${className}`} src={iconArt(name)} alt="" aria-hidden="true" width={24} height={24} draggable={false} />;
@@ -28,11 +28,12 @@ export function Dialog({ title, children, close }: { title: string; children: Re
   );
 }
 
-export function Rules({ close }: { close: () => void }) {
+export function Rules({ requiredOre, close }: { requiredOre?: number; close: () => void }) {
+  const profile = profileFor(requiredOre);
   return (
     <Dialog title="Правила экспедиции" close={close}>
-      <span className="eyebrow">{copy.profile}</span>
-      {copy.rulesText.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+      <span className="eyebrow">{profile.label}</span>
+      {profile.rules.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       <p className="soft-note">{copy.balance}</p>
     </Dialog>
   );

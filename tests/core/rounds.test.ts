@@ -2,10 +2,10 @@ import { expect, test } from "vitest";
 import { createDefinition, loadActiveDefinition } from "../../packages/config/src/index.js";
 import { applyCommand, assertInvariants, legalMoves, newMatch, playerView, publicView, startRound } from "../../packages/game-core/src/index.js";
 import type { Command, MatchState, Rng } from "../../packages/game-core/src/index.js";
-import { committed, fixedRng, give, play, ready, seats } from "./helpers.js";
+import { committed, fixedRng, give, legacyDefinition, play, ready, seats } from "./helpers.js";
 
 test("R14: a closed discard is safe, the last stock card is drawn once, and empty seats are skipped", async () => {
-  const { catalog, ruleset } = await loadActiveDefinition();
+  const { catalog, ruleset } = legacyDefinition();
   const definition = createDefinition(catalog, {
     ...ruleset,
     players: { min: 3, max: 3 },
@@ -35,7 +35,7 @@ test("R14: a closed discard is safe, the last stock card is drawn once, and empt
 });
 
 test("R02/R16/R18: resets round data, rotates the starter, accumulates scores, reveals a tie and supports a clean rematch", async () => {
-  const { catalog, ruleset } = await loadActiveDefinition();
+  const { catalog, ruleset } = legacyDefinition();
   const definition = createDefinition(catalog, {
     ...ruleset,
     turn: { ...ruleset.turn, maxTurnsFormula: { perPlayer: 0, constant: 1 } },
@@ -122,7 +122,7 @@ test("R14/R17: illegal commands preserve a stored snapshot and never consume RNG
 });
 
 test("R18: a pinned alternate profile handles a different deck, round count, goal count and required ore", async () => {
-  const { catalog, ruleset } = await loadActiveDefinition();
+  const { catalog, ruleset } = legacyDefinition();
   const alternate = createDefinition(catalog, {
     ...ruleset,
     id: "one-vein-fixture",

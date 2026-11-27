@@ -38,6 +38,7 @@ const rulesetSchema = z.strictObject({
   rounds: positive,
   handSizeByPlayers: z.record(z.string(), positive),
   traitorCountByPlayers: z.record(z.string(), positive),
+  traitorlessChancePercentByPlayers: z.record(z.string(), nonnegative.max(100)).optional(),
   deck: z.strictObject({
     tunnelCopies: nonnegative,
     actionCopies: nonnegative,
@@ -57,7 +58,7 @@ const rulesetSchema = z.strictObject({
     actionsPerTurn: z.literal(1),
     drawAfterNonterminalMove: z.literal(1),
     refillDiscard: z.literal(false),
-    maxTurnsFormula: z.strictObject({ perPlayer: nonnegative, constant: nonnegative }),
+    maxTurnsFormula: z.strictObject({ perPlayer: nonnegative, constant: nonnegative }).nullable(),
     skipEmptyHand: z.literal(true),
     timeoutDefaultSeconds: positive.nullable(),
     timeoutPolicy: z.literal("discard-first-by-instance-order"),
@@ -145,13 +146,18 @@ export function validateRuleset(raw: unknown, catalog: Catalog): Ruleset {
   const tableSize = players.max - players.min + 1;
   ensure(Object.keys(ruleset.handSizeByPlayers).length === tableSize &&
     Object.keys(ruleset.traitorCountByPlayers).length === tableSize, "Player tables must match player limits");
+  const traitorlessByPlayers = ruleset.traitorlessChancePercentByPlayers ?? {};
+  ensure(Object.keys(traitorlessByPlayers).every(count => Object.hasOwn(ruleset.traitorCountByPlayers, count)),
+    "Traitorless chances must match supported player counts");
   for (let n = players.min; n <= players.max; n++) {
     const hand = ruleset.handSizeByPlayers[String(n)];
     const traitors = ruleset.traitorCountByPlayers[String(n)];
     ensure(hand > 0 && hand * n <= deck.total, "Impossible deal for player count " + n);
     ensure(traitors > 0 && traitors < n, "Impossible role distribution for player count " + n);
-    const maxTurns = turn.maxTurnsFormula.perPlayer * n + turn.maxTurnsFormula.constant;
-    ensure(Number.isSafeInteger(maxTurns) && maxTurns > 0, "Invalid turn budget for player count " + n);
+    if (turn.maxTurnsFormula) {
+      const maxTurns = turn.maxTurnsFormula.perPlayer * n + turn.maxTurnsFormula.constant;
+      ensure(Number.isSafeInteger(maxTurns) && maxTurns > 0, "Invalid turn budget for player count " + n);
+    }
   }
   ensure(board.origin.connections.length === 1, "Origin must be a single connected component");
   unique(board.origin.connections.flat(), "origin port");

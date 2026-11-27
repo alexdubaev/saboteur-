@@ -8,7 +8,7 @@ export function committed(result: CommitResult) {
   return result.state;
 }
 
-test("R02: all eight player counts deal 66 unique cards and the configured roles", async () => {
+test("R02: all eight player counts deal 67 unique cards and the configured roles", async () => {
   const definition = await loadActiveDefinition();
   for (let count = 3; count <= 10; count++) {
     const seatIds = Array.from({ length: count }, (_, index) => "seat-" + index);
@@ -21,10 +21,10 @@ test("R02: all eight player counts deal 66 unique cards and the configured roles
     expect(state.revision).toBe(1);
     expect(state.seats.map(seat => seat.seatId)).toEqual(seatIds);
     expect(state.seats.filter(seat => seat.role === "traitor")).toHaveLength(count < 6 ? 1 : count < 9 ? 2 : 3);
-    expect(state.seats.map(seat => seat.hand.length)).toEqual(Array(count).fill(count < 9 ? 5 : 4));
+    expect(state.seats.map(seat => seat.hand.length)).toEqual(Array(count).fill(count < 6 ? 6 : count < 8 ? 5 : 4));
     const dealt = [...state.deck, ...state.seats.flatMap(seat => seat.hand)];
-    expect(dealt).toHaveLength(66);
-    expect(new Set(dealt.map(card => card.instanceId)).size).toBe(66);
+    expect(dealt).toHaveLength(67);
+    expect(new Set(dealt.map(card => card.instanceId)).size).toBe(67);
     let ready = state;
     for (const seatId of seatIds) ready = committed(applyCommand(ready, seatId, { type: "ACK_ROLE" }, rng));
     expect(ready.phase).toBe("TURN");

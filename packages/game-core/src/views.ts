@@ -29,6 +29,7 @@ export function publicView(state: MatchState): PublicView {
     turnSeatId: state.turnSeatId,
     turnNumber: state.turnNumber,
     maxTurns: state.maxTurns,
+    requiredOre: rules.victory.prospectors.required,
     deckCount: state.deck.length,
     seats: state.seats.map(({ seatId, hand, brokenTools, role }) => ({
       seatId, handCount: hand.length, brokenTools: Object.keys(brokenTools) as Tool[],
@@ -41,8 +42,10 @@ export function publicView(state: MatchState): PublicView {
   if (state.phase === "MATCH_FINISHED") {
     const finalScores = state.seats.map(({ seatId, score }) => ({ seatId, score }));
     const best = Math.max(...finalScores.map(seat => seat.score));
+    const allowsTraitorlessRounds = (rules.traitorlessChancePercentByPlayers?.[String(state.seats.length)] ?? 0) > 0;
     snapshot.finalScores = finalScores;
-    snapshot.winnerSeatIds = finalScores.filter(seat => seat.score === best).map(seat => seat.seatId);
+    snapshot.winnerSeatIds = best === 0 && allowsTraitorlessRounds
+      ? [] : finalScores.filter(seat => seat.score === best).map(seat => seat.seatId);
   }
   return snapshot;
 }

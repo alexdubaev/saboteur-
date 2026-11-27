@@ -30,7 +30,7 @@ export function Menu({ session, invite, pending, error, enter, resume }: MenuPro
         <div className="home-inner">
           <div className="eyebrow home-edition"><span aria-hidden="true">◆</span> {copy.alpha}<span className="edition-separator" />{copy.profile}</div>
           <h1 className="home-logo"><img src={logoArt} width={1440} height={488} alt={copy.title} /></h1>
-          <p className="lead">Проложите путь к двум золотым жилам. Но помните: в вашей команде есть предатели.</p>
+          <p className="lead">Проложите путь к золоту. Среди участников могут быть предатели.</p>
           <form className="entry-form" onSubmit={submit}>
             <div className="entry-switch" role="group" aria-label="Способ входа">
               <button type="button" className={mode === "create" ? "active" : ""} aria-pressed={mode === "create"} onClick={() => setMode("create")}><Icon name="pickaxe" />Создать</button>
@@ -45,7 +45,7 @@ export function Menu({ session, invite, pending, error, enter, resume }: MenuPro
           </form>
           {resume && <button className="button secondary resume-room" disabled={pending} onClick={resume}>Вернуться в комнату</button>}
           <ul className="home-facts" aria-label="Об экспедиции">
-            <li><Icon name="invite" />3–10 игроков</li><li><Icon name="cards" />3 раунда</li><li><Icon name="gold" />2 золотые жилы</li>
+            <li><Icon name="invite" />3–10 игроков</li><li><Icon name="cards" />3 раунда</li><li><Icon name="gold" />1 золотая жила</li>
           </ul>
         </div>
       </div>

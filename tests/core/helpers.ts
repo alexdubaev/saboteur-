@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { expect } from "vitest";
-import { applyCommand, assertInvariants, legalMoves, newMatch, startRound } from "../../packages/game-core/src/index.js";
-import type { CardCommand, CommitResult, Definition, MatchState } from "../../packages/game-core/src/index.js";
+import { applyCommand, assertInvariants, createDefinition, legalMoves, newMatch, startRound } from "../../packages/game-core/src/index.js";
+import type { CardCommand, CommitResult, Definition, MatchState, Rng } from "../../packages/game-core/src/index.js";
 
 export const fixedRng = () => 0.25;
 export const seats = ["first", "second", "third"];
@@ -10,8 +11,14 @@ export function committed(result: CommitResult) {
   return result.state;
 }
 
-export function ready(definition: Definition, matchId = "fixture"): MatchState {
-  const started = committed(startRound(newMatch(definition, { matchId, seatIds: seats }, fixedRng), fixedRng));
+export function legacyDefinition(): Definition {
+  const catalog = JSON.parse(readFileSync(new URL("../../data/card-catalog-v2.json", import.meta.url), "utf8"));
+  const ruleset = JSON.parse(readFileSync(new URL("../../data/rulesets/playtest-expedition-v0.json", import.meta.url), "utf8"));
+  return createDefinition(catalog, ruleset);
+}
+
+export function ready(definition: Definition, matchId = "fixture", rng: Rng = fixedRng): MatchState {
+  const started = committed(startRound(newMatch(definition, { matchId, seatIds: seats }, rng), rng));
   return committed(applyCommand(started, null, { type: "EXPIRE_ROLE_REVEAL" }, fixedRng));
 }
 

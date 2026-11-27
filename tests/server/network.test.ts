@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
+import { readFile } from "node:fs/promises";
 import { Agent, request as httpRequest } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
-import { loadActiveDefinition } from "../../packages/config/src/index.js";
+import { createDefinition, loadActiveDefinition } from "../../packages/config/src/index.js";
 import type { Definition } from "../../packages/game-core/src/types.js";
 import type { CommandAck, CommandEnvelope, RoomSnapshot, ServerMessage, WireCommand } from "../../packages/protocol/src/index.js";
 import { connectDatabase, migrate } from "../../apps/server/src/database.js";
@@ -30,9 +31,9 @@ function matchPath(snapshot: RoomSnapshot): string {
   return `/api/rooms/${snapshot.room.roomId}`;
 }
 
-function openTestServer() {
+function openTestServer(activeDefinition = definition) {
   db = connectDatabase(isolatedUrl.toString());
-  return startServer({ db, definition, origin, playtest: true, host: "127.0.0.1", port: 0 });
+  return startServer({ db, definition: activeDefinition, origin, playtest: true, host: "127.0.0.1", port: 0 });
 }
 
 async function stopTestServer(): Promise<void> {
@@ -287,10 +288,13 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     expect(current.match?.phase).toBe("ROLE_REVEAL");
     const views = await Promise.all(cookies.map((cookie) => snapshot(current, cookie)));
     for (const view of views) {
+      expect(view.match).toMatchObject({ requiredOre: 1, maxTurns: null, deckCount: 49 });
+      expect(view.match?.self.hand).toHaveLength(6);
       expect(view.match?.self.role).toMatch(/prospector|traitor/);
       expect(view.match?.seats.every((seat) => seat.role === undefined)).toBe(true);
       const hiddenGoals = view.match?.board.filter((tile) => tile.kind === "goal");
       expect(hiddenGoals).toHaveLength(3);
+      expect(hiddenGoals?.map(({ x, y }) => [x, y])).toEqual([[8, -2], [8, 0], [8, 2]]);
       expect(new Set(hiddenGoals?.map(({ assetId }) => assetId)).size).toBe(1);
       expect(view.match?.finalScores).toBeUndefined();
       const raw = JSON.stringify(view);
@@ -304,7 +308,8 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     const summaries: number[] = [];
     let scouted = false;
     let placed = false;
-    for (let steps = 0; steps < 200; steps++) {
+    const limit = definition.ruleset.rounds * (definition.ruleset.deck.total + 2) + 1;
+    for (let steps = 0; steps < limit; steps++) {
       switch (current.match?.phase) {
         case "ROLE_REVEAL":
           current = await advanceRoleReveal(current, cookies);
@@ -336,13 +341,16 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
         case "ROUND_SUMMARY":
           summaries.push(current.match.roundNo);
           expect(current.match.seats.every((seat) => seat.role !== undefined)).toBe(true);
+          expect(current.match.seats.every((seat) => seat.handCount === 0)).toBe(true);
+          expect(current.match).toMatchObject({ deckCount: 0, turnNumber: 67, outcome: { reason: "exhaustion" } });
           expect(current.match.board.filter((tile) => tile.kind === "goal").every((tile) => tile.revealed)).toBe(true);
+          expect(current.match.board.filter((tile) => tile.kind === "goal" && tile.assetId === "goal-gold")).toHaveLength(1);
           expect(current.match.finalScores).toBeUndefined();
           expect(current.match.self.roundScore).toBeGreaterThanOrEqual(0);
           for (const cookie of cookies) current = await command(current, cookie, { type: "ACK_SUMMARY" });
           break;
         case "MATCH_FINISHED":
-          steps = 200;
+          steps = limit;
           break;
         default: throw new Error("Unexpected phase");
       }
@@ -352,8 +360,12 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     expect(placed).toBe(true);
     expect(summaries).toEqual([1, 2, 3]);
     expect(current.match?.phase).toBe("MATCH_FINISHED");
-    expect(current.match?.finalScores).toHaveLength(3);
-    expect(current.match?.winnerSeatIds?.length).toBeGreaterThan(0);
+    const finalScores = current.match?.finalScores ?? [];
+    expect(finalScores).toHaveLength(3);
+    const highestScore = Math.max(...finalScores.map(({ score }) => score));
+    expect(current.match?.winnerSeatIds).toEqual(highestScore > 0
+      ? finalScores.filter(({ score }) => score === highestScore).map(({ seatId }) => seatId)
+      : []);
     const replay = envelope(current, { type: "REPLAY" });
     const ack = await httpCommand(current, cookies[0], replay);
     expect(ack.ok).toBe(true);
@@ -397,7 +409,10 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     expect((await request("/api/rooms/join", newGuest, { code: current.room.code })).status).toBe(409);
   });
 
-  it("N06 restarts from saved seats, receipt and turn deadline, then discards on timeout", async () => {
+  it("N06 preserves a pinned legacy match through restart, then replays with the active rules", async () => {
+    const legacyRuleset = JSON.parse(await readFile(new URL("../../data/rulesets/playtest-expedition-v0.json", import.meta.url), "utf8"));
+    await stopTestServer();
+    server = await openTestServer(createDefinition(definition.catalog, legacyRuleset));
     const { current, cookies } = await startHumanMatch(5);
     let role = current;
     const firstAck = envelope(role, { type: "ACK_ROLE" });
@@ -407,6 +422,8 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     expect(role.match?.phase).toBe("TURN");
     expect(role.room.deadlineAt).toBeTruthy();
     const before = await snapshot(role, cookies[0]);
+    expect(before.match).toMatchObject({ requiredOre: 2, maxTurns: 24 });
+    expect(before.match?.self.hand).toHaveLength(5);
     await stopTestServer();
     server = await openTestServer();
     const after = await snapshot(role, cookies[0]);
@@ -416,7 +433,13 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     expect(await httpCommand(after, cookies[0], firstAck)).toEqual(recorded);
     await expect.poll(async () => (await snapshot(after, cookies[0])).match?.revision, { timeout: 7000, interval: 100 })
       .toBe((before.match?.revision ?? 0) + 1);
-    expect((await snapshot(after, cookies[0])).journal.findLast(({ type }) => type === "DISCARD")?.data).toBeUndefined();
+    const timed = await snapshot(after, cookies[0]);
+    expect(timed.journal.findLast(({ type }) => type === "DISCARD")?.data).toBeUndefined();
+    const abandoned = await command(timed, cookies[0], { type: "ABANDON" });
+    const replay = await command(abandoned, cookies[0], { type: "REPLAY" });
+    expect(replay.match?.matchId).not.toBe(before.match?.matchId);
+    expect(replay.match).toMatchObject({ requiredOre: 1, maxTurns: null });
+    expect(replay.match?.self.hand).toHaveLength(6);
   }, 25_000);
 
   it("N07 checks origin, strict fields, body sizes, cookie attributes and rate limits", async () => {

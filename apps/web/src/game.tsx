@@ -5,7 +5,7 @@ import { cardArt } from "./art.js";
 import { Board, type TunnelAuthor } from "./board.js";
 import type { RunCommand } from "./lobby.js";
 import { Messages } from "./messages.js";
-import { actions, cardLabels, copy, reasons, roles, tools } from "./text.js";
+import { actions, cardLabels, copy, profileFor, reasons, roles, roundWinners, tools } from "./text.js";
 import { Avatar, Dialog, Icon, Notice } from "./ui.js";
 
 export type MatchSnapshot = RoomSnapshot & { match: PlayerView };
@@ -27,6 +27,7 @@ function Deadline({ at }: { at: string }) {
 function RoleCard({ snapshot, mandatory, close, run, pending, error }: { snapshot: MatchSnapshot; mandatory: boolean; close: () => void; run: RunCommand; pending: boolean; error: string }) {
   const role = snapshot.match.self.role;
   const deadline = snapshot.room.deadlineAt;
+  const profile = profileFor(snapshot.match.requiredOre);
   if (!role) return null;
   return (
     <Dialog title={copy.role} close={mandatory ? undefined : close}>
@@ -34,8 +35,8 @@ function RoleCard({ snapshot, mandatory, close, run, pending, error }: { snapsho
         <img className="role-art" src={cardArt("role-" + role, "standard")} width={512} height={768} alt="" />
         <div>
           <span className="eyebrow">Видно только вам</span>
-          <h3>{roles[role].name}</h3>
-          <p>{roles[role].goal}</p>
+          <h3>{roles[role]}</h3>
+          <p>{profile.roleGoals[role]}</p>
           {mandatory && <>
             {deadline && <p><Deadline key={deadline} at={deadline} /></p>}
             <button className="button primary" disabled={pending} onClick={() => void run({ type: "ACK_ROLE" })}>Роль понятна</button>
@@ -69,10 +70,11 @@ function RoundResults({ snapshot, run, pending, error }: { snapshot: MatchSnapsh
   const { match, room } = snapshot;
   if (!match.outcome) return null;
   const acknowledged = match.summaryAcknowledged.includes(room.mySeatId);
+  const reason = match.outcome.reason === "ore" ? profileFor(match.requiredOre).oreReason : reasons[match.outcome.reason];
   return (
     <Dialog title={`Итоги раунда ${match.roundNo}`}>
-      <p className="eyebrow">{match.outcome.winner === "prospectors" ? "Победили старатели" : "Победили предатели"}</p>
-      <p>{reasons[match.outcome.reason]}. Связанных жил: {match.outcome.connectedOre} из 2.</p>
+      <p className="eyebrow">{roundWinners[match.outcome.winner]}</p>
+      <p>{reason}.{match.requiredOre > 1 && ` Со входом связано ${match.outcome.connectedOre} из ${match.requiredOre} золотых жил.`}</p>
       <ul className="result-grid">
         {match.board.filter((tile) => tile.kind === "goal" && tile.revealed).map((tile) => (
           <li key={tile.goalSlotId}>
@@ -83,7 +85,7 @@ function RoundResults({ snapshot, run, pending, error }: { snapshot: MatchSnapsh
         ))}
       </ul>
       <ul className="revealed-roles" aria-label="Роли участников">
-        {match.seats.filter((seat) => seat.role).map((seat) => <li key={seat.seatId}>{room.seats.find((member) => member.seatId === seat.seatId)?.name} · {seat.role && roles[seat.role].name}</li>)}
+        {match.seats.filter((seat) => seat.role).map((seat) => <li key={seat.seatId}>{room.seats.find((member) => member.seatId === seat.seatId)?.name} · {seat.role && roles[seat.role]}</li>)}
       </ul>
       <div className="round-reward">
         {match.self.roundScore > 0 && <img className="reward-art" src={cardArt(({ 1: "reward-gold-one", 2: "reward-gold-two", 3: "reward-gold-three" } as Record<number, string>)[Math.min(match.self.roundScore, 3)])} width={256} height={384} alt="" />}
@@ -102,6 +104,7 @@ function MatchResults({ snapshot, run, pending, error, lobby }: { snapshot: Matc
   const scores = [...(match.finalScores ?? [])].sort((a, b) => b.score - a.score);
   return (
     <Dialog title={abandoned ? "Экспедиция остановлена" : "Итоги экспедиции"}>
+      {!abandoned && winners.size === 0 && <p>В матче нет победителя</p>}
       {winners.size > 1 && <p>Ничья за первое место</p>}
       <ol className="scores">
         {scores.map(({ seatId, score }) => {
@@ -210,6 +213,7 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
   const final = match.phase === "MATCH_FINISHED" || match.phase === "ABANDONED";
   const actorLabel = me ? "Ваш ход" : current ? `Ходит ${current.name}` : match.phase === "ROLE_REVEAL" ? "Участники смотрят роли" : "Подготовка шахты";
   const linkedOre = match.board.filter((tile) => tile.kind === "goal" && tile.revealed && tile.reachable && tile.assetId === "goal-gold").length;
+  const profile = profileFor(match.requiredOre);
   const isHost = room.hostSeatId === room.mySeatId;
   const deadline = room.deadlineAt;
   const staged = selected?.staged ?? null;
@@ -233,8 +237,8 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
           <h1 aria-live="polite">{actorLabel}</h1>
         </div>
         <ul className="match-counts">
-          <li title="Соедините обе золотые жилы со входом"><Icon name="gold" /><span>Жилы <b>{linkedOre}/2</b></span></li>
-          <li><Icon name="pickaxe" /><span>Ходы <b>{match.turnNumber}/{match.maxTurns}</b></span></li>
+          <li title={profile.roleGoals.prospector}><Icon name="gold" /><span>{profile.progress} <b>{linkedOre}/{match.requiredOre}</b></span></li>
+          <li><Icon name="pickaxe" /><span>Ходы <b>{match.turnNumber}{match.maxTurns !== null ? `/${match.maxTurns}` : ""}</b></span></li>
           <li><Icon name="cards" /><span>Колода <b>{match.deckCount}</b></span></li>
           {deadline && <li><Deadline key={deadline} at={deadline} /></li>}
         </ul>

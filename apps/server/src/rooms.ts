@@ -314,7 +314,7 @@ export class Rooms {
     const state = match.state;
     const actor = botPending(state, seats);
     if (!actor) return undefined;
-    const command = chooseBotMove(playerView(state, actor), rngFor(match.rng_secret, `bot:${state.revision}`));
+    const command = chooseBotMove(playerView(state, actor), rngFor(match.rng_secret, `bot:${state.revision}`), state.definition);
     if (command) return { actor, command };
   }
 
@@ -328,7 +328,7 @@ export class Rooms {
         if (command.type === "START_MATCH" ? match : !match || !["MATCH_FINISHED", "ABANDONED"].includes(match.state.phase)) {
           throw new RoomError("WRONG_PHASE");
         }
-        const definition = match?.state.definition ?? this.definition;
+        const definition = this.definition;
         if (seats.length < definition.ruleset.players.min) throw new RoomError("NOT_ENOUGH_PLAYERS");
         if (seats.some((candidate) => !candidate.ready)) throw new RoomError("SEATS_NOT_READY");
         const secret = randomBytes(32);

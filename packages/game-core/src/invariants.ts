@@ -30,8 +30,10 @@ export function assertInvariants(state: MatchState): void {
   }
   assert(state.phase !== "LOBBY", "active phase");
   assert(state.roundStarterSeatId !== null && seatIds.has(state.roundStarterSeatId), "round starter");
-  assert(state.maxTurns === ruleset.turn.maxTurnsFormula.perPlayer * count + ruleset.turn.maxTurnsFormula.constant, "turn budget");
-  assert(Number.isSafeInteger(state.turnNumber) && state.turnNumber >= 0 && state.turnNumber <= state.maxTurns, "turn count");
+  const turnBudget = ruleset.turn.maxTurnsFormula;
+  assert(state.maxTurns === (turnBudget ? turnBudget.perPlayer * count + turnBudget.constant : null), "turn budget");
+  const turnLimit = Math.min(state.maxTurns ?? ruleset.deck.total, ruleset.deck.total);
+  assert(Number.isSafeInteger(state.turnNumber) && state.turnNumber >= 0 && state.turnNumber <= turnLimit, "turn count");
   if (state.phase === "TURN") {
     assert(state.turnSeatId !== null && state.seats.some(seat => seat.seatId === state.turnSeatId && seat.hand.length > 0),
       "current seat needs a card");
@@ -43,7 +45,10 @@ export function assertInvariants(state: MatchState): void {
     assert(state.deck.length === 0 || state.seats.every(seat => seat.hand.length > 0), "empty hand with cards to draw");
   }
   const traitors = state.seats.filter(seat => seat.role === "traitor").length;
-  assert(traitors === ruleset.traitorCountByPlayers[String(count)] &&
+  const traitorlessChance = ruleset.traitorlessChancePercentByPlayers?.[String(count)] ?? 0;
+  const validTraitors = traitors === 0 ? traitorlessChance > 0 :
+    traitorlessChance < 100 && traitors === ruleset.traitorCountByPlayers[String(count)];
+  assert(validTraitors &&
     state.seats.filter(seat => seat.role === "prospector").length === count - traitors, "role distribution");
 
   const instances: CardInstance[] = [...state.deck, ...state.discard, ...state.board];
@@ -95,6 +100,9 @@ export function assertInvariants(state: MatchState): void {
   }
 
   if (state.phase === "ROUND_SUMMARY" || state.phase === "MATCH_FINISHED") assert(state.outcome !== null, "settled outcome");
+  if (state.outcome?.winner === "none") {
+    assert(traitors === 0 && state.outcome.reason !== "ore" && state.seats.every(seat => seat.roundScore === 0), "round without a winner");
+  }
   if (state.phase === "MATCH_FINISHED") {
     assert(state.roundNo === ruleset.rounds && state.summaryAcknowledged.length === count, "final summary");
   }
