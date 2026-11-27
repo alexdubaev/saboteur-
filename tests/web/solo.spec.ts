@@ -90,6 +90,7 @@ test.describe("тестовая игра с ботами", () => {
         const revision = await match.getAttribute("data-revision");
         const confirm = page.getByRole("button", { name: "Подтвердить ход" });
         await expect(confirm).toBeInViewport({ ratio: 0.98 });
+        await expect(page.getByRole("button", { name: "Повернуть на 180°" })).toBeInViewport({ ratio: 0.98 });
         await page.screenshot({ path: testInfo.outputPath(`${label}-placement.png`) });
         await confirm.tap();
         await expect(match).not.toHaveAttribute("data-revision", revision!);

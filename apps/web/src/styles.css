@@ -395,8 +395,11 @@ input::placeholder { color: #ad9dbe; }
     grid-template-rows: minmax(0, 1fr);
     grid-template-areas: "board hand";
   }
-  .phone-game .hand { overflow-y: auto; overscroll-behavior: contain; }
+  .phone-game .hand { gap: 6px; padding: 7px; overflow-y: auto; overscroll-behavior: contain; }
+  .phone-game .hand-actions { gap: 5px; }
   .phone-game .move-buttons .button { padding-inline: 7px; }
+  .phone-game .hand-actions > .primary { padding-inline: 6px; font-size: .88rem; }
+  .phone-game .hand-actions > .primary .icon { display: none; }
   .phone-game .dialog { max-height: calc(100dvh - 76px); }
   .phone-picker-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .phone-picker-grid .hand-card img { height: clamp(74px, 34svh, 122px); }
