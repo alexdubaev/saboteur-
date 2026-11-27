@@ -97,7 +97,7 @@ function RoundResults({ snapshot, run, pending, error }: { snapshot: MatchSnapsh
   );
 }
 
-function MatchResults({ snapshot, run, pending, error, lobby }: { snapshot: MatchSnapshot; run: RunCommand; pending: boolean; error: string; lobby: () => void }) {
+function MatchResults({ snapshot, run, pending, error, lobby, solo }: { snapshot: MatchSnapshot; run: RunCommand; pending: boolean; error: string; lobby: () => void; solo: boolean }) {
   const { match, room } = snapshot;
   const abandoned = match.phase === "ABANDONED";
   const winners = new Set(match.winnerSeatIds);
@@ -113,7 +113,7 @@ function MatchResults({ snapshot, run, pending, error, lobby }: { snapshot: Matc
         })}
       </ol>
       <div className="dialog-actions">
-        <button className="button secondary" onClick={lobby}>В лобби</button>
+        <button className="button secondary" onClick={lobby}>{solo ? "В меню" : "В лобби"}</button>
         {room.hostSeatId === room.mySeatId && <button className="button primary" disabled={pending} onClick={() => void run({ type: "REPLAY" })}>Играть снова</button>}
       </div>
       <Notice text={error} />
@@ -171,8 +171,10 @@ function lastBoardMove(snapshot: MatchSnapshot): Position | null {
   return null;
 }
 
-export function Game({ snapshot, pending, error, run, send, lobby, exit }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void }) {
+export function Game({ snapshot, pending, error, run, send, lobby, exit }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void }) {
   const { match, room } = snapshot;
+  const solo = !send;
+  const leaveLabel = solo ? "Выйти из партии" : copy.leave;
   const [selection, setSelection] = useState<Selection | null>(null);
   const [modal, setModal] = useState<"role" | "leave" | ScoutModal | null>(null);
   const [showMessages, setShowMessages] = useState(false);
@@ -225,7 +227,7 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
     : "Для карты нет подходящих целей. Её можно сбросить в закрытую.";
 
   return (
-    <main className="game-shell" data-testid="room-state" data-room={room.roomId} data-match={match.matchId} data-revision={match.revision}
+    <main className={solo ? "game-shell solo-game" : "game-shell"} data-testid="room-state" data-room={room.roomId} data-match={match.matchId} data-revision={match.revision}
       onKeyDown={(event) => {
         if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLDialogElement || typeof modal === "string" || scout || rolePending || summary || final) return;
         if (event.key === "Escape" && selected) setSelection(null);
@@ -245,8 +247,8 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
         <div className="match-tools">
           <button className="button secondary" disabled={!match.self.role} onClick={() => setModal("role")}><Icon name="lock" />{copy.role}</button>
           {match.self.scoutResults.length > 0 && <button className="button secondary" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" />Разведка</button>}
-          <button className="icon-button mobile-messages" aria-label={showMessages ? "Скрыть чат и журнал" : "Открыть чат и журнал"} aria-expanded={showMessages} onClick={() => setShowMessages(!showMessages)}><Icon name="chat" /></button>
-          <button className="icon-button" aria-label={copy.leave} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
+          {send && <button className="icon-button mobile-messages" aria-label={showMessages ? "Скрыть чат и журнал" : "Открыть чат и журнал"} aria-expanded={showMessages} onClick={() => setShowMessages(!showMessages)}><Icon name="chat" /></button>}
+          <button className="icon-button" aria-label={leaveLabel} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
         </div>
       </header>
       <Notice text={error} />
@@ -254,7 +256,7 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
         <Board key={match.roundNo} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose} />
         <aside className="table-side">
           <Crew snapshot={snapshot} authors={authors} />
-          <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} compact /></div>
+          {send && <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} compact /></div>}
         </aside>
         <section className="panel hand" aria-label="Ваша рука">
           <div className="hand-heading"><div><p className="eyebrow">Личные карты</p><h2>Ваша рука <span>{match.self.hand.length}</span></h2></div><p className="soft-note" aria-live="polite">{staged ? messageForMove(staged, snapshot) : hint}</p></div>
@@ -290,14 +292,14 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
       </div>
       {rolePending || (modal === "role" && !summary && !final) ? <RoleCard snapshot={snapshot} mandatory={rolePending} close={() => setModal(null)} run={run} pending={pending} error={error} /> : null}
       {!rolePending && !final && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
-      {!rolePending && !summary && !final && modal === "leave" && <Dialog title={copy.leave} close={() => setModal(null)}>
-        <p>Вернитесь на этот адрес, чтобы снова занять своё место.</p>
+      {!rolePending && !summary && !final && modal === "leave" && <Dialog title={leaveLabel} close={() => setModal(null)}>
+        <p>{solo ? "Если выйти сейчас, партия завершится." : "Вернитесь на этот адрес, чтобы снова занять своё место."}</p>
         <div className="dialog-actions"><button className="button secondary" onClick={exit}>В меню</button>
-        {isHost && <button className="button secondary" disabled={pending} onClick={async () => { if (await run({ type: "ABANDON" })) setModal(null); }}>Остановить экспедицию</button>}</div>
+        {!solo && isHost && <button className="button secondary" disabled={pending} onClick={async () => { if (await run({ type: "ABANDON" })) setModal(null); }}>Остановить экспедицию</button>}</div>
         <Notice text={error} />
       </Dialog>}
       {summary && !scout && <RoundResults snapshot={snapshot} run={run} pending={pending} error={error} />}
-      {final && <MatchResults snapshot={snapshot} run={run} pending={pending} error={error} lobby={lobby} />}
+      {final && <MatchResults snapshot={snapshot} run={run} pending={pending} error={error} lobby={lobby} solo={solo} />}
     </main>
   );
 }

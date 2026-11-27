@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, type Plugin, type UserConfig } from "vite";
+import { loadActiveDefinition } from "../../packages/config/src/index.js";
 
 const root = fileURLToPath(new URL("./", import.meta.url));
 const workspace = fileURLToPath(new URL("../../", import.meta.url));
@@ -69,12 +70,28 @@ function gameArt(): Plugin {
   };
 }
 
-export default defineConfig({
-  root,
-  publicDir: false,
-  plugins: [gameArt(), react()],
-  server: {
-    fs: { strict: true, allow: [root] },
-    proxy: { "/api": "http://127.0.0.1:4174", "/ws": { target: "http://127.0.0.1:4174", ws: true } },
-  },
+export default defineConfig(async ({ mode }): Promise<UserConfig> => {
+  if (mode === "sites") {
+    const definition = await loadActiveDefinition(workspace);
+    return {
+      root,
+      publicDir: false,
+      plugins: [gameArt(), react()],
+      define: { __SITES_SOLO_DEFINITION__: JSON.stringify(definition) },
+      resolve: {
+        alias: [{ find: /^node:crypto$/, replacement: join(root, "src/solo-sha256.ts") }],
+      },
+      build: { outDir: join(workspace, "dist"), emptyOutDir: true },
+      server: { fs: { strict: true, allow: [workspace] } },
+    };
+  }
+  return {
+    root,
+    publicDir: false,
+    plugins: [gameArt(), react()],
+    server: {
+      fs: { strict: true, allow: [root] },
+      proxy: { "/api": "http://127.0.0.1:4174", "/ws": { target: "http://127.0.0.1:4174", ws: true } },
+    },
+  };
 });

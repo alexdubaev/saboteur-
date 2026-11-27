@@ -259,6 +259,7 @@ input::placeholder { color: #ad9dbe; }
   .match-crew .panel-heading { display: none; }
   .match-crew ul { display: flex; overflow-x: auto; scrollbar-width: thin; }
   .match-crew li { flex: 0 0 min(42%, 158px); border-top: 0; border-right: 1px solid var(--line); gap: 5px; padding: 3px 6px; min-height: 44px; }
+  .solo-game .match-crew li { flex: 0 0 calc(100% / 3); min-width: 0; }
   .match-crew .avatar { width: 28px; height: 28px; flex-basis: 28px; }
   .match-crew strong { font-size: .81rem; }
   .match-crew small { font-size: .65rem; }
@@ -295,6 +296,17 @@ input::placeholder { color: #ad9dbe; }
   .match-tools .button .icon { display: none; }
   .hand-heading .eyebrow { display: none; }
   .hand-heading .soft-note { max-width: 60%; }
+}
+@media (max-width: 480px), (orientation: landscape) and (max-height: 520px) and (max-width: 960px) {
+  .solo-game .match-crew li { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding-inline: 5px; gap: 2px 4px; }
+  .solo-game .match-crew .avatar { display: none; }
+  .solo-game .match-crew .seat-name { display: contents; }
+  .solo-game .match-crew .seat-name strong { grid-column: 1 / -1; }
+  .solo-game .seat-icons { grid-column: 2; gap: 2px; }
+  .solo-game .seat-icons .icon { width: 13px; height: 13px; }
+  .solo-game .seat-name small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .solo-game .hand-heading h2 { white-space: nowrap; }
+  .solo-game .hand-heading .soft-note { min-width: 0; }
 }
 @media (orientation: landscape) and (max-height: 520px) {
   .mine { height: max(238px, 65dvh); }
