@@ -16,6 +16,8 @@ type BoardProps = {
   asset: string | undefined;
   last: Position | null;
   choose: (move: CardCommand) => void;
+  phone?: boolean;
+  selectedCard?: string;
 };
 
 const tileWidth = 72;
@@ -44,13 +46,13 @@ function TileImage({ id, rotation, large, name }: { id: string; rotation: number
     : <span className="tile-unavailable" aria-label={name}>?</span>;
 }
 
-export function Board({ tiles, authors, moves, staged, asset, last, choose }: BoardProps) {
+export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false, selectedCard }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Position>());
   const start = useRef<Position | null>(null);
   const dragged = useRef(false);
   const [panning, setPanning] = useState(false);
-  const [camera, setCamera] = useState<Camera | null>(null);
+  const [camera, setCamera] = useState<{ scope: string; view: Camera | "overview" } | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const bounds = tiles.reduce<Bounds>((frame, tile) => ({
     minX: Math.min(frame.minX, tile.x), maxX: Math.max(frame.maxX, tile.x),
@@ -66,13 +68,28 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose }: Bo
     x: size.width / 2 - (bounds.minX + bounds.maxX + 1) / 2 * tileWidth * fitScale,
     y: size.height / 2 - (bounds.minY + bounds.maxY + 1) / 2 * tileHeight * fitScale,
   };
-  const view = camera ?? fit;
+  const anchor = last ?? tiles.find((tile) => tile.kind === "origin") ?? { x: 0, y: 0 };
+  const byCell = new Map(tiles.map((tile) => [cell(tile), tile]));
+  const positionOf = (move: BoardMove) => "x" in move ? move : tiles.find((tile) => tile.goalSlotId === move.goalSlotId);
+  const nearAnchor = moves.reduce<Position | undefined>((nearest, move) => {
+    const target = positionOf(move);
+    return target && (!nearest || delta(target, anchor) < delta(nearest, anchor)) ? target : nearest;
+  }, undefined);
+  const point = nearAnchor ?? anchor;
+  const scope = `${phone}:${selectedCard ?? ""}`;
+  const chosenCamera = camera?.scope === scope ? camera.view : null;
+  const workScale = .86;
+  const work = {
+    scale: workScale,
+    x: size.width / 2 - (point.x + .5) * tileWidth * workScale,
+    y: size.height / 2 - (point.y + .5) * tileHeight * workScale,
+  };
+  const view = chosenCamera === "overview" ? fit : chosenCamera ?? (phone ? work : fit);
   const current = useRef(view);
   useEffect(() => { current.current = view; }, [view]);
   const large = tileWidth * view.scale * window.devicePixelRatio > 256;
-  const byCell = new Map(tiles.map((tile) => [cell(tile), tile]));
   const moveByCell = new Map(moves.map((move) => {
-    const position = "x" in move ? move : tiles.find((tile) => tile.goalSlotId === move.goalSlotId);
+    const position = positionOf(move);
     return [position ? cell(position) : "", move] as const;
   }));
 
@@ -88,8 +105,10 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose }: Bo
 
   const updateCamera = useCallback((change: (previous: Camera) => Camera) => {
     current.current = change(current.current);
-    setCamera(current.current);
-  }, []);
+    setCamera({ scope, view: current.current });
+  }, [scope]);
+
+  const showOverview = () => setCamera({ scope, view: "overview" });
 
   useEffect(() => {
     const node = viewport.current;
@@ -165,7 +184,7 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose }: Bo
       updateCamera((view) => ({ ...view, x: view.x + offset.x, y: view.y + offset.y }));
     } else if (event.key === "+" || event.key === "=") scaleBy(1.2);
     else if (event.key === "-") scaleBy(1 / 1.2);
-    else if (event.key === "0") setCamera(null);
+    else if (event.key === "0") showOverview();
     else return;
     event.preventDefault();
   };
@@ -221,10 +240,15 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose }: Bo
       <div className="board-controls" aria-label="Управление картой">
         <button className="icon-button" onClick={() => scaleBy(1.22)} aria-label="Приблизить"><Icon name="zoom-in" /></button>
         <button className="icon-button" onClick={() => scaleBy(1 / 1.22)} aria-label="Отдалить"><Icon name="zoom-out" /></button>
-        <button className="icon-button" onClick={() => setCamera(null)} aria-label="Показать всё поле"><Icon name="settings" /></button>
-        <button className="icon-button" onClick={() => { const origin = tiles.find((tile) => tile.kind === "origin"); if (origin) focusTile(origin); }} aria-label="Ко входу"><Icon name="home" /></button>
-        {goals.length > 0 && <button className="icon-button" onClick={() => focusTile(goals[Math.floor(goals.length / 2)])} aria-label="К камерам"><Icon name="gold" /></button>}
-        {last && <button className="icon-button" onClick={() => focusTile(last)} aria-label="К последнему ходу"><Icon name="arrow-back" /></button>}
+        {phone ? <>
+          <button className="button secondary" onClick={showOverview} aria-pressed={chosenCamera === "overview"}>Вся шахта</button>
+          <button className="button secondary" onClick={() => setCamera(null)}>К ходу</button>
+        </> : <>
+          <button className="icon-button" onClick={showOverview} aria-label="Показать всё поле"><Icon name="settings" /></button>
+          <button className="icon-button" onClick={() => { const origin = tiles.find((tile) => tile.kind === "origin"); if (origin) focusTile(origin); }} aria-label="Ко входу"><Icon name="home" /></button>
+          {goals.length > 0 && <button className="icon-button" onClick={() => focusTile(goals[Math.floor(goals.length / 2)])} aria-label="К камерам"><Icon name="gold" /></button>}
+          {last && <button className="icon-button" onClick={() => focusTile(last)} aria-label="К последнему ходу"><Icon name="arrow-back" /></button>}
+        </>}
       </div>
     </section>
   );

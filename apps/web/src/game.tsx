@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { CardCommand, PlayerView, Position, Rotation } from "../../../packages/game-core/src/types.js";
 import type { RoomSnapshot } from "../../../packages/protocol/src/index.js";
 import { cardArt } from "./art.js";
@@ -12,6 +12,13 @@ export type MatchSnapshot = RoomSnapshot & { match: PlayerView };
 type Selection = { revision: number; instanceId: string; rotation: Rotation; staged: CardCommand | null };
 type ScoutModal = { roundNo: number; goalSlotId?: string };
 const seatColors = ["#62d9ff", "#fbb364", "#a7e86a", "#f890cc", "#baa0ff", "#52e2bb", "#f7e26d", "#ff8282", "#91aaff", "#eee2cf"];
+const phoneLayout = "(max-width: 620px), (orientation: landscape) and (max-height: 520px)";
+
+function subscribeToPhoneLayout(update: () => void) {
+  const query = window.matchMedia(phoneLayout);
+  query.addEventListener("change", update);
+  return () => query.removeEventListener("change", update);
+}
 
 function Deadline({ at }: { at: string }) {
   const remaining = () => Math.max(0, Math.ceil((Date.parse(at) - Date.now()) / 1000));
@@ -171,12 +178,13 @@ function lastBoardMove(snapshot: MatchSnapshot): Position | null {
   return null;
 }
 
-export function Game({ snapshot, pending, error, run, send, lobby, exit }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void }) {
+export function Game({ snapshot, pending, error, run, send, lobby, exit, openRules }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void }) {
   const { match, room } = snapshot;
   const solo = !send;
+  const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches) && solo;
   const leaveLabel = solo ? "Выйти из партии" : copy.leave;
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [modal, setModal] = useState<"role" | "leave" | ScoutModal | null>(null);
+  const [modal, setModal] = useState<"role" | "leave" | "cards" | "details" | ScoutModal | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const selected = selection?.revision === match.revision ? selection : null;
   const me = match.turnSeatId === room.mySeatId && match.phase === "TURN";
@@ -225,71 +233,102 @@ export function Game({ snapshot, pending, error, run, send, lobby, exit }: { sna
     : boardMoves.length ? "Выберите подсвеченную клетку на карте."
     : tunnel && moves.some((move) => move.type === "PLAY_TUNNEL") ? "Поверните карту, чтобы увидеть доступные клетки."
     : "Для карты нет подходящих целей. Её можно сбросить в закрытую.";
+  const moveHint = staged ? messageForMove(staged, snapshot) : hint;
+  const counts = <ul className="match-counts">
+    <li title={profile.roleGoals.prospector}><Icon name="gold" /><span>{profile.progress} <b>{linkedOre}/{match.requiredOre}</b></span></li>
+    <li><Icon name="pickaxe" /><span>Ходы <b>{match.turnNumber}{match.maxTurns !== null ? `/${match.maxTurns}` : ""}</b></span></li>
+    <li><Icon name="cards" /><span>Колода <b>{match.deckCount}</b></span></li>
+    {deadline && <li><Deadline key={deadline} at={deadline} /></li>}
+  </ul>;
+  const cards = () => match.self.hand.map((card) => {
+    const label = cardLabels[card.typeId] ?? "Карта";
+    const active = card.instanceId === selected?.instanceId;
+    return <button key={card.instanceId} className={`hand-card${active ? " selected-card" : ""}`} aria-label={label} aria-pressed={active} disabled={pending}
+      onClick={() => {
+        setSelection(active && !phone ? null : { revision: match.revision, instanceId: card.instanceId, rotation: active ? selected.rotation : 0, staged: null });
+        if (phone) setModal(null);
+      }}>
+      <img src={cardArt(card.assetId)} width={256} height={384} alt="" draggable={false}
+        style={{ transform: active && tunnel ? `rotate(${selected.rotation}deg)` : undefined }} />
+      <span>{label}</span>
+    </button>;
+  });
+  const confirmButton = staged && <button className="button primary" disabled={pending} onClick={() => void confirm()}><Icon name="confirm" />{pending ? "Ожидаем подтверждения…" : copy.confirm}</button>;
+  const actionsPanel = selected && <div className="hand-actions" aria-label="Подготовка хода">
+    {phone && confirmButton}
+    {(seats.length > 0 || (phone && boardMoves.some((move) => move.type === "PLAY_SCOUT"))) && <div className="seat-targets" aria-label="Доступные цели">
+      {seats.length > 0 && <strong>{actions[seats[0].type]}</strong>}
+      {seats.map((move) => <button className="button secondary" key={JSON.stringify(move)} aria-pressed={JSON.stringify(staged) === JSON.stringify(move)} disabled={pending} onClick={() => choose(move)}>{messageForMove(move, snapshot)}</button>)}
+      {phone && boardMoves.flatMap((move) => move.type === "PLAY_SCOUT"
+        ? <button className="button secondary" key={move.goalSlotId} aria-pressed={staged?.type === "PLAY_SCOUT" && staged.goalSlotId === move.goalSlotId} onClick={() => choose(move)}>Камера {move.goalSlotId.replace(/^g/, "")}</button> : [])}
+    </div>}
+    <div className="move-buttons">
+      {tunnel && <button className="icon-button" aria-label="Повернуть на 180°" disabled={pending || !me} onClick={rotate}><Icon name="rotate" /></button>}
+      {discard && <button className="button secondary" aria-label={actions.DISCARD} disabled={pending} onClick={() => choose(discard)}>{phone ? "Сбросить" : actions.DISCARD}</button>}
+      <button className="icon-button" aria-label={copy.cancel} disabled={pending} onClick={() => setSelection(null)}><Icon name="close" /></button>
+      {!phone && confirmButton}
+    </div>
+  </div>;
 
   return (
-    <main className={solo ? "game-shell solo-game" : "game-shell"} data-testid="room-state" data-room={room.roomId} data-match={match.matchId} data-revision={match.revision}
+    <main className={`game-shell${solo ? " solo-game" : ""}${phone ? " phone-game" : ""}`} data-testid="room-state" data-room={room.roomId} data-match={match.matchId} data-revision={match.revision}
       onKeyDown={(event) => {
         if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLDialogElement || typeof modal === "string" || scout || rolePending || summary || final) return;
         if (event.key === "Escape" && selected) setSelection(null);
         if (event.key.toLowerCase() === "r" && selected && tunnel) rotate();
       }}>
-      <header className="match-header">
+      {!phone && <header className="match-header">
         <div className="match-progress">
           <span className="eyebrow">Раунд {match.roundNo} из {match.rounds}</span>
           <h1 aria-live="polite">{actorLabel}</h1>
         </div>
-        <ul className="match-counts">
-          <li title={profile.roleGoals.prospector}><Icon name="gold" /><span>{profile.progress} <b>{linkedOre}/{match.requiredOre}</b></span></li>
-          <li><Icon name="pickaxe" /><span>Ходы <b>{match.turnNumber}{match.maxTurns !== null ? `/${match.maxTurns}` : ""}</b></span></li>
-          <li><Icon name="cards" /><span>Колода <b>{match.deckCount}</b></span></li>
-          {deadline && <li><Deadline key={deadline} at={deadline} /></li>}
-        </ul>
+        {counts}
         <div className="match-tools">
           <button className="button secondary" disabled={!match.self.role} onClick={() => setModal("role")}><Icon name="lock" />{copy.role}</button>
           {match.self.scoutResults.length > 0 && <button className="button secondary" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" />Разведка</button>}
           {send && <button className="icon-button mobile-messages" aria-label={showMessages ? "Скрыть чат и журнал" : "Открыть чат и журнал"} aria-expanded={showMessages} onClick={() => setShowMessages(!showMessages)}><Icon name="chat" /></button>}
           <button className="icon-button" aria-label={leaveLabel} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
         </div>
-      </header>
+      </header>}
       <Notice text={error} />
       <div className="table-layout">
-        <Board key={match.roundNo} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose} />
-        <aside className="table-side">
+        <Board key={match.roundNo} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose}
+          phone={phone} selectedCard={selected && phone ? `${selected.instanceId}:${selected.rotation}` : undefined} />
+        {!phone && <aside className="table-side">
           <Crew snapshot={snapshot} authors={authors} />
           {send && <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} compact /></div>}
-        </aside>
+        </aside>}
         <section className="panel hand" aria-label="Ваша рука">
-          <div className="hand-heading"><div><p className="eyebrow">Личные карты</p><h2>Ваша рука <span>{match.self.hand.length}</span></h2></div><p className="soft-note" aria-live="polite">{staged ? messageForMove(staged, snapshot) : hint}</p></div>
-          <div className="hand-body">
-            <div className="hand-cards">
-              {match.self.hand.map((card) => {
-                const label = cardLabels[card.typeId] ?? "Карта";
-                const active = card.instanceId === selected?.instanceId;
-                return (
-                  <button key={card.instanceId} className={`hand-card${active ? " selected-card" : ""}`} aria-label={label} aria-pressed={active} disabled={pending}
-                    onClick={() => setSelection(active ? null : { revision: match.revision, instanceId: card.instanceId, rotation: 0, staged: null })}>
-                    <img src={cardArt(card.assetId)} width={256} height={384} alt="" draggable={false}
-                      style={{ transform: active && tunnel ? `rotate(${selected.rotation}deg)` : undefined }} />
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
+          {phone ? <>
+            <div className="phone-turn">
+              <h1 aria-live="polite">{actorLabel}</h1>
+              <span>Раунд {match.roundNo}/{match.rounds}</span>
             </div>
-            {selected && <div className="hand-actions" aria-label="Подготовка хода">
-              {seats.length > 0 && <div className="seat-targets" aria-label="Доступные участники">
-                <strong>{actions[seats[0].type]}</strong>
-                {seats.map((move) => <button className="button secondary" key={JSON.stringify(move)} aria-pressed={staged === move || JSON.stringify(staged) === JSON.stringify(move)} disabled={pending} onClick={() => choose(move)}>{messageForMove(move, snapshot)}</button>)}
-              </div>}
-              <div className="move-buttons">
-                {tunnel && <button className="icon-button" aria-label="Повернуть на 180°" disabled={pending || !me} onClick={rotate}><Icon name="rotate" /></button>}
-                {discard && <button className="button secondary" disabled={pending} onClick={() => choose(discard)}>{actions.DISCARD}</button>}
-                <button className="icon-button" aria-label={copy.cancel} disabled={pending} onClick={() => setSelection(null)}><Icon name="close" /></button>
-                {staged && <button className="button primary" disabled={pending} onClick={() => void confirm()}><Icon name="confirm" />{pending ? "Ожидаем подтверждения…" : copy.confirm}</button>}
-              </div>
-            </div>}
-          </div>
+            <div className="phone-menu">
+              <button className={`button ${me && !selected ? "primary" : "secondary"}`} onClick={() => setModal("cards")} disabled={!match.self.hand.length}>Карты · {match.self.hand.length}</button>
+              <button className="button secondary" onClick={() => setModal("details")}>Партия</button>
+            </div>
+            {handCard && <div className="phone-card-name" aria-live="polite"><strong>{cardLabels[handCard.typeId] ?? "Карта"}</strong><span>{moveHint}</span></div>}
+            {actionsPanel}
+          </> : <>
+            <div className="hand-heading"><div><p className="eyebrow">Личные карты</p><h2>Ваша рука <span>{match.self.hand.length}</span></h2></div><p className="soft-note" aria-live="polite">{moveHint}</p></div>
+            <div className="hand-body"><div className="hand-cards">{cards()}</div>{actionsPanel}</div>
+          </>}
         </section>
       </div>
+      {phone && !rolePending && !summary && !final && modal === "cards" && <Dialog title="Ваша рука" className="phone-picker" close={() => setModal(null)}>
+        <div className="phone-picker-grid">{cards()}</div>
+      </Dialog>}
+      {phone && !rolePending && !summary && !final && modal === "details" && <Dialog title="Партия" close={() => setModal(null)}>
+        {counts}
+        <Crew snapshot={snapshot} authors={authors} />
+        <div className="dialog-actions">
+          <button className="button secondary" onClick={() => setModal("role")}>{copy.role}</button>
+          {match.self.scoutResults.length > 0 && <button className="button secondary" onClick={() => setModal({ roundNo: match.roundNo })}>Моя разведка</button>}
+          {openRules && <button className="button secondary" onClick={() => { setModal(null); openRules(); }}>{copy.rules}</button>}
+          <button className="button secondary" onClick={() => setModal("leave")}>{leaveLabel}</button>
+        </div>
+      </Dialog>}
       {rolePending || (modal === "role" && !summary && !final) ? <RoleCard snapshot={snapshot} mandatory={rolePending} close={() => setModal(null)} run={run} pending={pending} error={error} /> : null}
       {!rolePending && !final && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
       {!rolePending && !summary && !final && modal === "leave" && <Dialog title={leaveLabel} close={() => setModal(null)}>

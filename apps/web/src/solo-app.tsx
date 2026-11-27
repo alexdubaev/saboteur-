@@ -63,7 +63,7 @@ export function SoloApp() {
       <button className="button secondary header-rules" onClick={() => setRulesOpen(true)}><Icon name="info" />{copy.rules}</button>
     </header>
     {active
-      ? <Game key={active.snapshot.match.matchId} snapshot={active.snapshot} run={run} error={error} pending={false} lobby={menu} exit={menu} />
+      ? <Game key={active.snapshot.match.matchId} snapshot={active.snapshot} run={run} error={error} pending={false} lobby={menu} exit={menu} openRules={() => setRulesOpen(true)} />
       : <main className="home-stage">
         <div className="home-copy">
           <div className="home-inner">
