@@ -98,6 +98,23 @@ def clips(folder):
     }
 
 
+def write_media_tracks(offsets):
+    bed_offset, bed_duration = offsets["mineBed"][0]
+    start_offset, start_duration = offsets["start"][0]
+    strike_offset = offsets["minePick"][0][0] + .168
+    tracks = [
+        ("ambience", bed_offset, bed_duration, "alimiter=limit=0.35:level=false"),
+        ("start", start_offset, start_duration, "volume=0.8"),
+        ("turn", strike_offset, .32, "adelay=160,aecho=1:1:300:1,volume=0.42"),
+    ]
+    for name, offset, duration, filters in tracks:
+        subprocess.run([
+            "ffmpeg", "-v", "error", "-y", "-ss", str(offset), "-t", str(duration),
+            "-i", str(OUTPUT / "mine.mp3"), "-af", filters, "-map_metadata", "-1",
+            "-c:a", "libmp3lame", "-q:a", "5", str(OUTPUT / f"mine-{name}.mp3"),
+        ], check=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("recordings", type=Path, help="Folder with original clips named as in docs/SOUND_SOURCES.md")
@@ -128,6 +145,7 @@ def main():
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(uncompressed),
                         "-c:a", "libmp3lame", "-q:a", "5", str(OUTPUT / "mine.mp3")], check=True)
     (OUTPUT / "mine.json").write_text(json.dumps(offsets, separators=(",", ":")) + "\n", encoding="utf-8")
+    write_media_tracks(offsets)
 
 
 if __name__ == "__main__":

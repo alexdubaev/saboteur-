@@ -15,7 +15,7 @@ const soundKey = "zoloto.solo-sound";
 export function SoloApp() {
   const [botRange] = useState(soloBotRange);
   const [botCount, setBotCount] = useState(botRange.min);
-  const { audio, sound, enableAudio, toggleSound } = useGameAudio(soundKey);
+  const { audio, sound, soundActive, enableAudio, toggleSound } = useGameAudio(soundKey);
   const heardSequence = useRef(0);
   const [active, setActive] = useState<ActiveMatch | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -128,9 +128,9 @@ export function SoloApp() {
     return () => window.clearTimeout(timeout);
   }, [active]);
 
-  const soundControl = <button type="button" className="icon-button" aria-label={sound ? copy.soundOn : copy.soundOff}
-    title={sound ? copy.soundOn : copy.soundOff} aria-pressed={sound} onClick={toggleSound}>
-    <Icon name="volume" className={sound ? "" : "muted-icon"} />
+  const soundControl = <button type="button" className="icon-button" data-sound-toggle aria-label={soundActive ? copy.soundOn : copy.soundOff}
+    title={soundActive ? copy.soundOn : copy.soundOff} aria-pressed={soundActive} onClick={toggleSound}>
+    <Icon name="volume" className={soundActive ? "" : "muted-icon"} />
   </button>;
 
   return <div className="solo-app">

@@ -61,7 +61,7 @@ export function App() {
   const [canCreateRooms, setCanCreateRooms] = useState(false);
   const [connecting, setConnecting] = useState(true);
   const [rules, setRules] = useState(false);
-  const { audio, sound, enableAudio, toggleSound } = useGameAudio(soundKey);
+  const { audio, sound, soundActive, enableAudio, toggleSound } = useGameAudio(soundKey);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [terminalLobby, setTerminalLobby] = useState<string | null>(null);
@@ -190,7 +190,7 @@ export function App() {
     if (!state || status !== "open") return false;
     const { room: current, match } = state;
     return mutation(async () => {
-      if (sound) enableAudio(false);
+      if (sound) enableAudio(command.type === "START_MATCH" || command.type === "REPLAY");
       try {
         await sendCommand({
           roomId: current.roomId, matchId: match?.matchId ?? null,
@@ -223,9 +223,9 @@ export function App() {
 
   const blocked = pending || (state !== null && status !== "open");
   const connectionStatus = state && status !== "open" ? status === "offline" ? copy.offline : copy.reconnect : undefined;
-  const soundControl = <button type="button" className="icon-button" aria-label={sound ? copy.soundOn : copy.soundOff}
-    title={sound ? copy.soundOn : copy.soundOff} aria-pressed={sound} onClick={toggleSound}>
-    <Icon name="volume" className={sound ? "" : "muted-icon"} />
+  const soundControl = <button type="button" className="icon-button" data-sound-toggle aria-label={soundActive ? copy.soundOn : copy.soundOff}
+    title={soundActive ? copy.soundOn : copy.soundOff} aria-pressed={soundActive} onClick={toggleSound}>
+    <Icon name="volume" className={soundActive ? "" : "muted-icon"} />
   </button>;
 
   return <div className="network-app">
