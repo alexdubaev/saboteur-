@@ -14,7 +14,8 @@
 			X-Content-Type-Options nosniff
 			X-Robots-Tag "noindex, nofollow"
 		}
-		basic_auth bcrypt "Gold Trail playtest" {
+		@entry not path /ws
+		basic_auth @entry bcrypt "Gold Trail playtest" {
 			{$PLAYTEST_USER} {$PLAYTEST_HASH}
 		}
 		@backend path /api/* /ws
@@ -25,8 +26,9 @@
 		}
 		handle {
 			@versionedArt {
-				path /assets/*.webp
+				path_regexp ^/assets/.+[.]webp$
 				query v=*
+				file
 			}
 			header @versionedArt Cache-Control "private, max-age=31536000, immutable"
 			root * /srv/web
