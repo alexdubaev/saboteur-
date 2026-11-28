@@ -203,18 +203,20 @@ type GameProps = {
   openRules?: () => void;
   fullscreenControl?: { label: string; active: boolean; toggle: () => void };
   soundControl?: ReactNode;
+  connectionStatus?: string | undefined;
   onGoldReveal?: (event: JournalEntry) => void;
 };
 
-export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl, soundControl, onGoldReveal }: GameProps) {
+export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl, soundControl, connectionStatus, onGoldReveal }: GameProps) {
   const { match, room } = snapshot;
   const presentation = useTurnPresentation(snapshot);
   const solo = !send;
-  const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches) && solo;
+  const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches);
   const leaveLabel = solo ? "Выйти из партии" : copy.leave;
   const [selection, setSelection] = useState<Selection | null>(null);
   const [modal, setModal] = useState<"role" | "leave" | ScoutModal | null>(null);
   const [showMessages, setShowMessages] = useState(false);
+  const sendPhoneMessage = send ?? sendLocalMessage;
   const selected = selection?.revision === match.revision ? selection : null;
   const toolStatusId = useId();
   const damagedTools = match.seats.find((seat) => seat.seatId === room.mySeatId)?.brokenTools ?? [];
@@ -318,7 +320,8 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
     </div>
   </div>;
 
-  return (
+  return <>
+    {!phone && connectionStatus && <p className="connection-status" role="status">{connectionStatus}</p>}
     <main className={`game-shell${solo ? " solo-game" : ""}${phone ? " phone-game" : ""}`} data-testid="room-state" data-room={room.roomId} data-match={match.matchId} data-revision={match.revision}
       onKeyDown={(event) => {
         if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || (event.target instanceof Element && event.target.closest("dialog")) || typeof modal === "string" || scout || rolePending || summary || final) return;
@@ -332,6 +335,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
           <div><dt>Ход</dt><dd>{match.turnNumber}{match.maxTurns !== null ? `/${match.maxTurns}` : ""}</dd></div>
           <div><dt>Колода</dt><dd>{match.deckCount}</dd></div>
           <div><dt>{profile.progress}</dt><dd>{linkedOre}/{match.requiredOre}</dd></div>
+          {deadline && <div><dt>Таймер</dt><dd><Deadline key={deadline} at={deadline} /></dd></div>}
         </dl>
         <Crew snapshot={snapshot} authors={authors} toolChange={presentation.tool} compact />
         <div className="phone-utilities">
@@ -346,6 +350,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
           {openRules && <button className="icon-button" aria-label={copy.rules} onClick={openRules}><Icon name="info" /></button>}
           <button className="icon-button" aria-label={leaveLabel} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
         </div>
+        {connectionStatus && <p className="connection-status" role="status">{connectionStatus}</p>}
       </header> : <header className="match-header">
         <div className="match-progress">
           <span className="eyebrow">Раунд {match.roundNo} из {match.rounds}</span>
@@ -353,7 +358,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
         </div>
         {counts}
         <div className="match-tools">
-          {soundControl}
+          {solo && soundControl}
           {fullscreenControl && <button className="button secondary" onClick={fullscreenControl.toggle}>{fullscreenControl.label}</button>}
           <button className="button secondary" title={copy.role} disabled={!roleName} onClick={() => setModal("role")}><Icon name="lock" />{solo && roleName ? roleName : copy.role}</button>
           {match.self.scoutResults.length > 0 && <button className="button secondary" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" />Разведка</button>}
@@ -401,7 +406,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
             <div className="hand-body"><div className="hand-cards">{cards()}</div>{actionsPanel}</div>
           </>}
         </section>
-        {phone && sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} authors={authors} split local />}
+        {phone && sendPhoneMessage && <Messages snapshot={snapshot} send={sendPhoneMessage} authors={authors} split local={solo} />}
       </div>
       {rolePending || (modal === "role" && !summary && !final) ? <RoleCard snapshot={snapshot} mandatory={rolePending} close={() => setModal(null)} run={run} pending={pending} error={error} /> : null}
       {!rolePending && !final && !presentation.gold && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
@@ -414,5 +419,5 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       {summary && !scout && !presentation.holdResults && <RoundResults snapshot={snapshot} run={run} pending={pending} error={error} />}
       {final && <MatchResults snapshot={snapshot} run={run} pending={pending} error={error} lobby={lobby} solo={solo} />}
     </main>
-  );
+  </>;
 }

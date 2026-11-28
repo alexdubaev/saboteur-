@@ -316,7 +316,7 @@ input::placeholder { color: #ad9dbe; }
   .home-logo { margin-block: 11px 8px; }
 }
 
-.solo-app {
+:is(.solo-app, .network-app) {
   --browser-top: 12px;
   --browser-bottom: 24px;
   --game-top: max(var(--browser-top), env(safe-area-inset-top));
@@ -377,10 +377,11 @@ input::placeholder { color: #ad9dbe; }
 .message-pane .chat-form button .icon { width: 16px; height: 16px; }
 .solo-game .table-side .messages-split { min-height: 145px; }
 
-.solo-app:has(.phone-game) > .site-header { display: none; }
+:is(.solo-app, .network-app):has(.phone-game) > .site-header { display: none; }
 .phone-game {
   --table-control: 34px;
   --hand-art-height: clamp(51px, 11dvh, 83px);
+  display: flex; flex-direction: column;
   min-height: 100dvh;
   padding: var(--game-top) max(6px, env(safe-area-inset-right)) var(--game-bottom) max(6px, env(safe-area-inset-left));
   gap: 5px;
@@ -390,6 +391,7 @@ input::placeholder { color: #ad9dbe; }
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "turn tools" "stats stats" "crew crew";
 }
+.phone-table-header .connection-status { grid-column: 1 / -1; padding: 3px 6px; border-radius: 4px; font-size: .72rem; }
 .phone-turn { grid-area: turn; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: bold 1rem/1.1 Georgia, serif; }
 .phone-utilities { grid-area: tools; display: flex; align-items: center; justify-content: end; gap: 4px; }
 .phone-utilities .button { white-space: nowrap; }
@@ -417,7 +419,7 @@ input::placeholder { color: #ad9dbe; }
 .phone-game .phone-crew .broken-tool b { font-size: .66rem; }
 .journal-actor { font-weight: 650; }
 .phone-game .table-layout {
-  flex: 1 0 auto; min-height: 0;
+  flex: 1 0 auto; min-height: 0; align-items: stretch;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(175px, 1fr) auto minmax(96px, min(19dvh, 140px));
   grid-template-areas: "board" "hand" "feed";
@@ -462,13 +464,13 @@ input::placeholder { color: #ad9dbe; }
 .phone-game .messages-split { grid-area: feed; }
 .phone-game .message-pane { border-radius: 7px; padding: 4px; }
 .phone-game .message-pane h2 { padding-bottom: 2px; border-bottom: 1px solid var(--line); }
-.phone-game .chat-pane .message-list li > div { display: none; }
+.phone-game.solo-game .chat-pane .message-list li > div { display: none; }
 .phone-game .chat-pane .message-list li p { margin: 0; }
 .phone-game .chat-input { font-size: 16px; }
 .phone-game .chat-input::placeholder { font-size: .73rem; }
 .phone-game .dialog .match-counts { justify-content: start; margin-bottom: 8px; }
 .phone-game .dialog h2 { font-size: 1.16rem; }
-.solo-app:has(.phone-game) .dialog {
+:is(.solo-app, .network-app):has(.phone-game) .dialog {
   inset-block: var(--game-top) var(--game-bottom);
   max-height: calc(100dvh - var(--game-top) - var(--game-bottom) - 12px);
 }
@@ -483,7 +485,7 @@ input::placeholder { color: #ad9dbe; }
 .phone-game .role-card .button { margin-top: 8px; min-height: 38px; padding-block: 4px; }
 
 @media (orientation: landscape) and (max-height: 520px) {
-  .solo-app { --browser-top: 18px; --browser-bottom: 36px; }
+  :is(.solo-app, .network-app) { --browser-top: 18px; --browser-bottom: 36px; }
   .phone-game {
     --table-control: clamp(25px, 9.2dvh, 29px);
     --hand-art-height: clamp(33px, calc(20dvh - 18px), 86px);
@@ -521,9 +523,9 @@ input::placeholder { color: #ad9dbe; }
 }
 
 @media (display-mode: standalone), (display-mode: fullscreen) {
-  .solo-app { --browser-top: 6px; --browser-bottom: 6px; }
+  :is(.solo-app, .network-app) { --browser-top: 6px; --browser-bottom: 6px; }
 }
-:fullscreen .solo-app { --browser-top: 6px; --browser-bottom: 6px; }
+:fullscreen :is(.solo-app, .network-app) { --browser-top: 6px; --browser-bottom: 6px; }
 
 .mine.mine-with-status { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
 .mine.mine-with-status > .board-viewport { position: relative; inset: auto; min-height: 0; }

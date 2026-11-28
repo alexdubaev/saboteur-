@@ -478,6 +478,42 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     expect(flood.some((response) => response.status === 200)).toBe(true);
   });
 
+  it.each([[2, 8], [3, 7]])("fills a mixed room with %i humans and %i bots", async (humans, bots) => {
+    const cookies = await Promise.all(Array.from({ length: humans }, (_, index) => guest(`Игрок ${index + 1}`)));
+    const [owner, teammate] = cookies;
+    let current = await room(owner);
+    for (const cookie of cookies.slice(1)) {
+      const response = await request("/api/rooms/join", cookie, { code: current.room.code });
+      expect(response.status).toBe(200);
+    }
+    for (const cookie of cookies) current = await command(current, cookie, { type: "SET_READY", ready: true });
+
+    const addBot = { type: "ADD_BOT" } as const;
+    const startMatch = { type: "START_MATCH" } as const;
+    expect(await httpCommand(current, teammate, envelope(current, addBot))).toMatchObject({ ok: false, code: "HOST_REQUIRED" });
+    if (humans === 2) {
+      expect(await httpCommand(current, owner, envelope(current, startMatch))).toMatchObject({ ok: false, code: "NOT_ENOUGH_PLAYERS" });
+    }
+    for (let count = 0; count < bots; count++) current = await command(current, owner, addBot);
+    expect(await httpCommand(current, owner, envelope(current, addBot))).toMatchObject({ ok: false, code: "ROOM_FULL" });
+
+    const bot = current.room.seats.find((seat) => seat.bot);
+    if (!bot) throw new Error("Expected a bot to remove");
+    const removeBot = { type: "REMOVE_BOT", seatId: bot.seatId } as const;
+    expect(await httpCommand(current, teammate, envelope(current, removeBot))).toMatchObject({ ok: false, code: "HOST_REQUIRED" });
+    current = await command(current, owner, removeBot);
+    expect(current.room.seats).toHaveLength(9);
+    expect(current.room.seats.some((seat) => seat.seatId === bot.seatId)).toBe(false);
+    current = await command(current, owner, addBot);
+
+    current = await command(current, owner, startMatch);
+    const teammateView = await snapshot(current, teammate);
+    expect(teammateView.room.seats.filter((seat) => seat.bot)).toHaveLength(bots);
+    expect(teammateView.room.seats.filter((seat) => !seat.bot)).toHaveLength(humans);
+    expect(teammateView.match).toMatchObject({ matchId: current.match?.matchId, phase: "ROLE_REVEAL" });
+    expect(teammateView.match?.seats).toHaveLength(10);
+  });
+
   it("runs bot confirmations automatically and lets only the host abandon an unattended match", async () => {
     const owner = await guest();
     const teammate = await guest();

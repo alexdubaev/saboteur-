@@ -1,0 +1,37 @@
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	route {
+		@health path /health /health/*
+		respond @health 404
+		header {
+			Cache-Control "private, no-store"
+			Content-Security-Policy "frame-ancestors 'none'; base-uri 'none'; object-src 'none'"
+			Referrer-Policy no-referrer
+			X-Content-Type-Options nosniff
+			X-Robots-Tag "noindex, nofollow"
+		}
+		basic_auth bcrypt "Gold Trail playtest" {
+			{$PLAYTEST_USER} {$PLAYTEST_HASH}
+		}
+		@backend path /api/* /ws
+		handle @backend {
+			reverse_proxy app:4174 {
+				header_up -Authorization
+			}
+		}
+		handle {
+			@versionedArt {
+				path /assets/*.webp
+				query v=*
+			}
+			header @versionedArt Cache-Control "private, max-age=31536000, immutable"
+			root * /srv/web
+			try_files {path} /index.html
+			file_server
+		}
+	}
+}

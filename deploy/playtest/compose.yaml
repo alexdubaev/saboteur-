@@ -1,0 +1,88 @@
+name: saboteur-playtest
+
+x-logs: &limited-logs
+  driver: local
+  options:
+    max-size: 5m
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
+    environment:
+      POSTGRES_DB: gold
+      POSTGRES_USER: gold
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a project-specific database password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: [CMD, pg_isready, -U, gold, -d, gold]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+    mem_limit: 224m
+    restart: unless-stopped
+    logging: *limited-logs
+
+  app:
+    image: node:24.15.0-bookworm-slim@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d
+    user: node
+    working_dir: /srv/game
+    init: true
+    command: [node, apps/server/src/index.js]
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=112
+      APP_ORIGIN: ${APP_ORIGIN:?Set the exact HTTPS origin}
+      DATABASE_URL: postgresql://gold:${POSTGRES_PASSWORD:?Set a project-specific database password}@db:5432/gold
+      HOST: 0.0.0.0
+      PORT: "4174"
+      PLAYTEST_MODE: "1"
+    volumes:
+      - ./release:/srv/game:ro
+    networks: [gateway, data]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:4174/health/ready').then(r => { if (!r.ok) process.exitCode = 1 })"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+    read_only: true
+    mem_limit: 192m
+    restart: unless-stopped
+    logging: *limited-logs
+
+  gateway:
+    image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    environment:
+      PLAYTEST_USER: ${PLAYTEST_USER:?Set the group access username}
+      PLAYTEST_HASH: ${PLAYTEST_HASH:?Set a bcrypt hash for group access}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./release/web:/srv/web:ro
+    networks: [ingress, gateway]
+    mem_limit: 64m
+    restart: unless-stopped
+    logging: *limited-logs
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.11.2@sha256:55c7e3e8d89d5e8d20b75a82f3602cbf98e06db406e73e282073cfdc5a9a3af6
+    command: [tunnel, --no-autoupdate, --protocol, http2, --url, "http://gateway:8080"]
+    profiles: [quick-tunnel]
+    networks: [ingress]
+    depends_on: [gateway]
+    mem_limit: 96m
+    logging: *limited-logs
+
+networks:
+  ingress:
+  gateway:
+    internal: true
+  data:
+    internal: true
+
+volumes:
+  postgres-data:

@@ -28,6 +28,34 @@
 - С того же HTTPS-origin отдавайте статику `apps/web/dist`, проксируйте `/api/*` и `/ws` к `127.0.0.1:4174`, сохраняйте `Origin` и поддерживайте WebSocket Upgrade. Для WebP с версией из манифеста `?v=…` включите публичное immutable-кеширование. API уже возвращает `Cache-Control: no-store`.
 - Оставьте PostgreSQL, внутренний API-порт и `/health/*` на loopback или во внутренней сети. Изоляция особенно важна для `/health/metrics`, который содержит агрегированные числа комнат, подключений и команд. Для внешней проверки без ботов задайте `PLAYTEST_MODE=0`.
 
+### Отдельный стенд для сетевой игры с ботами
+
+В `deploy/playtest` описан отдельный Compose-проект без опубликованных портов. Сервер, PostgreSQL и шлюз используют свои сети и том. Для закрытой группы шлюз добавляет пароль поверх обычных гостевых сессий. Он проксирует HTTPS API и WebSocket с одного адреса. Служебные запросы `/health/*` со стороны игроков получают `404`.
+
+На машине сборки подготовьте новый пустой каталог `release` из проверенного checkout. В путях ниже он находится рядом с репозиторием.
+
+```sh
+mkdir ../release
+cp package.json pnpm-lock.yaml pnpm-workspace.yaml ../release/
+cp -R data migrations ../release/
+pnpm exec tsc -p deploy/playtest/tsconfig.json --outDir ../release
+pnpm build --outDir ../release/web
+pnpm --dir ../release install --prod --frozen-lockfile --ignore-scripts --config.node-linker=hoisted
+```
+
+Перенесите `release`, `compose.yaml` и `Caddyfile` на Linux в каталог стенда. В `release` нужны права чтения для контейнеров. Рядом с `compose.yaml` создайте `.env` с правами `0600`. Задайте отдельный `POSTGRES_PASSWORD` из случайных букв и цифр, `PLAYTEST_USER`, `PLAYTEST_HASH` и `APP_ORIGIN`. Для `PLAYTEST_HASH` используйте `caddy hash-password --bcrypt-cost 12` с вводом по stdin и одинарные кавычки в `.env`, чтобы Compose сохранил знаки `$`. Секреты хранятся отдельно от сборки и Git.
+
+Для временного внешнего теста сначала задайте `APP_ORIGIN=https://playtest.invalid` и запустите только `docker compose up -d tunnel`. Дождитесь регистрации адреса в `docker compose logs tunnel`, укажите назначенный HTTPS-origin без завершающего слеша в `.env` и проверьте шлюз. С другого устройства `GET /` без пароля должен вернуть `401`. Quick Tunnel выдаёт другой адрес после перезапуска. После смены адреса обновите `APP_ORIGIN`, пересоздайте `app` и раздайте новые приглашения. Для постоянного адреса нужен собственный HTTPS-вход.
+
+```sh
+docker compose config --quiet
+docker compose up -d --wait db
+docker compose run --rm app node apps/server/src/migrate.js
+docker compose up -d --wait app gateway
+```
+
+Проверьте `ready` внутри `app`, вход с двух отдельных браузерных сессий, нажатие «Добавить бота», ход на общем поле и восстановление после обновления. Чтобы остановить этот стенд, используйте `docker compose stop tunnel gateway app db` из его каталога. Снимок перед будущим обновлением храните вне каталога релиза, а предыдущий релиз сохраняйте до успешной проверки нового. Для остановки том базы сохраняется.
+
 ## Проверки
 
 Установите `TEST_DATABASE_URL` для отдельной тестовой PostgreSQL на loopback. Запуски Vitest и сетевой замер создают свои схемы. Без переменной интеграционные тесты пропускаются. Браузерный прогон ожидает локальный API на 4174 с `PLAYTEST_MODE=1` и отдельной тестовой БД.
