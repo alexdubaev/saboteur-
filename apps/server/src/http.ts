@@ -2,14 +2,14 @@ import { createServer } from "node:http";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import { performance } from "node:perf_hooks";
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { Pool } from "pg";
 import { WebSocket, WebSocketServer } from "ws";
 import type { RawData } from "ws";
-import type { z } from "zod";
+import { z } from "zod";
 import {
   chatSchema, clientMessageSchema, emptySchema, guestSchema, httpCommandSchema, joinSchema, roomIdSchema,
 } from "../../../packages/protocol/src/index.js";
@@ -22,8 +22,11 @@ import type { Identity } from "./session.js";
 const MAX_BODY_BYTES = 4096;
 const RATE_WINDOW_MS = 60_000;
 const MAX_RATE_KEYS = 20_000;
+const HOST_COOKIE = "gold_host";
+const HOST_KEY = /^[a-f0-9]{64}$/;
+const hostClaimSchema = z.strictObject({ key: z.string().regex(HOST_KEY) });
 
-type Options = { db: Pool; definition: Definition; origin: string; playtest: boolean; host: string; port: number };
+type Options = { db: Pool; definition: Definition; origin: string; playtest: boolean; host: string; port: number; hostKey?: string };
 type Subscription = { roomId: string; seatId: string; lastSequence: number };
 type Connection = {
   socket: WebSocket;
@@ -123,7 +126,15 @@ function rejectUpgrade(socket: Duplex, status: number, code: string) {
   socket.end(`HTTP/1.1 ${status} Rejected\r\nConnection: close\r\nContent-Type: application/json\r\nCache-Control: no-store\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`);
 }
 
-export async function startServer({ db, definition, origin, playtest, host, port }: Options) {
+function matchesKey(candidate: string | undefined, expected: string) {
+  return Boolean(candidate && HOST_KEY.test(candidate) && timingSafeEqual(Buffer.from(candidate, "hex"), Buffer.from(expected, "hex")));
+}
+
+export async function startServer({ db, definition, origin, playtest, host, port, hostKey }: Options) {
+  if (hostKey !== undefined && !HOST_KEY.test(hostKey)) throw new Error("PLAYTEST_HOST_KEY must contain 64 lowercase hexadecimal characters");
+  const hostGrant = hostKey && createHmac("sha256", Buffer.from(hostKey, "hex")).update("gold-trail:host-grant:v1").digest("hex");
+  const canCreateRooms = (cookie?: string) => hostGrant === undefined || matchesKey(cookie, hostGrant);
+  const guestCookie = { httpOnly: true, sameSite: "Strict" as const, secure: origin.startsWith("https://"), path: "/", maxAge: SESSION_AGE_SECONDS };
   const app = new Hono<{ Bindings: { incoming: IncomingMessage } }>();
   const http = createServer({ requestTimeout: 15_000, headersTimeout: 10_000 }, getRequestListener(app.fetch));
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_BODY_BYTES, perMessageDeflate: false });
@@ -273,6 +284,17 @@ export async function startServer({ db, definition, origin, playtest, host, port
     return c.json({ rooms: result.rows[0].count, sockets: connections.size, commands, commandDurationMs, resyncs });
   });
 
+  app.get("/api/entry", (c) => c.json({ canCreateRooms: canCreateRooms(getCookie(c, HOST_COOKIE)) }));
+
+  app.post("/api/session/host", async (c) => {
+    if (!hostKey || !hostGrant) throw new RoomError("NOT_FOUND", 404);
+    rateLimit(`host:${c.env.incoming.socket.remoteAddress}`, 30);
+    const { key } = await parseBody(c.req.raw, hostClaimSchema);
+    if (!matchesKey(key, hostKey)) throw new RoomError("HOST_LINK_REQUIRED", 403);
+    setCookie(c, HOST_COOKIE, hostGrant, guestCookie);
+    return c.json({ ok: true });
+  });
+
   app.post("/api/session/guest", async (c) => {
     rateLimit(`guest:${c.env.incoming.socket.remoteAddress}`, 60);
     const { name } = await parseBody(c.req.raw, guestSchema);
@@ -281,10 +303,9 @@ export async function startServer({ db, definition, origin, playtest, host, port
       if (existing.name !== name) await db.query("UPDATE profiles SET name = $2 WHERE user_id = $1", [existing.userId, name]);
       return c.json({ name, avatarId: existing.avatarId });
     }
+    if (!canCreateRooms(getCookie(c, HOST_COOKIE))) throw new RoomError("HOST_LINK_REQUIRED", 403);
     const { token, identity } = await createSession(db, name);
-    setCookie(c, SESSION_COOKIE, token, {
-      httpOnly: true, sameSite: "Strict", secure: origin.startsWith("https://"), path: "/", maxAge: SESSION_AGE_SECONDS,
-    });
+    setCookie(c, SESSION_COOKIE, token, guestCookie);
     return c.json({ name: identity.name, avatarId: identity.avatarId }, 201);
   });
 
@@ -295,17 +316,19 @@ export async function startServer({ db, definition, origin, playtest, host, port
 
   app.post("/api/rooms", async (c) => {
     const identity = await authenticate(getCookie(c, SESSION_COOKIE));
+    if (!canCreateRooms(getCookie(c, HOST_COOKIE))) throw new RoomError("HOST_LINK_REQUIRED", 403);
     rateLimit(`create:${identity.userId}`, 10);
     await parseBody(c.req.raw, emptySchema, true);
     return c.json(await rooms.create(identity), 201);
   });
 
   app.post("/api/rooms/join", async (c) => {
-    const identity = await authenticate(getCookie(c, SESSION_COOKIE));
     rateLimit(`join:${c.env.incoming.socket.remoteAddress}`, 120);
-    rateLimit(`join-seat:${identity.userId}`, 12);
     const { code } = await parseBody(c.req.raw, joinSchema);
-    const snapshot = await rooms.join(code, identity);
+    const identity = await readSession(db, getCookie(c, SESSION_COOKIE));
+    if (identity) rateLimit(`join-seat:${identity.userId}`, 12);
+    const { snapshot, token } = await rooms.joinInvitation(code, identity);
+    if (token) setCookie(c, SESSION_COOKIE, token, guestCookie);
     publish(snapshot.room.roomId);
     return c.json(snapshot);
   });
@@ -313,6 +336,16 @@ export async function startServer({ db, definition, origin, playtest, host, port
   app.get("/api/rooms/:roomId", async (c) => {
     const identity = await authenticate(getCookie(c, SESSION_COOKIE));
     return c.json(await rooms.snapshot(validate(roomIdSchema, c.req.param("roomId")), identity.userId));
+  });
+
+  app.post("/api/rooms/:roomId/name", async (c) => {
+    const identity = await authenticate(getCookie(c, SESSION_COOKIE));
+    rateLimit(`rename:${identity.userId}`, 12);
+    const roomId = validate(roomIdSchema, c.req.param("roomId"));
+    const { name } = await parseBody(c.req.raw, guestSchema);
+    const snapshot = await rooms.rename(roomId, identity.userId, name);
+    publish(roomId);
+    return c.json(snapshot);
   });
 
   app.post("/api/rooms/:roomId/leave", async (c) => {

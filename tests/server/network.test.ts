@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 import { Agent, request as httpRequest } from "node:http";
@@ -9,9 +9,11 @@ import type { Definition } from "../../packages/game-core/src/types.js";
 import type { CommandAck, CommandEnvelope, RoomSnapshot, ServerMessage, WireCommand } from "../../packages/protocol/src/index.js";
 import { connectDatabase, migrate } from "../../apps/server/src/database.js";
 import { startServer } from "../../apps/server/src/http.js";
+import { SESSION_COOKIE } from "../../apps/server/src/session.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const origin = "http://127.0.0.1:4173";
+let expectedOrigin = origin;
 const network = describe.skipIf(!databaseUrl);
 const sockets = new Set<WebSocket>();
 const agent = new Agent({ keepAlive: true, maxSockets: 6 });
@@ -31,9 +33,10 @@ function matchPath(snapshot: RoomSnapshot): string {
   return `/api/rooms/${snapshot.room.roomId}`;
 }
 
-function openTestServer(activeDefinition = definition) {
+function openTestServer(activeDefinition = definition, hosted?: { origin: string; hostKey: string }) {
   db = connectDatabase(isolatedUrl.toString());
-  return startServer({ db, definition: activeDefinition, origin, playtest: true, host: "127.0.0.1", port: 0 });
+  expectedOrigin = hosted?.origin ?? origin;
+  return startServer({ db, definition: activeDefinition, origin: expectedOrigin, playtest: true, host: "127.0.0.1", port: 0, hostKey: hosted?.hostKey });
 }
 
 async function stopTestServer(): Promise<void> {
@@ -48,7 +51,7 @@ async function stopTestServer(): Promise<void> {
   }
 }
 
-async function request(path: string, cookie?: string, payload?: unknown, requestOrigin = origin) {
+async function request(path: string, cookie?: string, payload?: unknown, requestOrigin = expectedOrigin) {
   const headers: Record<string, string> = {};
   if (cookie) headers.Cookie = cookie;
   if (payload !== undefined) {
@@ -77,12 +80,27 @@ async function request(path: string, cookie?: string, payload?: unknown, request
   });
 }
 
-async function guest(name = "Тестовый игрок"): Promise<string> {
-  const response = await request("/api/session/guest", undefined, { name });
-  expect(response.status).toBe(201);
+function responseCookie(response: Response): string {
   const cookie = response.headers.get("set-cookie")?.split(";")[0];
+  if (!cookie) throw new Error("Response cookie was omitted");
+  return cookie;
+}
+
+async function guest(name = "Тестовый игрок", hostCookie?: string): Promise<string> {
+  const response = await request("/api/session/guest", hostCookie, { name });
+  expect(response.status).toBe(201);
+  const cookie = response.headers.getSetCookie().find((value) => value.startsWith(`${SESSION_COOKIE}=`))?.split(";")[0];
   if (!cookie) throw new Error("Guest session cookie was omitted");
   return cookie;
+}
+
+async function identityCounts() {
+  if (!db) throw new Error("Test database is unavailable");
+  const result = await db.query<{ profiles: number; sessions: number }>(`
+    SELECT (SELECT count(*)::int FROM profiles) AS profiles,
+           (SELECT count(*)::int FROM guest_sessions) AS sessions
+  `);
+  return result.rows[0];
 }
 
 async function room(cookie: string): Promise<RoomSnapshot> {
@@ -147,7 +165,7 @@ function firstDiscard(view: RoomSnapshot): WireCommand {
   return discard;
 }
 
-function websocket(cookie?: string, requestOrigin = origin) {
+function websocket(cookie?: string, requestOrigin = expectedOrigin) {
   const socket = new WebSocket(address("/ws").replace("http", "ws"), {
     origin: requestOrigin,
     headers: cookie ? { Cookie: cookie } : {},
@@ -536,5 +554,114 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     current = await command(await snapshot(current, owner), owner, { type: "ABANDON" });
     expect(current.match?.phase).toBe("ABANDONED");
     expect(current.match?.seats.every(({ role }) => role === undefined)).toBe(true);
+  });
+
+  it("serializes the last anonymous invitation seat and restores the admitted guest after start", async () => {
+    const owner = await guest("Ведущий");
+    let current = await room(owner);
+    for (let count = 0; count < 8; count++) current = await command(current, owner, { type: "ADD_BOT" });
+
+    const before = await identityCounts();
+    const invitation = { code: current.room.code };
+    const candidates = await Promise.all(Array.from({ length: 2 }, () => request("/api/rooms/join", undefined, invitation)));
+    expect(candidates.map(({ status }) => status).sort()).toEqual([200, 409]);
+    const rejected = candidates.find(({ status }) => status === 409)!;
+    expect(await rejected.json()).toMatchObject({ code: "ROOM_FULL" });
+    expect(rejected.headers.has("set-cookie")).toBe(false);
+    expect(await identityCounts()).toEqual({ profiles: before.profiles + 1, sessions: before.sessions + 1 });
+
+    const admitted = candidates.find(({ status }) => status === 200)!;
+    const cookie = responseCookie(admitted);
+    const joined = await admitted.json() as RoomSnapshot;
+    expect(joined.room.seats).toHaveLength(10);
+    expect(joined.room.seats.find(({ seatId }) => seatId === joined.room.mySeatId)?.name).toMatch(/^Гость/u);
+    expect((await snapshot(joined, cookie)).room.mySeatId).toBe(joined.room.mySeatId);
+
+    current = await command(current, cookie, { type: "SET_READY", ready: true });
+    current = await command(current, owner, { type: "SET_READY", ready: true });
+    current = await command(current, owner, { type: "START_MATCH" });
+    const after = await identityCounts();
+    const late = await request("/api/rooms/join", undefined, invitation);
+    expect(late.status).toBe(409);
+    expect(await late.json()).toMatchObject({ code: "MATCH_STARTED" });
+    expect(late.headers.has("set-cookie")).toBe(false);
+    const repeated = await request("/api/rooms/join", cookie, invitation);
+    expect(repeated.status).toBe(200);
+    const restored = await repeated.json() as RoomSnapshot;
+    expect(restored.room.mySeatId).toBe(joined.room.mySeatId);
+    expect(restored.match?.matchId).toBe(current.match?.matchId);
+    expect((await request(`${matchPath(current)}/name`, cookie, { name: "Позднее имя" })).status).toBe(409);
+    expect(await (await request("/api/session", cookie)).json()).not.toMatchObject({ name: "Позднее имя" });
+    expect(await identityCounts()).toEqual(after);
+  });
+
+  it("grants hosting by private key and broadcasts a passwordless guest's lobby rename", async () => {
+    const hostKey = randomBytes(32).toString("hex");
+    await stopTestServer();
+    server = await openTestServer(definition, { hostKey, origin: "https://invite-playtest.invalid" });
+
+    const entry = () => request("/api/entry");
+    expect(await (await entry()).json()).toEqual({ canCreateRooms: false });
+    const noHost = await request("/api/session/guest", undefined, { name: "Гость с главной" });
+    expect(noHost.status).toBe(403);
+    expect(noHost.headers.has("set-cookie")).toBe(false);
+    const offOrigin = await request("/api/session/host", undefined, { key: hostKey }, "https://other.invalid");
+    expect(offOrigin.status).toBe(403);
+    expect(offOrigin.headers.has("set-cookie")).toBe(false);
+    const wrongKey = await request("/api/session/host", undefined, { key: "0".repeat(64) });
+    expect(wrongKey.status).toBe(403);
+    expect(wrongKey.headers.has("set-cookie")).toBe(false);
+
+    const granted = await request("/api/session/host", undefined, { key: hostKey });
+    expect(granted.ok).toBe(true);
+    expect(granted.headers.get("set-cookie")).toMatch(/HttpOnly/i);
+    expect(granted.headers.get("set-cookie")).toMatch(/\bSecure\b/i);
+    expect(granted.headers.get("set-cookie")).toMatch(/SameSite=Strict/i);
+    const grantCookie = responseCookie(granted);
+    expect(await (await request("/api/entry", grantCookie)).json()).toEqual({ canCreateRooms: true });
+    expect(await (await request("/api/entry", grantCookie.replace(/=.+$/, "=invalid"))).json()).toEqual({ canCreateRooms: false });
+    expect((await request("/api/session", grantCookie)).status).toBe(401);
+    const host = await guest("Ведущий", grantCookie);
+    const owner = `${host}; ${grantCookie}`;
+    expect((await request("/api/rooms", host, {})).status).toBe(403);
+    const created = await room(owner);
+
+    const before = await identityCounts();
+    const malformed = await request("/api/rooms/join", undefined, { code: `${created.room.code}2` });
+    expect(malformed.status).toBe(400);
+    const unknown = `${created.room.code.slice(0, -1)}${created.room.code.endsWith("2") ? "3" : "2"}`;
+    const missing = await request("/api/rooms/join", undefined, { code: unknown });
+    expect(missing.status).toBe(404);
+    const foreign = await request("/api/rooms/join", undefined, { code: created.room.code }, "https://other.invalid");
+    expect(foreign.status).toBe(403);
+    for (const result of [malformed, missing, foreign]) expect(result.headers.has("set-cookie")).toBe(false);
+    expect(await identityCounts()).toEqual(before);
+
+    const admitted = await request("/api/rooms/join", undefined, { code: created.room.code });
+    expect(admitted.status).toBe(200);
+    expect(admitted.headers.get("set-cookie")).toMatch(/HttpOnly/i);
+    expect(admitted.headers.get("set-cookie")).toMatch(/\bSecure\b/i);
+    expect(admitted.headers.get("set-cookie")).toMatch(/SameSite=Strict/i);
+    const friend = responseCookie(admitted);
+    const joined = await admitted.json() as RoomSnapshot;
+    expect(await (await request("/api/entry", friend)).json()).toEqual({ canCreateRooms: false });
+    expect((await request("/api/rooms", friend, {})).status).toBe(403);
+
+    const spectator = websocket(owner);
+    try {
+      await once(spectator.socket, "open");
+      spectator.send({ type: "SUBSCRIBE", roomId: created.room.roomId });
+      await spectator.next(isSnapshot);
+      const renamed = await request(`${matchPath(created)}/name`, friend, { name: "  Артём  Игрок " });
+      expect(renamed.status).toBe(200);
+      const renameView = await renamed.json() as RoomSnapshot;
+      expect(renameView.room.seats.find(({ seatId }) => seatId === joined.room.mySeatId)?.name).toBe("Артём Игрок");
+      const published = await spectator.next((message): message is Extract<ServerMessage, { type: "SNAPSHOT" }> =>
+        isSnapshot(message) && message.room.seats.some(({ seatId, name }) => seatId === joined.room.mySeatId && name === "Артём Игрок"));
+      expect(published.room.mySeatId).toBe(created.room.mySeatId);
+      expect(await (await request("/api/session", friend)).json()).toMatchObject({ name: "Артём Игрок" });
+    } finally {
+      spectator.socket.close();
+    }
   });
 });

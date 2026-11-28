@@ -30,9 +30,24 @@ function TimerSetup({ seconds, disabled, run }: { seconds: number | null; disabl
   );
 }
 
-export function Lobby({ snapshot, run, send, pending, leave }: { snapshot: RoomSnapshot; run: RunCommand; send: (message: string) => Promise<boolean>; pending: boolean; leave: () => void }) {
+function EditName({ current, pending, rename, cancel }: { current: string; pending: boolean; rename: (name: string) => Promise<boolean>; cancel: () => void }) {
+  const [name, setName] = useState(current);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const next = name.trim();
+    if (next && next !== current && await rename(next)) cancel();
+  };
+  return <form className="lobby-name-form" onSubmit={(event) => void submit(event)}>
+    <label className="field">Имя в экспедиции<input name="name" autoFocus autoComplete="nickname" value={name} onChange={(event) => setName(event.target.value)} maxLength={32} required /></label>
+    <button className="button secondary" type="submit" disabled={pending || !name.trim() || name.trim() === current}>Сохранить имя</button>
+    <button className="button secondary" type="button" disabled={pending} onClick={cancel}>Отмена</button>
+  </form>;
+}
+
+export function Lobby({ snapshot, run, send, rename, pending, leave }: { snapshot: RoomSnapshot; run: RunCommand; send: (message: string) => Promise<boolean>; rename: (name: string) => Promise<boolean>; pending: boolean; leave: () => void }) {
   const [copied, setCopied] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [editingName, setEditingName] = useState(false);
   const { room, match } = snapshot;
   const host = room.mySeatId === room.hostSeatId;
   const me = room.seats.find((seat) => seat.seatId === room.mySeatId);
@@ -73,8 +88,10 @@ export function Lobby({ snapshot, run, send, pending, leave }: { snapshot: RoomS
           <div className="lobby-actions" style={{ marginBottom: 14 }}>
             {host && !match && <button className="button secondary" disabled={pending || freeSeats === 0} onClick={() => void run({ type: "ADD_BOT" })}><Icon name="cart" />Добавить бота</button>}
             {!match && <button className="button secondary" disabled={pending || !me} aria-pressed={me?.ready ?? false} onClick={() => void run({ type: "SET_READY", ready: !me?.ready })}><Icon name="confirm" />{me?.ready ? copy.unready : copy.ready}</button>}
+            {!match && me && !editingName && <button className="button secondary" type="button" disabled={pending} onClick={() => setEditingName(true)}>Изменить имя</button>}
             {host && <button className="button primary" disabled={pending || !allReady} onClick={() => void run({ type: match ? "REPLAY" : "START_MATCH" })}><Icon name="pickaxe" />{match ? "Играть снова" : copy.play}</button>}
           </div>
+          {!match && me && editingName && <EditName current={me.name} pending={pending} rename={rename} cancel={() => setEditingName(false)} />}
           <ul className="lobby-seats">
             {room.seats.map((seat) => (
               <li key={seat.seatId}>

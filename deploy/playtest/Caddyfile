@@ -14,10 +14,6 @@
 			X-Content-Type-Options nosniff
 			X-Robots-Tag "noindex, nofollow"
 		}
-		@entry not path /ws
-		basic_auth @entry bcrypt "Gold Trail playtest" {
-			{$PLAYTEST_USER} {$PLAYTEST_HASH}
-		}
 		@backend path /api/* /ws
 		handle @backend {
 			reverse_proxy app:4174 {

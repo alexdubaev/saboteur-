@@ -6,7 +6,7 @@ import type { Command, CommitResult, Definition, MatchEvent, MatchState, Rng } f
 import { chooseBotMove } from "../../../packages/bots/src/index.js";
 import type { ChatMessage, CommandAck, CommandEnvelope, JournalEntry, RoomSnapshot } from "../../../packages/protocol/src/index.js";
 import { transaction } from "./database.js";
-import type { Identity } from "./session.js";
+import { createSessionInTransaction, type Identity } from "./session.js";
 
 const ROOM_IDLE_MS = 24 * 60 * 60 * 1000;
 const ROOM_FINISHED_MS = 7 * ROOM_IDLE_MS;
@@ -109,20 +109,39 @@ export class Rooms {
   }
 
   async join(code: string, identity: Identity): Promise<RoomSnapshot> {
-    const roomId = await transaction(this.db, async (client) => {
+    return (await this.joinInvitation(code, identity)).snapshot;
+  }
+
+  async joinInvitation(code: string, identity?: Identity): Promise<{ snapshot: RoomSnapshot; token?: string }> {
+    const { roomId, userId, token } = await transaction(this.db, async (client) => {
       const result = await client.query<Room>("SELECT * FROM rooms WHERE code = $1 AND (expires_at IS NULL OR expires_at > now()) FOR UPDATE", [code]);
       const room = result.rows[0];
       if (!room) throw new RoomError("ROOM_NOT_FOUND", 404);
       const seats = await this.seats(client, room.room_id);
-      if (seats.some((seat) => seat.user_id === identity.userId)) return room.room_id;
+      if (identity && seats.some((seat) => seat.user_id === identity.userId)) return { roomId: room.room_id, userId: identity.userId };
       if (room.current_match_id) throw new RoomError("MATCH_STARTED");
       if (seats.length >= this.definition.ruleset.players.max) throw new RoomError("ROOM_FULL");
+      const position = (seats.at(-1)?.position ?? -1) + 1;
+      const admission = identity ? { identity, token: undefined } : await createSessionInTransaction(client, `Гость ${position + 1}`);
+      const guest = admission.identity;
       await client.query("INSERT INTO seats (seat_id, room_id, user_id, name, avatar_id, position) VALUES ($1,$2,$3,$4,$5,$6)",
-        [randomUUID(), room.room_id, identity.userId, identity.name, identity.avatarId, (seats.at(-1)?.position ?? -1) + 1]);
+        [randomUUID(), room.room_id, guest.userId, guest.name, guest.avatarId, position]);
       await this.bumpSequence(client, room.room_id);
-      return room.room_id;
+      return { roomId: room.room_id, userId: guest.userId, token: admission.token };
     });
-    return this.snapshot(roomId, identity.userId);
+    return { snapshot: await this.snapshot(roomId, userId), token };
+  }
+
+  async rename(roomId: string, userId: string, name: string): Promise<RoomSnapshot> {
+    await transaction(this.db, async (client) => {
+      const { room, seat } = await this.access(client, roomId, userId);
+      if (room.current_match_id) throw new RoomError("MATCH_STARTED");
+      await client.query("UPDATE profiles SET name = $2 WHERE user_id = $1", [userId, name]);
+      if (seat.name === name) return;
+      await client.query("UPDATE seats SET name = $2 WHERE seat_id = $1", [seat.seat_id, name]);
+      await this.bumpSequence(client, roomId);
+    });
+    return this.snapshot(roomId, userId);
   }
 
   async leave(roomId: string, userId: string): Promise<string> {

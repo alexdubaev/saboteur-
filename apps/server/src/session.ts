@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { transaction } from "./database.js";
 
 export const SESSION_COOKIE = "gold_guest";
@@ -29,12 +29,14 @@ export async function activeSessions(db: Pool, tokens: readonly string[]): Promi
 }
 
 export async function createSession(db: Pool, name: string): Promise<{ token: string; identity: Identity }> {
+  return transaction(db, (client) => createSessionInTransaction(client, name));
+}
+
+export async function createSessionInTransaction(client: PoolClient, name: string): Promise<{ token: string; identity: Identity }> {
   const token = randomBytes(32).toString("base64url");
   const identity = { userId: randomUUID(), name, avatarId: `guest-${randomBytes(1)[0] % 10 + 1}` };
-  await transaction(db, async (client) => {
-    await client.query("INSERT INTO profiles (user_id, name, avatar_id) VALUES ($1, $2, $3)", [identity.userId, name, identity.avatarId]);
-    await client.query("INSERT INTO guest_sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)",
-      [hash(token), identity.userId, new Date(Date.now() + SESSION_AGE_SECONDS * 1000)]);
-  });
+  await client.query("INSERT INTO profiles (user_id, name, avatar_id) VALUES ($1, $2, $3)", [identity.userId, name, identity.avatarId]);
+  await client.query("INSERT INTO guest_sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)",
+    [hash(token), identity.userId, new Date(Date.now() + SESSION_AGE_SECONDS * 1000)]);
   return { token, identity };
 }

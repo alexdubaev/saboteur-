@@ -141,6 +141,8 @@ input::placeholder { color: #ad9dbe; }
 .timer-form input { min-width: 0; }
 .lobby-actions, .lobby-footer, .dialog-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .lobby-actions { margin-top: 14px; }
+.lobby-name-form { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.lobby-name-form .field { flex: 1 1 150px; min-width: 0; }
 .lobby-footer { justify-content: space-between; padding: 14px 2px 0; }
 .messages { overflow: hidden; }
 .message-tabs { display: grid; grid-template-columns: 1fr 1fr; padding: 5px; gap: 5px; border-bottom: 1px solid var(--line); }

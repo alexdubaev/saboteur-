@@ -9,14 +9,17 @@ export type EntryMode = "create" | "join";
 type MenuProps = {
   session: SessionView | null;
   invite: string;
+  canCreateRooms: boolean;
+  connecting?: string;
   pending: boolean;
   error: string;
   resume?: () => void;
   enter: (mode: EntryMode, name: string, code: string) => void;
 };
 
-export function Menu({ session, invite, pending, error, enter, resume }: MenuProps) {
-  const [mode, setMode] = useState<EntryMode>(invite ? "join" : "create");
+export function Menu({ session, invite, canCreateRooms, connecting, pending, error, enter, resume }: MenuProps) {
+  const [selectedMode, setMode] = useState<EntryMode>(invite ? "join" : "create");
+  const mode = canCreateRooms ? selectedMode : "join";
   const [name, setName] = useState("");
   const [code, setCode] = useState(invite);
   const submit = (event: FormEvent) => {
@@ -31,19 +34,19 @@ export function Menu({ session, invite, pending, error, enter, resume }: MenuPro
           <div className="eyebrow home-edition"><span aria-hidden="true">◆</span> {copy.alpha}<span className="edition-separator" />{copy.profile}</div>
           <h1 className="home-logo"><img src={logoArt} width={1440} height={488} alt={copy.title} /></h1>
           <p className="lead">Проложите путь к золоту. Среди участников могут быть предатели.</p>
-          <form className="entry-form" onSubmit={submit}>
-            <div className="entry-switch" role="group" aria-label="Способ входа">
+          {connecting ? <p className="entry-form soft-note" role="status">{connecting}</p> : <form className="entry-form" onSubmit={submit}>
+            {canCreateRooms ? <div className="entry-switch" role="group" aria-label="Способ входа">
               <button type="button" className={mode === "create" ? "active" : ""} aria-pressed={mode === "create"} onClick={() => setMode("create")}><Icon name="pickaxe" />Создать</button>
               <button type="button" className={mode === "join" ? "active" : ""} aria-pressed={mode === "join"} onClick={() => setMode("join")}><Icon name="invite" />Присоединиться</button>
-            </div>
+            </div> : <p className="soft-note">Откройте ссылку от ведущего или введите код приглашения.</p>}
             {session
               ? <div className="guest-id"><Avatar {...session} /><span>{session.name}</span></div>
-              : <label className="field">Имя в экспедиции<input value={name} onChange={(event) => setName(event.target.value)} name="name" autoComplete="nickname" maxLength={32} placeholder="Ваше имя" required /></label>}
+              : mode === "create" && <label className="field">Имя в экспедиции<input value={name} onChange={(event) => setName(event.target.value)} name="name" autoComplete="nickname" maxLength={32} placeholder="Ваше имя" required /></label>}
             {mode === "join" && <label className="field">Код приглашения<input name="code" value={code} autoComplete="off" autoCapitalize="characters" maxLength={8} pattern="[23456789A-HJ-KM-NP-Z]{8}" onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="8 символов" required /></label>}
             <Notice text={error} />
             <button className="button primary entry-submit" disabled={pending} type="submit">{pending ? "Подождите…" : mode === "create" ? copy.create : copy.join}<span className="arrow" aria-hidden="true">→</span></button>
-          </form>
-          {resume && <button className="button secondary resume-room" disabled={pending} onClick={resume}>Вернуться в комнату</button>}
+          </form>}
+          {resume && !connecting && <button className="button secondary resume-room" disabled={pending} onClick={resume}>Вернуться в комнату</button>}
           <ul className="home-facts" aria-label="Об экспедиции">
             <li><Icon name="invite" />3–10 игроков</li><li><Icon name="cards" />3 раунда</li><li><Icon name="gold" />1 золотая жила</li>
           </ul>

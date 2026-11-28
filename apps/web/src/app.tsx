@@ -4,16 +4,46 @@ import { Game } from "./game.js";
 import { createGameAudio, preloadGameSounds } from "./game-audio.js";
 import { Lobby } from "./lobby.js";
 import { Menu, type EntryMode } from "./menu.js";
-import { errorCode, request, roomPath, sendCommand, sessionRequest, useRoomSocket } from "./network.js";
+import { ApiError, errorCode, request, roomPath, sendCommand, sessionRequest, useRoomSocket } from "./network.js";
 import { copy, errorText } from "./text.js";
 import { getGoldFinale } from "./turn-presentation.js";
 import { Icon, Notice, Rules } from "./ui.js";
 
 const params = new URLSearchParams(window.location.search);
-const invitation = (params.get("join") ?? "").trim().toUpperCase().slice(0, 8);
-const initialRoom = params.get("room");
+const invitation = params.get("join")?.trim().toUpperCase();
+const initialRoom = invitation === undefined ? params.get("room") : null;
+const hostKey = new URLSearchParams(window.location.hash.slice(1)).get("host");
+const inviteCodePattern = /^[23456789A-HJ-KM-NP-Z]{8}$/;
 const savedRoomKey = "expedition:lastRoom";
 const soundKey = "expedition:sound";
+
+const joinRoom = (code: string) => request<RoomSnapshot>("/rooms/join", { code });
+
+async function readEntryAccess() {
+  if (hostKey !== null) {
+    const url = new URL(window.location.href);
+    url.hash = "";
+    window.history.replaceState(null, "", url);
+    await request<{ ok: true }>("/session/host", { key: hostKey });
+  }
+  return request<{ canCreateRooms: boolean }>("/entry");
+}
+
+async function restorePlayer(): Promise<{ snapshot?: RoomSnapshot; guest?: SessionView }> {
+  if (invitation !== undefined) {
+    if (!inviteCodePattern.test(invitation)) throw new ApiError("INVALID_INVITATION");
+    return { snapshot: await joinRoom(invitation) };
+  }
+  if (initialRoom) return { snapshot: await request<RoomSnapshot>(roomPath(initialRoom)) };
+  return { guest: await sessionRequest() };
+}
+
+const loadEntry = () => Promise.allSettled([readEntryAccess(), restorePlayer()]);
+
+function roomGuest(snapshot: RoomSnapshot): SessionView | null {
+  const seat = snapshot.room.seats.find(({ seatId }) => seatId === snapshot.room.mySeatId);
+  return seat ? { name: seat.name, avatarId: seat.avatarId } : null;
+}
 
 function setRoomAddress(roomId: string | null) {
   const url = new URL(window.location.href);
@@ -26,6 +56,8 @@ function setRoomAddress(roomId: string | null) {
 export function App() {
   const [state, setState] = useState<RoomSnapshot | null>(null);
   const [session, setSession] = useState<SessionView | null>(null);
+  const [canCreateRooms, setCanCreateRooms] = useState(false);
+  const [connecting, setConnecting] = useState(true);
   const [rules, setRules] = useState(false);
   const [sound, setSound] = useState(() => {
     try { return localStorage.getItem(soundKey) === "on"; } catch { return false; }
@@ -34,6 +66,7 @@ export function App() {
   const [pending, setPending] = useState(false);
   const [terminalLobby, setTerminalLobby] = useState<string | null>(null);
   const [resume, setResume] = useState(() => initialRoom ?? (invitation ? null : sessionStorage.getItem(savedRoomKey)));
+  const entryLoad = useRef<ReturnType<typeof loadEntry> | null>(null);
   const inFlight = useRef(false);
   const room = useRef(initialRoom);
   const audio = useRef<ReturnType<typeof createGameAudio> | null>(null);
@@ -102,6 +135,7 @@ export function App() {
     sessionStorage.setItem(savedRoomKey, room.current);
     setResume(room.current);
     setRoomAddress(room.current);
+    setSession(roomGuest(snapshot));
     accept(snapshot);
   }, [accept]);
 
@@ -130,22 +164,26 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    const restore = async () => {
-      try {
-        const guest = await sessionRequest();
-        if (!active) return;
-        setSession(guest);
-        if (initialRoom) {
-          const snapshot = await request<RoomSnapshot>(roomPath(initialRoom));
-          if (active) attach(snapshot);
+    entryLoad.current ??= loadEntry();
+    void entryLoad.current.then(([access, player]) => {
+      if (!active) return;
+      setConnecting(false);
+      if (access.status === "fulfilled") setCanCreateRooms(access.value.canCreateRooms);
+      if (player.status === "fulfilled") {
+        if (player.value.snapshot) {
+          attach(player.value.snapshot);
+          return;
         }
-      } catch (failure) {
-        if (!active) return;
-        const code = errorCode(failure);
-        if (code !== "UNAUTHENTICATED" || initialRoom) showError(code);
+        if (player.value.guest) setSession(player.value.guest);
+      } else {
+        const code = errorCode(player.reason);
+        if (code !== "UNAUTHENTICATED" || initialRoom || invitation !== undefined) {
+          showError(code);
+          return;
+        }
       }
-    };
-    void restore();
+      if (access.status === "rejected") showError(errorCode(access.reason));
+    });
     return () => { active = false; };
   }, [attach, showError]);
 
@@ -168,11 +206,19 @@ export function App() {
 
   const enter = (mode: EntryMode, name: string, code: string) => mutation(async () => {
     if (sound) enableAudio(true);
+    if (mode === "join") {
+      attach(await joinRoom(code));
+      return;
+    }
     if (!session) setSession(await sessionRequest(name));
-    const snapshot = mode === "create"
-      ? await request<RoomSnapshot>("/rooms", {})
-      : await request<RoomSnapshot>("/rooms/join", { code });
-    attach(snapshot);
+    attach(await request<RoomSnapshot>("/rooms", {}));
+  });
+
+  const rename = (name: string) => mutation(async () => {
+    if (!state) return;
+    const snapshot = await request<RoomSnapshot>(roomPath(state.room.roomId) + "/name", { name });
+    setSession(roomGuest(snapshot));
+    accept(snapshot);
   });
 
   const run = async (command: WireCommand) => {
@@ -232,8 +278,10 @@ export function App() {
       : state ? <>
         {connectionStatus && <p className="connection-status" role="status">{connectionStatus}</p>}
         <div className="lobby-error"><Notice text={error} /></div>
-        <Lobby snapshot={state} run={run} send={send} pending={blocked} leave={() => void leave()} />
-      </> : <Menu session={session} invite={invitation} pending={pending} error={error} enter={(...args) => void enter(...args)}
+        <Lobby snapshot={state} run={run} send={send} rename={rename} pending={blocked} leave={() => void leave()} />
+      </> : <Menu session={session} invite={invitation?.slice(0, 8) ?? ""} canCreateRooms={canCreateRooms} pending={pending} error={error}
+        connecting={connecting ? invitation !== undefined ? "Входим в комнату…" : "Подключаемся…" : undefined}
+        enter={(...args) => void enter(...args)}
         resume={session && resume ? () => void mutation(async () => {
           if (sound) enableAudio(false);
           attach(await request<RoomSnapshot>(roomPath(resume)));

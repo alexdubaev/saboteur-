@@ -12,6 +12,40 @@ test("меню использует утверждённый растровый 
   await expect(rules.getByText(/в 20% раундов все становятся старателями/)).toBeVisible();
 });
 
+test("недействительное приглашение сразу показывает причину и оставляет вход по коду", async ({ page }) => {
+  await page.route("**/api/entry", (route) => route.fulfill({ json: { canCreateRooms: false } }));
+  await page.route("**/api/session", (route) => route.fulfill({ status: 401, json: { code: "UNAUTHENTICATED" } }));
+  const attempts: object[] = [];
+  await page.route("**/api/rooms/join", (route) => {
+    attempts.push(route.request().postDataJSON());
+    return route.fulfill({ status: 404, json: { code: "ROOM_NOT_FOUND" } });
+  });
+
+  await page.goto("/?join=ABCDEFGH");
+  await expect(page.getByRole("alert")).toHaveText("Комната не найдена. Проверьте код приглашения.", { timeout: 3000 });
+  await expect(page.getByLabel("Код приглашения", { exact: true })).toHaveValue("ABCDEFGH");
+  await expect(page.getByRole("button", { name: "Войти по коду" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Создать", exact: true })).toHaveCount(0);
+  expect(attempts).toEqual([{ code: "ABCDEFGH" }]);
+});
+
+test("личная ссылка ведущего открывает создание комнаты и удаляется из адресной строки", async ({ page }) => {
+  const key = "a".repeat(64);
+  let claimed = false;
+  await page.route("**/api/session/host", (route) => {
+    expect(route.request().postDataJSON()).toEqual({ key });
+    expect(new URL(page.url()).hash).toBe("");
+    claimed = true;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.route("**/api/entry", (route) => route.fulfill({ json: { canCreateRooms: claimed } }));
+  await page.route("**/api/session", (route) => route.fulfill({ status: 401, json: { code: "UNAUTHENTICATED" } }));
+
+  await page.goto("/#host=" + key);
+  await expect(page.getByRole("button", { name: "Создать комнату" })).toBeVisible();
+  expect(claimed).toBe(true);
+});
+
 test("изолированные гости играют три раунда и возвращаются после потери связи", async ({ browser }, testInfo) => {
   test.setTimeout(240_000);
   const contexts = await Promise.all([
@@ -49,10 +83,19 @@ test("изолированные гости играют три раунда и 
     expect(invitation).toMatch(/^[23456789A-HJ-KM-NP-Z]{8}$/);
     for (const [offset, guest] of [portrait, landscape].entries()) {
       await guest.goto("/?join=" + invitation);
-      await guest.getByLabel("Имя в экспедиции").fill(names[offset + 1]);
-      await expect(guest.getByLabel("Код приглашения", { exact: true })).toHaveValue(invitation!);
-      await guest.getByRole("button", { name: "Войти по коду" }).click();
       await expect(guest.getByRole("heading", { name: "Комната экспедиции" })).toBeVisible();
+      await expect(guest.getByRole("region", { name: "Участники" }).getByText(/^Гость /).first()).toBeVisible();
+      const roomAddress = guest.url();
+      expect(new URL(roomAddress).searchParams.has("join")).toBe(false);
+      expect(new URL(roomAddress).searchParams.has("room")).toBe(true);
+      await guest.getByRole("button", { name: "Изменить имя" }).click();
+      await guest.getByLabel("Имя в экспедиции").fill(names[offset + 1]);
+      await guest.getByRole("button", { name: "Сохранить имя" }).click();
+      await expect(host.getByRole("region", { name: "Участники" }).getByText(names[offset + 1], { exact: true })).toBeVisible();
+      await guest.reload();
+      expect(guest.url()).toBe(roomAddress);
+      await expect(guest.getByRole("heading", { name: "Комната экспедиции" })).toBeVisible();
+      await expect(guest.getByRole("region", { name: "Участники" }).getByText(names[offset + 1], { exact: true })).toBeVisible();
     }
     for (const guest of guests) {
       await guest.getByRole("button", { name: "Я готов" }).click();
@@ -149,7 +192,7 @@ test("изолированные гости играют три раунда и 
             await card.click();
             if (!await cell.isVisible()) {
               const rotate = current.getByRole("button", { name: "Повернуть на 180°" });
-              if (await rotate.isVisible()) await rotate.click();
+              if (await rotate.isVisible() && await rotate.isEnabled()) await rotate.click();
             }
             if (await cell.isVisible()) break;
           }
