@@ -71,7 +71,7 @@ input::placeholder { color: #ad9dbe; }
 .entry-submit .arrow { position: absolute; right: 15px; font-size: 1.32rem; }
 .share-link { display: grid; gap: 5px; justify-items: start; min-width: 0; }
 .share-link input { max-width: 240px; }
-.home-inner > .share-link { margin-top: 12px; }
+.home-actions { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; margin-top: 12px; }
 .home-facts { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 19px; padding: 0; margin: 27px 0 0; color: var(--muted); font-size: .84rem; }
 .home-facts li { display: flex; align-items: center; gap: 5px; }
 .home-facts .icon { width: 23px; height: 23px; }
@@ -335,7 +335,8 @@ input::placeholder { color: #ad9dbe; }
   --game-bottom: max(var(--browser-bottom), env(safe-area-inset-bottom));
   display: flex; flex-direction: column; min-height: 100dvh; -webkit-text-size-adjust: 100%;
 }
-.solo-app > .home-stage { flex: 1 0 auto; min-height: 0; }
+:is(.solo-app, .network-app) > .home-stage { flex: 1 0 auto; min-height: 0; }
+.home-actions .resume-room { margin-top: 0; }
 .solo-app .entry-fullscreen { justify-self: start; min-height: 34px; padding-block: 4px; font-size: .85rem; }
 .solo-start-controls { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
 .solo-start-controls label {
@@ -373,6 +374,82 @@ input::placeholder { color: #ad9dbe; }
   .solo-app .home-art figcaption { bottom: max(12px, env(safe-area-inset-bottom)); }
   .solo-app .dialog { padding: 12px; }
   .solo-app .role-art { max-height: 38svh; }
+}
+
+@media (min-width: 731px) and (max-height: 800px) {
+  .network-app .home-inner { padding-block: clamp(12px, 2dvh, 26px); }
+  .network-app .home-logo { margin-block: 16px 10px; }
+  .network-app .entry-form { margin-top: 16px; }
+  .network-app .home-facts { margin-top: 18px; }
+}
+
+@media (max-width: 730px), (orientation: landscape) and (max-height: 520px) and (max-width: 1100px) {
+  .network-app:has(> .home-stage) > .site-header { min-height: 0; padding-block: max(4px, env(safe-area-inset-top)) 4px; }
+  .network-app > .home-stage { display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate; }
+  .network-app .home-copy { order: 0; margin: 0; background: none; }
+  .network-app .home-art { position: absolute; inset: 0; min-height: 0; }
+  .network-app .home-art > img { object-position: center 31%; }
+  .network-app .home-art::after { background: linear-gradient(180deg, #15101e20, #15101edb min(280px, 43dvh), #15101e 65%); }
+  .network-app .home-art figcaption { display: none; }
+  .network-app .home-inner {
+    width: min(100%, 490px); justify-self: center;
+    padding: clamp(12px, calc(100dvh - 532px - env(safe-area-inset-top) - env(safe-area-inset-bottom)), 160px)
+      max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  }
+  .network-app .home-edition { font-size: .66rem; gap: 4px 7px; flex-wrap: wrap; white-space: normal; }
+  .network-app .home-logo { width: min(100%, clamp(175px, 40dvh, 420px)); margin: 5px 0; }
+  .network-app .lead { font-size: clamp(.83rem, 3.7vw, 1rem); line-height: 1.35; }
+  .network-app .entry-form { gap: 6px; margin-top: 8px; max-width: none; }
+  .network-app .entry-switch { padding: 2px; gap: 2px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .network-app .entry-switch button { padding: 2px 4px; font-size: .84rem; gap: 4px; }
+  .network-app .home-inner .icon { width: 16px; height: 16px; }
+  .network-app .entry-form .field { gap: 3px; min-width: 0; }
+  .network-app :is(.entry-form, .home-actions) input { min-height: 44px; padding-block: 5px; font-size: 1rem; }
+  .network-app .entry-submit { min-height: 44px; }
+  .network-app .home-inner .guest-id { min-width: 0; font-size: .85rem; }
+  .network-app .home-inner .guest-id > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .network-app .home-inner .avatar { width: 30px; height: 30px; flex-basis: 30px; }
+  .network-app .home-actions { margin-top: 6px; gap: 4px 7px; }
+  .network-app .home-actions .button { padding-inline: 9px; font-size: .83rem; }
+  .network-app .home-facts { margin-top: 8px; gap: 4px 8px; font-size: .72rem; }
+  .network-app .home-facts .icon { width: 14px; height: 14px; }
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 1100px) {
+  .network-app:has(> .home-stage) > .site-header { padding-block: max(2px, env(safe-area-inset-top)) 2px; }
+  .network-app .home-art > img { object-position: center 55%; }
+  .network-app .home-art::after { background: linear-gradient(90deg, #15101e8c, #15101edc 51%, #15101e 88%); }
+  .network-app .home-inner {
+    display: grid; grid-template-areas: "heading entry" "facts entry";
+    grid-template-columns: minmax(0, .68fr) minmax(0, 1fr); column-gap: clamp(12px, 4vw, 45px);
+    width: min(100%, 950px); padding-block: 7px max(7px, env(safe-area-inset-bottom));
+  }
+  .network-app .home-heading { grid-area: heading; align-self: end; }
+  .network-app .home-logo { width: min(100%, clamp(140px, 73dvh, 325px)); }
+  .network-app .home-entry { grid-area: entry; align-self: center; min-width: 0; }
+  .network-app .entry-form { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: end; margin-top: 0; }
+  .network-app .entry-form > * { grid-column: 1 / -1; }
+  .network-app .entry-form:has(.field) > .field { grid-area: 2 / 1; }
+  .network-app .entry-form:has(.field) > .entry-submit { grid-area: 2 / 2; }
+  .network-app .entry-form > .error { grid-row: 3; }
+  .network-app .entry-form > .guest-id { grid-area: 1 / 2; align-self: center; }
+  .network-app .entry-form:has(.guest-id) > :is(.entry-switch, .soft-note) { grid-area: 1 / 1; }
+  .network-app .entry-submit { padding-inline: 6px; font-size: .87rem; }
+  .network-app .entry-submit .arrow { display: none; }
+  .network-app .home-facts { grid-area: facts; align-self: start; }
+}
+
+@media (orientation: landscape) and (max-height: 320px) and (max-width: 1100px) {
+  .network-app .home-inner { grid-template-columns: minmax(0, .58fr) minmax(0, 1fr); column-gap: clamp(10px, 2.6vw, 28px); }
+  .network-app .home-edition { line-height: 1.15; }
+  .network-app .lead { font-size: .81rem; line-height: 1.24; }
+  .network-app .home-facts { margin-top: 5px; line-height: 1.15; gap: 3px 7px; }
+  .network-app .home-facts .icon { width: 12px; height: 12px; }
+}
+
+@media (orientation: landscape) and (max-height: 320px) and (max-width: 740px) {
+  .network-app .entry-switch button { font-size: .78rem; }
+  .network-app .entry-switch .icon { display: none; }
 }
 
 .messages-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; min-width: 0; min-height: 0; }
