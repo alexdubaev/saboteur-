@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { SessionView } from "../../../packages/protocol/src/index.js";
-import { corridorArt, logoArt } from "./art.js";
+import { logoArt } from "./art.js";
+import { EntranceScene } from "./entrance-scene.js";
 import { ShareLink, shareUrl } from "./share-link.js";
 import { copy } from "./text.js";
 import { Avatar, Icon, Notice } from "./ui.js";
@@ -33,9 +34,9 @@ export function Menu({ session, invite, canCreateRooms, connecting, pending, err
       <div className="home-copy">
         <div className="home-inner">
           <div className="home-heading">
-            <div className="eyebrow home-edition"><span aria-hidden="true">◆</span> {copy.alpha}<span className="edition-separator" />{copy.profile}</div>
+            <div className="eyebrow home-edition">Сетевая экспедиция<span className="edition-separator" />{copy.alpha}</div>
             <h1 className="home-logo"><img src={logoArt} width={1440} height={488} alt={copy.title} /></h1>
-            <p className="lead">Проложите путь к золоту. Среди участников могут быть предатели.</p>
+            <p className="lead">Найдите золото. Решите, кому доверять.</p>
           </div>
           <div className="home-entry">
             {connecting ? <p className="entry-form soft-note" role="status">{connecting}</p> : <form className="entry-form" onSubmit={submit}>
@@ -60,10 +61,7 @@ export function Menu({ session, invite, canCreateRooms, connecting, pending, err
           </ul>
         </div>
       </div>
-      <figure className="home-art">
-        <img src={corridorArt} alt="" fetchPriority="high" width={1254} height={1254} />
-        <figcaption><Icon name="lantern" /><span>Вход в шахту</span></figcaption>
-      </figure>
+      <EntranceScene />
     </main>
   );
 }

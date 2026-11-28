@@ -4,6 +4,8 @@ import mineSoundsUrl from "./audio/mine.mp3?url";
 import startUrl from "./audio/mine-start.mp3?url";
 import turnUrl from "./audio/mine-turn.mp3?url";
 import bank from "./audio/mine.json" with { type: "json" };
+import tonesUrl from "./audio/mine-tones.mp3?url";
+import tones from "./audio/mine-tones.json" with { type: "json" };
 
 const sounds = { ...bank, turn: [[bank.minePick[0][0] + .168, .32]] };
 
@@ -48,7 +50,9 @@ function createEffectsAudio() {
   const lastVariant = new Map<SoundName, number>();
   let resuming: Promise<void> | null = null;
   let loading: Promise<void> | null = null;
+  let loadingTones: Promise<void> | null = null;
   let buffer: AudioBuffer | null = null;
+  let tonalBuffer: AudioBuffer | null = null;
   let queuedCue: Cue | null = null;
   let notifiedTurn: string | null = null;
   let turnQueued = false;
@@ -56,6 +60,18 @@ function createEffectsAudio() {
   let detail: AudioBufferSourceNode | null = null;
   let detailTimer: number | undefined;
   let nextDetail = 0;
+
+  function playTone(name: keyof typeof tones, volume: number, when: number) {
+    if (!tonalBuffer) return;
+    const [offset, duration] = tones[name];
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    source.buffer = tonalBuffer;
+    gain.gain.value = volume;
+    source.connect(gain).connect(master);
+    source.addEventListener("ended", () => { source.disconnect(); gain.disconnect(); }, { once: true });
+    source.start(when, offset, duration);
+  }
 
   function playClip({ sound, volume }: Cue, when = 0) {
     if (!buffer) return;
@@ -87,6 +103,9 @@ function createEffectsAudio() {
       pan?.disconnect();
     }, { once: true });
     source.start(when, offset, duration);
+    if (sound === "start" || sound === "reveal" || sound === "gold" || sound === "round") {
+      playTone(sound, volume, when);
+    }
     return { source, duration };
   }
 
@@ -101,6 +120,7 @@ function createEffectsAudio() {
       turnQueued = false;
       playClip(turnAlert, context.currentTime + .16);
       playClip(turnAlert, context.currentTime + .46);
+      playTone("turn", .8, context.currentTime + .16);
     }
   }
 
@@ -132,12 +152,22 @@ function createEffectsAudio() {
   });
 
   function prepareSamples() {
-    if (buffer || loading) return;
-    loading = loadSamples()
-      .then((bytes) => context.decodeAudioData(bytes.slice(0)))
-      .then((decoded) => { buffer = decoded; playQueued(); syncAmbience(); })
-      .catch(() => { queuedCue = null; })
-      .finally(() => { loading = null; });
+    if (!buffer && !loading) {
+      loading = loadSamples()
+        .then((bytes) => context.decodeAudioData(bytes.slice(0)))
+        .then((decoded) => { buffer = decoded; playQueued(); syncAmbience(); })
+        .catch(() => { queuedCue = null; })
+        .finally(() => { loading = null; });
+    }
+    if (!tonalBuffer && !loadingTones) {
+      loadingTones = fetch(tonesUrl).then((response) => {
+        if (!response.ok) throw new Error("Tonal sounds are unavailable");
+        return response.arrayBuffer();
+      }).then((bytes) => context.decodeAudioData(bytes))
+        .then((decoded) => { tonalBuffer = decoded; })
+        .catch(() => { /* Optional: retry on a later resume. */ })
+        .finally(() => { loadingTones = null; });
+    }
   }
 
   return {

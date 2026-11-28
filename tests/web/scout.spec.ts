@@ -19,7 +19,7 @@ test("новые правила показывают одну жилу, прив
   };
   const initial: RoomSnapshot = {
     room: { roomId, code: "SCOUT444", hostSeatId: member.seatId, mySeatId: member.seatId, seats: [member, { ...member, seatId: "guest", name: "Гость", present: false }], turnTimeoutSeconds: null, deadlineAt: null },
-    match, sequence: 4, journal: [], chat: [],
+    match: { ...match, revision: 3 }, sequence: 3, journal: [], chat: [],
   };
   let channel: WebSocketRoute | undefined;
   await page.setViewportSize({ width: 360, height: 800 });
@@ -42,6 +42,17 @@ test("новые правила показывают одну жилу, прив
   await expect(stats.getByRole("definition").filter({ hasText: /^0\/1$/ })).toBeVisible();
   await expect(stats.getByRole("term").filter({ hasText: /^Ход$/ })).toBeVisible();
   await expect(stats.getByRole("definition").filter({ hasText: /^0$/ })).toBeVisible();
+  await page.getByRole("button", { name: "Разведка", exact: true }).click();
+  await page.getByRole("button", { name: "О карте" }).click();
+  const cardDetails = page.getByRole("dialog", { name: "О карте" });
+  await expect(cardDetails.getByRole("heading", { name: "Разведка" })).toBeVisible();
+  await expect(cardDetails.getByText("Позволяет тайно посмотреть содержимое закрытой камеры.")).toBeVisible();
+  await expect(cardDetails.getByText("Разведать камеру")).toBeVisible();
+  channel!.send(JSON.stringify({ type: "SNAPSHOT", ...initial, sequence: 4, match }));
+  await expect(cardDetails.getByText("Выберите карту для хода.")).toBeVisible();
+  await expect(cardDetails.getByRole("heading", { name: "Разведка" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(cardDetails).toBeHidden();
   await page.getByRole("button", { name: "Разведка", exact: true }).click();
   await page.getByRole("button", { name: "Камера 1 · закрыта" }).click();
   await page.getByRole("button", { name: "Подтвердить ход" }).click();

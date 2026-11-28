@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chatSchema, type ChatMessage, type JournalEntry, type WireCommand } from "../../../packages/protocol/src/index.js";
-import { corridorArt, logoArt } from "./art.js";
+import { logoArt } from "./art.js";
+import { EntranceScene } from "./entrance-scene.js";
 import { Game, type MatchSnapshot } from "./game.js";
 import { createSoloMatch, soloBotRange, type SoloMatch } from "./solo-match.js";
 import { copy, errorText } from "./text.js";
@@ -169,10 +170,7 @@ export function SoloApp() {
             </div>
           </div>
         </div>
-        <figure className="home-art">
-          <img src={corridorArt} alt="" fetchPriority="high" width={1254} height={1254} />
-          <figcaption><Icon name="lantern" /><span>Вход в шахту</span></figcaption>
-        </figure>
+        <EntranceScene />
       </main>}
     {rulesOpen && <Rules close={() => setRulesOpen(false)} />}
     {fullscreenHelp && <Dialog title={standalone ? "Режим экрана" : "Во весь экран"} close={() => setFullscreenHelp(false)}>

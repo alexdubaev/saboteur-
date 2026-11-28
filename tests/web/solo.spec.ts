@@ -342,6 +342,58 @@ test.describe("тестовая игра с ботами", () => {
     }
   });
 
+  test("reduced motion сразу показывает итоги и сохраняет звук золота", async ({ browser }) => {
+    const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0], reducedMotion: "reduce" });
+    try {
+      await context.addInitScript(seedRandom, 53);
+      await context.addInitScript(() => {
+        localStorage.setItem("zoloto.solo-sound", "true");
+        const start = AudioBufferSourceNode.prototype.start;
+        AudioBufferSourceNode.prototype.start = function (when, offset, duration) {
+          if (offset === 18.522) document.documentElement.dataset.goldSound = "played";
+          return start.call(this, when, offset, duration);
+        };
+      });
+      const page = await context.newPage();
+      await page.goto(sitesUrl!);
+      await page.getByRole("button", { name: "Начать игру" }).tap();
+      await page.getByRole("button", { name: "Роль понятна" }).tap();
+      const board = page.getByRole("region", { name: "Карта шахты" });
+      const hand = page.getByRole("region", { name: "Ваша рука" });
+      const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
+      await board.getByRole("button", { name: "Вся шахта" }).tap();
+      const world = board.locator(".board-world");
+      const camera = () => world.evaluate(async (node) => {
+        // Let ResizeObserver and React apply the new viewport dimensions before measuring.
+        await new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+        const { width, height } = node.parentElement!.getBoundingClientRect();
+        const { a, e, f } = new DOMMatrix(getComputedStyle(node).transform);
+        return { scale: a, x: (width / 2 - e) / a, y: (height / 2 - f) / a };
+      });
+      const before = await camera();
+      for (const [card, cell] of [
+        ["Вертикальная развилка", "Клетка 0, -1"],
+        ["Горизонтальная развилка", "Клетка 3, 0"],
+        ["Перекрёсток", "Клетка 5, 0"],
+      ]) {
+        await expect(turn).toBeVisible();
+        await hand.getByRole("button", { name: card, exact: true }).first().tap();
+        await board.getByRole("button", { name: cell, exact: true }).tap();
+        await hand.getByRole("button", { name: "Подтвердить ход" }).tap();
+      }
+      await expect(world.getByRole("img", { name: "Туннель 7, 0 · Автор: Бот 3" })).toBeAttached();
+      await expect(page.getByRole("dialog", { name: "Итоги раунда 1" })).toBeVisible({ timeout: 500 });
+      await expect(page.locator(".gold-reveal")).toHaveCount(0);
+      const after = await camera();
+      expect(after.scale).toBeCloseTo(before.scale, 5);
+      expect(after.x).toBeCloseTo(before.x, 1);
+      expect(after.y).toBeCloseTo(before.y, 1);
+      await expect(page.locator("html")).toHaveAttribute("data-gold-sound", "played");
+    } finally {
+      await context.close();
+    }
+  });
+
   test("девять ботов играют за одним столом", async ({ browser }) => {
     const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
     try {
@@ -431,6 +483,16 @@ test.describe("тестовая игра с ботами", () => {
     try {
       await context.addInitScript(seedRandom, 41);
       await context.addInitScript(() => {
+        const originalFetch = window.fetch;
+        let releaseTones: (() => void) | undefined;
+        window.fetch = async (...args) => {
+          if (String(args[0]).includes("mine-tones")) {
+            document.documentElement.dataset.tonesWaiting = "yes";
+            await new Promise<void>((resolve) => { releaseTones = resolve; });
+          }
+          return originalFetch(...args);
+        };
+        (window as Window & { releaseTestTones?: () => void }).releaseTestTones = () => releaseTones?.();
         const create = AudioContext.prototype.createBufferSource;
         AudioContext.prototype.createBufferSource = function () {
           (window as Window & { testAudio?: AudioContext }).testAudio = this;
@@ -475,7 +537,7 @@ test.describe("тестовая игра с ботами", () => {
           start.call(this, when, offset, duration);
           const root = document.documentElement;
           const playback = JSON.parse(root.dataset.playback ?? "[]");
-          playback.push({ volume: gains.get(this)?.gain.value, offset, loop: this.loop });
+          playback.push({ volume: gains.get(this)?.gain.value, offset, loop: this.loop, bank: (this.buffer?.duration ?? 0) > 50 ? "foley" : "tones" });
           root.dataset.playback = JSON.stringify(playback);
         };
         const playMedia = HTMLMediaElement.prototype.play;
@@ -495,10 +557,10 @@ test.describe("тестовая игра с ботами", () => {
       const page = await context.newPage();
       await page.clock.install();
       await page.goto(sitesUrl!);
-      const playback = (): Promise<{ volume: number; offset: number; loop: boolean }[]> =>
+      const playback = (): Promise<{ volume: number; offset: number; loop: boolean; bank: string }[]> =>
         page.evaluate(() => JSON.parse(document.documentElement.dataset.playback ?? "[]"));
-      const turnAlert = ({ volume }: { volume: number }) => Math.abs(volume - .78) < .001;
-      const effects = async () => (await playback()).filter((clip) => clip.volume >= .4 && !turnAlert(clip));
+      const turnAlert = ({ volume, bank }: { volume: number; bank: string }) => bank === "foley" && Math.abs(volume - .78) < .001;
+      const effects = async () => (await playback()).filter((clip) => clip.bank === "foley" && clip.volume >= .4 && !turnAlert(clip));
       const turnAlerts = async () => (await playback()).filter(turnAlert).length;
       const stoppedLoops = () => page.evaluate(() => Number(document.documentElement.dataset.stoppedLoops ?? 0));
       const ambiencePlaying = () => page.evaluate(() => (window as Window & { testAmbience?: HTMLMediaElement }).testAmbience?.paused === false);
@@ -508,7 +570,10 @@ test.describe("тестовая игра с ботами", () => {
       await expect.poll(ambiencePlaying).toBe(true);
       const beforeStart = await stoppedLoops();
       await page.getByRole("button", { name: "Начать игру" }).tap();
+      await expect(page.locator("html")).toHaveAttribute("data-tones-waiting", "yes");
       await expect.poll(async () => (await effects()).length).toBeGreaterThan(0);
+      expect((await playback()).every(({ bank }) => bank === "foley")).toBe(true);
+      await page.evaluate(() => (window as Window & { releaseTestTones?: () => void }).releaseTestTones?.());
       expect(await stoppedLoops()).toBe(beforeStart);
       await page.getByRole("button", { name: "Роль понятна" }).tap();
       const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
@@ -549,7 +614,7 @@ test.describe("тестовая игра с ботами", () => {
       await page.getByRole("button", { name: "Включить звук" }).tap();
       await expect.poll(async () => (await playback()).length).toBeGreaterThan(muted);
       await page.clock.runFor(42000);
-      const voicesAndTools = (await playback()).filter(({ volume, loop }) => volume < .4 && !loop);
+      const voicesAndTools = (await playback()).filter(({ volume, loop, bank }) => bank === "foley" && volume < .4 && !loop);
       expect(new Set(voicesAndTools.map(({ volume }) => volume)).size).toBe(3);
 
       const beforeHide = await stoppedLoops();

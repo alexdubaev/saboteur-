@@ -52,3 +52,17 @@
 @media (prefers-reduced-motion: reduce) {
   .move-feedback, .crew-event-pulse { animation: none; }
 }
+
+.gold-reveal {
+  border-color: #caa96e;
+  background: linear-gradient(135deg, #3b342a, #211e1a);
+  box-shadow: 0 4px 14px #071316b8, inset 0 0 0 1px #e9cb8a20;
+}
+.gold-reveal-title { color: #ffe5ad; letter-spacing: .025em; }
+.gold-reveal-credit { color: #d8cdbb; }
+.move-feedback {
+  border-color: color-mix(in srgb, var(--event-tone), #aa9a7e 35%);
+  background: linear-gradient(135deg, #3b342af7, #211e1af7);
+  box-shadow: 0 5px 16px #071316b8, inset 3px 0 var(--event-tone);
+}
+.move-feedback p { color: #dfd3bf; }

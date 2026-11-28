@@ -1,0 +1,147 @@
+/* Expedition table: restrained metal, leather and lamplight around the original card art. */
+.game-shell {
+  --table-ink: #f3e8d0;
+  --table-muted: #b7b3a5;
+  --table-gold: #e5c17d;
+  --table-line: #826c4a;
+  color: var(--table-ink);
+}
+.game-shell .match-header { padding-bottom: 10px; border-bottom: 1px solid #8c754655; }
+.game-shell .match-progress .eyebrow, .game-shell .hand-heading .eyebrow {
+  color: #c9a86c; letter-spacing: .15em; text-transform: uppercase; font-size: .66rem; font-weight: 750;
+}
+.game-shell .match-progress h1, .game-shell .phone-turn { color: #f8ecd3; letter-spacing: -.025em; }
+.game-shell .own-turn { color: #f2cf87; box-shadow: inset 0 -1px #d4a451; }
+.game-shell .match-counts li {
+  color: #bdb9a9; border-color: #766446; background: linear-gradient(145deg, #34312b, #24221f); border-radius: 4px;
+  box-shadow: inset 0 1px #e8cd9620;
+}
+.game-shell .match-counts b, .game-shell .phone-score dd { color: #f0cd89; }
+.game-shell .match-counts .icon { opacity: .9; }
+.game-shell .match-tools .button, .game-shell .phone-utilities :is(.button, .icon-button) {
+  color: #eadfc8; background: #2b2823; border-color: #746446;
+}
+.game-shell .match-tools .button:hover, .game-shell .phone-utilities :is(.button, .icon-button):hover { background: #484035; border-color: #c6a66e; }
+.game-shell .panel.hand, .game-shell .match-crew, .game-shell .message-pane, .game-shell .messages {
+  background: linear-gradient(155deg, #35312b, #24221f 70%); border-color: #786a4c;
+  box-shadow: inset 0 1px #f1d5a01a, 0 5px 16px #050a0b55;
+}
+.game-shell .hand { position: relative; border-radius: 5px; }
+.game-shell .hand-heading h2, .game-shell .panel-heading h2, .game-shell .message-pane h2 { color: #f3e6ca; }
+.game-shell .hand-heading h2 span, .game-shell .phone-hand-header h2 span { color: #d9b978; }
+.game-shell .hand-heading .soft-note, .game-shell .phone-hand-header > span { color: #c1bbab; }
+.game-shell .hand-cards { scrollbar-color: #a08353 #24221f; }
+.game-shell .hand-card {
+  position: relative; border: 1px solid #8c7957; border-radius: 4px;
+  color: #eadbc0; background: linear-gradient(145deg, #66543a, #302e24 45%, #25221d);
+  box-shadow: inset 0 1px #f4dfae66, 0 3px 6px #071010aa;
+}
+.game-shell .hand-card img { border-radius: 2px; box-shadow: 0 0 0 1px #100f0bc9; }
+.game-shell .hand-card span { color: #f0dfbd; font-weight: 650; letter-spacing: .01em; }
+.game-shell .hand-card:not(:disabled):hover { border-color: #efd293; filter: brightness(1.12); }
+.game-shell .hand-card.selected-card, .game-shell.phone-game .hand-card.selected-card {
+  border-color: #ffe0a0; background: linear-gradient(145deg, #a0834e, #50402a 48%, #343029);
+  box-shadow: inset 0 0 0 1px #f9d78e, 0 0 0 2px #e5b75c80, 0 4px 10px #070e0ecc;
+}
+.game-shell .hand-card.tunnel-blocked:not(.selected-card) { border-color: #a66d59; background: #45302a; }
+.game-shell .hand-card:disabled { filter: grayscale(.4); opacity: .65; }
+.game-shell :is(button, .board-viewport, .crew-scroll):focus-visible { outline: 2px solid #ffe0a0; outline-offset: 2px; }
+.game-shell .match-crew li { border-color: #a99a7138; }
+.game-shell .match-crew li.current-seat { background: linear-gradient(90deg, #9f824d55, #a2874d0a); box-shadow: inset 3px 0 #d5ae69; }
+.game-shell .seat-name strong { color: #eee1c8; }
+.game-shell .seat-name small, .game-shell .seat-cards { color: #b7b3a4; }
+.game-shell .seat-color { box-shadow: 0 0 0 2px #1e1b17; }
+.game-shell .message-tabs button[aria-pressed="true"] { color: #f4d598; border-color: #a98b57; background: #4a4431; }
+.game-shell .message-tabs button:hover { background: #454036; }
+.game-shell .message-list > li, .game-shell .message-pane h2 { border-color: #a99a7138; }
+.game-shell .message-list b { color: #e4c88e; }
+.game-shell .message-list time { color: #aaa295; }
+.game-shell .phone-table-header { color: #efe2c8; }
+.game-shell .phone-score dt { color: #bdb5a5; }
+.game-shell.phone-game .phone-crew li { background: #2d2923; border-color: #766b4e; }
+.game-shell.phone-game .phone-crew li.current-seat { background: #514a30; border-color: #d8b66f; box-shadow: inset 2px 0 #e4c27c; }
+.game-shell.phone-game .hand-card { border-color: #867350; }
+.game-shell.phone-game .move-buttons .primary:disabled { color: #a8a89a; border-color: #655e51; background: #353129; }
+.game-shell .dialog {
+  color: #f2e5ca; border-color: #ad9160; border-radius: 7px;
+  background: radial-gradient(ellipse at 50% 0, #4a4133, transparent 60%), linear-gradient(145deg, #343029, #1e1c19);
+  box-shadow: inset 0 0 0 3px #24201b, inset 0 0 0 4px #b3965e55, 0 18px 70px #020808d9;
+}
+.game-shell .dialog::backdrop { background: #030a0bd9; }
+.game-shell .dialog-header { padding-bottom: 10px; border-bottom: 1px solid #a78a555c; }
+.game-shell .dialog h2 { color: #f2dfb9; letter-spacing: -.02em; }
+.game-shell .dialog p { color: #d1c9b6; }
+.game-shell .dialog .eyebrow { color: #dab978; letter-spacing: .12em; text-transform: uppercase; }
+.game-shell .role-card h3 { color: #f0cc82; }
+.game-shell .role-art, .game-shell .summary-art, .game-shell .reward-art { border: 1px solid #b59860; box-shadow: 0 5px 16px #050a09a8; }
+.game-shell .result-grid li { color: #c5c3b2; background: #25221d; border-color: #746446; border-radius: 4px; }
+.game-shell .result-grid strong { color: #f3e4c5; }
+.game-shell .revealed-roles { color: #d1c7b1; }
+.game-shell .round-reward { color: #f0d198; border: 1px solid #a48856; background: linear-gradient(110deg, #564b31, #353026); }
+.game-shell .round-reward small { color: #d3c9b1; }
+.game-shell .scores li { border-color: #9e8a6155; }
+.game-shell .scores li:first-child { background: #a98b5420; }
+.game-shell .scores li > strong, .game-shell .winner { color: #f1cf87; }
+.game-shell .winner { letter-spacing: .04em; }
+@media (prefers-reduced-motion: no-preference) {
+  .game-shell .hand-card { transition: border-color .15s ease, filter .15s ease, box-shadow .15s ease; }
+}
+
+/* A private field-guide view, kept outside the compact hand geometry. */
+.game-shell .card-details-trigger { flex: none; padding: 3px 8px; border: 1px solid #aa8b55; border-radius: 3px; background: #302d25; color: #f1d49a; font-size: .72rem; font-weight: 700; }
+.game-shell .card-details-trigger:hover { background: #504738; }
+.game-shell .card-details { display: grid; grid-template-columns: minmax(90px, .6fr) minmax(0, 1fr); gap: clamp(14px, 3vw, 24px); align-items: start; padding-block: 10px; }
+.game-shell .card-details img { display: block; width: 100%; max-height: 48dvh; object-fit: contain; border: 1px solid #b59860; border-radius: 4px; box-shadow: 0 8px 22px #050a09bb; }
+.game-shell .card-details h3 { margin-top: 6px; color: #f4d394; font: 700 clamp(1.35rem, 3vw, 2rem)/1.1 Georgia, serif; }
+.game-shell .card-details-label { display: block; margin-top: 16px; color: #e3be7c; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
+.game-shell .card-details ul { margin: 8px 0 0; padding-left: 1.2em; color: #f0dfbd; }
+.game-shell .role-card h3 { font-size: clamp(1.7rem, 4vw, 2.6rem); line-height: 1; }
+.game-shell .dialog:has(.role-card) .role-card > div { border-left: 1px solid #b9985d80; padding-left: clamp(12px, 2vw, 20px); }
+.game-shell .dialog > .eyebrow { display: block; margin-top: 15px; font: 700 clamp(1.25rem, 3vw, 1.8rem)/1.15 Georgia, serif; letter-spacing: 0; text-transform: none; }
+.game-shell .round-reward strong { font: 700 1.1rem/1.2 Georgia, serif; }
+.game-shell .scores li > strong { font: 700 1.3rem/1 Georgia, serif; }
+.game-shell.phone-game .card-details-trigger { padding: 2px 5px; font-size: .65rem; white-space: nowrap; }
+.game-shell.phone-game .card-details { grid-template-columns: minmax(70px, .42fr) minmax(0, 1fr); gap: 10px; padding-block: 2px; }
+.game-shell.phone-game .card-details img { max-height: 34dvh; }
+.game-shell.phone-game .card-details h3 { font-size: 1.25rem; }
+.game-shell.phone-game .card-details p { margin-top: 5px; font-size: .85rem; line-height: 1.3; }
+.game-shell.phone-game .card-details-label { margin-top: 8px; }
+
+.role-illustration { position: relative; display: block; min-width: 0; }
+.role-cover { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .role-deal { perspective: 600px; isolation: isolate; }
+  .role-deal .role-art { backface-visibility: hidden; animation: role-face 740ms cubic-bezier(.22,.65,.3,1) both; }
+  .role-deal .role-cover {
+    display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+    border-radius: 7px; pointer-events: none; backface-visibility: hidden;
+    animation: role-cover-turn 740ms cubic-bezier(.22,.65,.3,1) both;
+  }
+  .role-deal::after {
+    content: ""; position: absolute; inset: 0; border-radius: 7px; pointer-events: none;
+    background: linear-gradient(104deg, transparent 32%, #ffe3a955 49%, transparent 63%) no-repeat;
+    background-size: 230% 100%; animation: role-lamplight 560ms 240ms ease-out both;
+  }
+  @keyframes role-cover-turn {
+    0% { transform: translateY(5%) rotate(-3deg) rotateY(0deg); opacity: 1; }
+    42% { transform: rotateY(94deg); opacity: 1; }
+    43%, 100% { transform: rotateY(100deg); opacity: 0; }
+  }
+  @keyframes role-face {
+    0%, 35% { transform: rotateY(-94deg); }
+    77% { transform: rotateY(4deg); }
+    100% { transform: none; }
+  }
+  @keyframes role-lamplight {
+    0% { background-position: 100% center; opacity: 0; }
+    38% { opacity: .9; }
+    100% { background-position: 0% center; opacity: 0; }
+  }
+  .chamber-results .summary-art { animation: chamber-settle 370ms ease-out both; }
+  .chamber-results li:nth-child(2) .summary-art { animation-delay: 85ms; }
+  .chamber-results li:nth-child(3) .summary-art { animation-delay: 170ms; }
+  @keyframes chamber-settle {
+    from { transform: translateY(7px) rotate(-3deg); opacity: .45; }
+    to { transform: none; opacity: 1; }
+  }
+}

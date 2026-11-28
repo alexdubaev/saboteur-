@@ -18,6 +18,7 @@ const boardManifest = JSON.parse(readFileSync(join(workspace, "data/board-art-v2
   cards: CardRaster[];
 };
 type Raster = { path: string; sha256: string };
+const scenes = JSON.parse(readFileSync(join(workspace, "data/scene-art.json"), "utf8")) as { variants: Raster[] };
 type CardRaster = { id: string; variants: (Raster & { purpose: "standard" | "compact" })[] };
 
 function gameArt(): Plugin {
@@ -25,7 +26,8 @@ function gameArt(): Plugin {
   const assets = new Map<string, Raster>();
   const urls = new Map<string, string>();
   if (manifest.schemaVersion !== 3 || boardManifest.schemaVersion !== 1) throw new Error("Game art manifest schema mismatch");
-  for (const asset of [...[...manifest.cards, ...boardManifest.cards].flatMap((card) => card.variants), ...manifest.otherAssets]) {
+  const otherAssets = [...manifest.otherAssets, ...scenes.variants];
+  for (const asset of [...[...manifest.cards, ...boardManifest.cards].flatMap((card) => card.variants), ...otherAssets]) {
     if (!/^assets\/(?:[a-z0-9-]+\/)*[a-z0-9-]+\.webp$/.test(asset.path) || assets.has(asset.path)) {
       throw new Error("Invalid or duplicate raster path: " + asset.path);
     }
@@ -35,7 +37,7 @@ function gameArt(): Plugin {
   const cardUrls = (cards: CardRaster[]) => Object.fromEntries(cards.map((card) => [
     card.id, Object.fromEntries(card.variants.map((variant) => [variant.purpose, urls.get(variant.path)])),
   ]));
-  const other = Object.fromEntries(manifest.otherAssets.map((asset) => [asset.path, urls.get(asset.path)]));
+  const other = Object.fromEntries(otherAssets.map((asset) => [asset.path, urls.get(asset.path)]));
   return {
     name: "game-art",
     resolveId(id) {
@@ -97,7 +99,7 @@ function webApp(): Plugin {
         source: JSON.stringify({
           name, short_name: iconTitle, lang: "ru",
           id: "/", start_url: "/", scope: "/", display: "standalone",
-          background_color: "#100e20", theme_color: "#100e20", icons,
+          background_color: "#1b1714", theme_color: "#1b1714", icons,
         }),
       });
     },
