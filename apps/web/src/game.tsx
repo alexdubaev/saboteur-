@@ -1,11 +1,14 @@
 import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { CardCommand, PlayerView, Position, Rotation } from "../../../packages/game-core/src/types.js";
-import type { RoomSnapshot } from "../../../packages/protocol/src/index.js";
+import type { JournalEntry, RoomSnapshot } from "../../../packages/protocol/src/index.js";
 import { cardArt } from "./art.js";
 import { Board, type TunnelAuthor } from "./board.js";
 import type { RunCommand } from "./lobby.js";
 import { Messages } from "./messages.js";
+import { TargetPicker } from "./target-picker.js";
 import { actions, cardLabels, copy, profileFor, reasons, roles, roundWinners, tools } from "./text.js";
+import { GoldReveal, ToolFeedback } from "./turn-overlays.js";
+import { useTurnPresentation, type ToolChange } from "./turn-presentation.js";
 import { Avatar, Dialog, Icon, Notice } from "./ui.js";
 
 export type MatchSnapshot = RoomSnapshot & { match: PlayerView };
@@ -132,7 +135,9 @@ function MatchResults({ snapshot, run, pending, error, lobby, solo }: { snapshot
   );
 }
 
-function Crew({ snapshot, authors, compact = false }: { snapshot: MatchSnapshot; authors: ReadonlyMap<string, TunnelAuthor>; compact?: boolean }) {
+function Crew({ snapshot, authors, toolChange, compact = false }: {
+  snapshot: MatchSnapshot; authors: ReadonlyMap<string, TunnelAuthor>; toolChange: ToolChange | null; compact?: boolean;
+}) {
   const { room, match } = snapshot;
   const scrollable = compact && room.seats.length > 3;
   return (
@@ -143,8 +148,11 @@ function Crew({ snapshot, authors, compact = false }: { snapshot: MatchSnapshot;
           const info = match.seats.find(({ seatId }) => seatId === seat.seatId);
           const active = seat.seatId === match.turnSeatId;
           const own = seat.seatId === room.mySeatId;
+          const damaged = Boolean(info?.brokenTools.length);
+          const flash = toolChange?.targetSeatId === seat.seatId ? toolChange : null;
           return (
-            <li key={seat.seatId} className={active ? "current-seat" : ""}>
+            <li key={seat.seatId} className={[active && "current-seat", damaged && "seat-damaged"].filter(Boolean).join(" ")}>
+              {flash && <span key={flash.sequence} className={`crew-event-pulse${flash.broken ? "" : " repaired"}`} aria-hidden="true" />}
               {!compact && <Avatar {...seat} />}
               <div className="seat-name">
                 <strong><span className="seat-color" style={{ backgroundColor: authors.get(seat.seatId)?.color }} aria-hidden="true" />{own && compact ? "Вы" : seat.name}</strong>
@@ -183,8 +191,24 @@ function lastBoardMove(snapshot: MatchSnapshot): Position | null {
   return null;
 }
 
-export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl, soundControl }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; sendLocalMessage?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void; fullscreenControl?: { label: string; active: boolean; toggle: () => void }; soundControl?: ReactNode }) {
+type GameProps = {
+  snapshot: MatchSnapshot;
+  pending: boolean;
+  error: string;
+  run: RunCommand;
+  send?: (message: string) => Promise<boolean>;
+  sendLocalMessage?: (message: string) => Promise<boolean>;
+  lobby: () => void;
+  exit: () => void;
+  openRules?: () => void;
+  fullscreenControl?: { label: string; active: boolean; toggle: () => void };
+  soundControl?: ReactNode;
+  onGoldReveal?: (event: JournalEntry) => void;
+};
+
+export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl, soundControl, onGoldReveal }: GameProps) {
   const { match, room } = snapshot;
+  const presentation = useTurnPresentation(snapshot);
   const solo = !send;
   const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches) && solo;
   const leaveLabel = solo ? "Выйти из партии" : copy.leave;
@@ -229,7 +253,8 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   const rolePending = match.phase === "ROLE_REVEAL" && !match.self.roleAcknowledged;
   const summary = match.phase === "ROUND_SUMMARY";
   const final = match.phase === "MATCH_FINISHED" || match.phase === "ABANDONED";
-  const actorLabel = me ? "Ваш ход" : current ? `Ходит ${current.name}` : match.phase === "ROLE_REVEAL" ? "Участники смотрят роли" : "Подготовка шахты";
+  const actorLabel = me ? "Ваш ход" : current ? `Ходит ${current.name}` : summary ? "Раунд окончен" :
+    match.phase === "ROLE_REVEAL" ? "Участники смотрят роли" : "Подготовка шахты";
   const linkedOre = match.board.filter((tile) => tile.kind === "goal" && tile.revealed && tile.reachable && tile.assetId === "goal-gold").length;
   const profile = profileFor(match.requiredOre);
   const roleName = match.self.role ? roles[match.self.role] : null;
@@ -245,6 +270,18 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
     : "Для карты нет подходящих целей. Её можно сбросить в закрытую.";
   const moveHint = staged ? messageForMove(staged, snapshot) : hint;
   const phoneTargets = [...seats, ...boardMoves.filter((move) => move.type === "PLAY_SCOUT")];
+  const stagedTarget = phoneTargets.findIndex((move) => JSON.stringify(move) === JSON.stringify(staged));
+  const targetOptions = phoneTargets.map((move, index) => {
+    const id = String(index);
+    if (move.type === "PLAY_SCOUT") return { id, label: `Камера ${move.goalSlotId.replace(/^g/, "")}` };
+    const target = move.targetSeatId;
+    const author = authors.get(target);
+    const name = target === room.mySeatId ? "Вы" : author?.name ?? "Участник";
+    if (move.type === "PLAY_REPAIR") return { id, label: `${name} · ${tools[move.tool]}`, color: author?.color, tool: move.tool };
+    const damaged = match.seats.find(({ seatId }) => seatId === target)?.brokenTools ?? [];
+    return { id, label: name, color: author?.color,
+      detail: damaged.length > 0 ? `Поломка: ${damaged.map((tool) => tools[tool]).join(", ")}` : undefined };
+  });
   const counts = <ul className="match-counts">
     <li title={profile.roleGoals.prospector}><Icon name="gold" /><span>{profile.progress} <b>{linkedOre}/{match.requiredOre}</b></span></li>
     <li><Icon name="pickaxe" /><span>Ходы <b>{match.turnNumber}{match.maxTurns !== null ? `/${match.maxTurns}` : ""}</b></span></li>
@@ -257,7 +294,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
     const active = card.instanceId === selected?.instanceId;
     const blocked = tunnelsBlocked && card.typeId.startsWith("tunnel-");
     return <button key={card.instanceId} className={`hand-card${blocked ? " tunnel-blocked" : ""}${active ? " selected-card" : ""}`}
-      aria-label={label} aria-describedby={blocked ? toolStatusId : undefined} aria-pressed={active} disabled={pending} title={label}
+      aria-label={label} aria-describedby={blocked ? toolStatusId : undefined} aria-pressed={active} disabled={pending || presentation.holdResults} title={label}
       onClick={() => setSelection(active ? null : { revision: match.revision, instanceId: card.instanceId, rotation: 0, staged: null })}>
       <img src={cardArt(card.assetId)} width={256} height={384} alt="" draggable={false}
         style={{ transform: active && tunnel ? `rotate(${selected.rotation}deg)` : undefined }} />
@@ -270,7 +307,8 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   const actionsPanel = (phone || selected) && <div className="hand-actions" aria-label="Подготовка хода">
     {!phone && seats.length > 0 && <div className="seat-targets" aria-label="Доступные цели">
       <strong>{actions[seats[0].type]}</strong>
-      {seats.map((move) => <button className="button secondary" key={JSON.stringify(move)} aria-pressed={JSON.stringify(staged) === JSON.stringify(move)} disabled={pending} onClick={() => choose(move)}>{messageForMove(move, snapshot)}</button>)}
+      {seats.map((move) => <button className="button secondary" key={JSON.stringify(move)} aria-pressed={JSON.stringify(staged) === JSON.stringify(move)} disabled={pending} onClick={() => choose(move)}
+        style={{ color: authors.get(move.targetSeatId)?.color }}>{messageForMove(move, snapshot)}</button>)}
     </div>}
     <div className="move-buttons">
       {(phone || tunnel) && <button className={phone ? "button secondary" : "icon-button"} aria-label="Повернуть на 180°" disabled={pending || !me || !tunnel || tunnelsBlocked} onClick={rotate}>{phone ? "Повернуть" : <Icon name="rotate" />}</button>}
@@ -283,7 +321,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   return (
     <main className={`game-shell${solo ? " solo-game" : ""}${phone ? " phone-game" : ""}`} data-testid="room-state" data-room={room.roomId} data-match={match.matchId} data-revision={match.revision}
       onKeyDown={(event) => {
-        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLDialogElement || typeof modal === "string" || scout || rolePending || summary || final) return;
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || (event.target instanceof Element && event.target.closest("dialog")) || typeof modal === "string" || scout || rolePending || summary || final) return;
         if (event.key === "Escape" && selected) setSelection(null);
         if (event.key.toLowerCase() === "r" && selected && tunnel) rotate();
       }}>
@@ -295,7 +333,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
           <div><dt>Колода</dt><dd>{match.deckCount}</dd></div>
           <div><dt>{profile.progress}</dt><dd>{linkedOre}/{match.requiredOre}</dd></div>
         </dl>
-        <Crew snapshot={snapshot} authors={authors} compact />
+        <Crew snapshot={snapshot} authors={authors} toolChange={presentation.tool} compact />
         <div className="phone-utilities">
           <button className="button secondary phone-role" title={copy.role} aria-haspopup="dialog" disabled={!roleName} onClick={() => setModal("role")}>
             <span className="phone-role-label">Роль</span>
@@ -326,8 +364,12 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       <Notice text={error} />
       <div className="table-layout">
         <Board key={match.matchId} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose}
-          phone={phone} status={tunnelsBlocked ? <div className="tool-status" id={toolStatusId} role="status">
-            <div className="tool-status-heading">
+          phone={phone} effects={presentation.board}
+          overlay={presentation.gold
+            ? <GoldReveal key={presentation.gold.event.sequence} scene={presentation.gold} author={authors.get(presentation.gold.actorSeatId ?? "")} onReveal={onGoldReveal} />
+            : presentation.tool && <ToolFeedback key={presentation.tool.sequence} change={presentation.tool} authors={authors} mySeatId={room.mySeatId} />}
+          status={tunnelsBlocked ? <div className="tool-status" role="status" aria-label="Состояние ваших инструментов">
+            <div className="tool-status-heading" id={toolStatusId}>
               <strong>Туннели заблокированы</strong>
               <ul>
                 {damagedTools.map((tool) => <li key={tool}><Icon name={tool} />{tools[tool]}</li>)}
@@ -336,7 +378,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
             <span>В свой ход можно сыграть действие или сбросить карту.</span>
           </div> : undefined} />
         {!phone && <aside className="table-side">
-          <Crew snapshot={snapshot} authors={authors} />
+          <Crew snapshot={snapshot} authors={authors} toolChange={presentation.tool} />
           {send && <div className={`match-messages${showMessages ? " show-messages" : ""}`}><Messages snapshot={snapshot} send={send} authors={authors} compact /></div>}
           {sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} authors={authors} split local />}
         </aside>}
@@ -344,15 +386,10 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
           {phone ? <>
             <div className="phone-hand-header" aria-live="polite" title={moveHint}>
               <h2>Рука <span>{match.self.hand.length}</span></h2>
-              <span>{handCard ? cardLabels[handCard.typeId] ?? "Карта" : me ? "Выберите карту" : "Ход соперника"}</span>
-              {phoneTargets.length > 0 && <select aria-label="Цель карты" disabled={pending}
-                value={phoneTargets.findIndex((move) => JSON.stringify(move) === JSON.stringify(staged))}
-                onChange={(event) => { const target = phoneTargets[Number(event.currentTarget.value)]; if (target) choose(target); }}>
-                <option value={-1} disabled>Выбрать цель</option>
-                {phoneTargets.map((move, index) => <option value={index} key={JSON.stringify(move)}>
-                  {move.type === "PLAY_SCOUT" ? `Камера ${move.goalSlotId.replace(/^g/, "")}` : messageForMove(move, snapshot)}
-                </option>)}
-              </select>}
+              {!summary && !final && <span>{handCard ? cardLabels[handCard.typeId] ?? "Карта" : me ? "Выберите карту" : "Ход соперника"}</span>}
+              {targetOptions.length > 0 && <TargetPicker key={handCard?.instanceId} options={targetOptions} disabled={pending}
+                activeId={stagedTarget < 0 ? undefined : String(stagedTarget)}
+                onSelect={(id) => { const target = phoneTargets[Number(id)]; if (target) choose(target); }} />}
             </div>
             <div className="hand-cards">{cards()}</div>
             {actionsPanel}
@@ -364,14 +401,14 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
         {phone && sendLocalMessage && <Messages snapshot={snapshot} send={sendLocalMessage} authors={authors} split local />}
       </div>
       {rolePending || (modal === "role" && !summary && !final) ? <RoleCard snapshot={snapshot} mandatory={rolePending} close={() => setModal(null)} run={run} pending={pending} error={error} /> : null}
-      {!rolePending && !final && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
+      {!rolePending && !final && !presentation.gold && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
       {!rolePending && !summary && !final && modal === "leave" && <Dialog title={leaveLabel} close={() => setModal(null)}>
         <p>{solo ? "Если выйти сейчас, партия завершится." : "Вернитесь на этот адрес, чтобы снова занять своё место."}</p>
         <div className="dialog-actions"><button className="button secondary" onClick={exit}>В меню</button>
         {!solo && isHost && <button className="button secondary" disabled={pending} onClick={async () => { if (await run({ type: "ABANDON" })) setModal(null); }}>Остановить экспедицию</button>}</div>
         <Notice text={error} />
       </Dialog>}
-      {summary && !scout && <RoundResults snapshot={snapshot} run={run} pending={pending} error={error} />}
+      {summary && !scout && !presentation.holdResults && <RoundResults snapshot={snapshot} run={run} pending={pending} error={error} />}
       {final && <MatchResults snapshot={snapshot} run={run} pending={pending} error={error} lobby={lobby} solo={solo} />}
     </main>
   );

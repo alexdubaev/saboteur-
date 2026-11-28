@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { chatSchema, type ChatMessage, type WireCommand } from "../../../packages/protocol/src/index.js";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { chatSchema, type ChatMessage, type JournalEntry, type WireCommand } from "../../../packages/protocol/src/index.js";
 import { corridorArt, logoArt } from "./art.js";
 import { Game, type MatchSnapshot } from "./game.js";
 import { createGameAudio, preloadGameSounds } from "./game-audio.js";
 import { createSoloMatch, soloBotRange, type SoloMatch } from "./solo-match.js";
 import { copy, errorText } from "./text.js";
+import { getGoldFinale } from "./turn-presentation.js";
 import { Dialog, Icon, Notice, Rules } from "./ui.js";
 
 type ActiveMatch = { game: SoloMatch; snapshot: MatchSnapshot };
@@ -115,6 +116,9 @@ export function SoloApp() {
   }
 
   const snapshot = active?.snapshot;
+  const playGold = useCallback((event: JournalEntry) => {
+    audio.current?.playLatest([event], "", true);
+  }, []);
   useEffect(() => {
     if (sound) preloadGameSounds();
   }, [sound]);
@@ -123,8 +127,10 @@ export function SoloApp() {
     if (!snapshot || snapshot.sequence <= heardSequence.current) return;
     const previous = heardSequence.current;
     heardSequence.current = snapshot.sequence;
+    const events = snapshot.journal.filter(({ sequence }) => sequence > previous);
+    const gold = getGoldFinale(snapshot, events);
     audio.current?.playLatest(
-      snapshot.journal.filter(({ sequence }) => sequence > previous),
+      gold ? events.filter(({ type }) => type === "PLAY_TUNNEL") : events,
       snapshot.room.mySeatId,
       snapshot.match.outcome?.reason === "ore",
     );
@@ -160,7 +166,7 @@ export function SoloApp() {
     </header>
     {active
       ? <Game key={active.snapshot.match.matchId} snapshot={{ ...active.snapshot, chat }} run={run} error={error} pending={false} lobby={menu} exit={menu}
-          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)} soundControl={soundControl}
+          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)} soundControl={soundControl} onGoldReveal={playGold}
           fullscreenControl={{ label: fullscreenLabel, active: fullscreen, toggle: () => void toggleFullscreen() }} />
       : <main className="home-stage">
         <div className="home-copy">

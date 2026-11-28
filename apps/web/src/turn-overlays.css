@@ -1,0 +1,82 @@
+.gold-reveal {
+  --scene-card-width: clamp(48px, 12dvh, 112px);
+  position: absolute;
+  z-index: 5;
+  inset: 0 0 calc(var(--table-control, 40px) + 4px);
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #302449fa 18%, #120c1ad6 60%, #100b1770 100%);
+}
+.gold-reveal-layout { display: grid; justify-items: center; gap: clamp(4px, 1.2dvh, 12px); max-width: 100%; }
+.gold-reveal-title { color: #ffe0a3; font: bold clamp(1rem, 3.2dvh, 2rem)/1.05 Georgia, serif; }
+.gold-reveal-open .gold-reveal-title { text-shadow: 0 0 .65em #f3ad5eaa; }
+.gold-reveal-cards { display: flex; align-items: center; gap: 8px; }
+.gold-reveal-tunnel, .gold-reveal-perspective { width: var(--scene-card-width); aspect-ratio: 2 / 3; }
+.gold-reveal-tunnel {
+  position: relative; overflow: hidden; border-radius: 5px; box-shadow: 0 7px 18px #07050bc7;
+  animation: gold-tunnel-settle 300ms cubic-bezier(.18,.8,.27,1) both;
+}
+.gold-reveal-tunnel::after {
+  position: absolute; inset: 0; content: ""; border: 2px solid var(--tunnel-author, #edc383); border-radius: inherit;
+}
+.gold-reveal-cards img { display: block; width: 100%; height: 100%; border-radius: 5px; }
+.gold-reveal-link { width: clamp(12px, 4vw, 38px); height: 2px; background: #eac586; box-shadow: 0 0 7px #ffa747; }
+.gold-reveal-perspective { perspective: 340px; }
+.gold-reveal-flip { position: relative; height: 100%; transform-style: preserve-3d; }
+.gold-reveal-flip img { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.gold-reveal-flip .gold-reveal-face { transform: rotateY(180deg); box-shadow: 0 0 26px #ffc154a8; }
+.gold-reveal-open .gold-reveal-flip { animation: gold-reveal-flip 780ms cubic-bezier(.38,.08,.22,1) both; }
+.gold-reveal-credit { margin: 0; color: #e1d3ea; font-size: clamp(.66rem, 1.75dvh, .9rem); text-align: center; }
+@keyframes gold-tunnel-settle {
+  from { opacity: .08; transform: translate(-9px, -16px) scale(1.12) rotate(-5deg); }
+  72% { opacity: 1; transform: translateY(1px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes gold-reveal-flip {
+  from { transform: rotateY(0); }
+  56% { transform: rotateY(158deg) scale(1.1); }
+  80% { transform: rotateY(180deg) scale(1.15); }
+  to { transform: rotateY(180deg) scale(1.08); }
+}
+.move-feedback {
+  --event-tone: #f7939e;
+  z-index: 5; position: absolute; inset: 6px 6px auto auto;
+  display: flex; align-items: center; gap: 7px; max-width: calc(100% - 12px); padding: 5px 8px;
+  border: 1px solid var(--event-tone); border-radius: 7px; background: #211626f5;
+  box-shadow: 0 5px 16px #08060cbc; color: var(--event-tone);
+  pointer-events: none; animation: tool-message-in 230ms ease-out both;
+}
+.move-feedback-repair { --event-tone: #9ee2b0; }
+.move-feedback .icon { width: 21px; height: 21px; }
+.move-feedback strong { display: block; font-size: .75rem; }
+.move-feedback p { margin: 1px 0 0; color: #d7c9e1; font-size: .72rem; line-height: 1.2; }
+.mine-with-status .move-feedback { inset-block: auto calc(var(--table-control, 40px) + 9px); }
+@keyframes tool-message-in {
+  from { opacity: .15; transform: translateY(-5px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+.match-crew li { position: relative; }
+.match-crew li.seat-damaged { background: #422333; box-shadow: inset 0 0 0 1px #bc6578; }
+.match-crew .seat-damaged .seat-name strong { font-weight: 760; }
+.match-crew .seat-damaged .broken-tool {
+  background: #612d41; border: 1px solid #dc8494; border-radius: 3px; padding: 1px; color: #ffb5c2;
+}
+.crew-event-pulse {
+  --pulse-color: #ffa1ac;
+  position: absolute; z-index: 1; inset: 1px; pointer-events: none; border-radius: inherit;
+  animation: tool-target-pulse 670ms ease-out both;
+}
+.crew-event-pulse.repaired { --pulse-color: #9ee2b0; }
+@keyframes tool-target-pulse {
+  8%, 40% { box-shadow: inset 0 0 0 2px var(--pulse-color), inset 0 0 10px var(--pulse-color); opacity: 1; }
+  24%, 100% { opacity: 0; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .gold-reveal { --scene-card-width: clamp(39px, 17dvh, 76px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gold-reveal-tunnel, .gold-reveal-open .gold-reveal-flip, .move-feedback, .crew-event-pulse { animation: none; }
+  .gold-reveal-open .gold-reveal-flip { transform: rotateY(180deg); }
+}

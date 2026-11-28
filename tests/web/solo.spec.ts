@@ -161,7 +161,7 @@ test.describe("тестовая игра с ботами", () => {
         await expect(tunnel).toBeAttached();
         await expect(page.getByRole("heading", { name: "Ваш ход", exact: true })).toBeVisible();
         await expect.poll(camera).toEqual(fixedView);
-        const damage = board.getByRole("status");
+        const damage = board.getByRole("status", { name: "Состояние ваших инструментов" });
         await expect(damage.getByText("Кирка", { exact: true })).toBeInViewport();
         await expect(damage.getByText("Туннели заблокированы")).toBeInViewport();
         await expect(journal.getByText("Бот 2 сломал вам кирку")).toBeAttached();
@@ -223,7 +223,11 @@ test.describe("тестовая игра с ботами", () => {
       const board = page.getByRole("region", { name: "Карта шахты" });
       const hand = page.getByRole("region", { name: "Ваша рука" });
       const journal = page.getByRole("region", { name: "Журнал", exact: true });
-      const damage = board.getByRole("status");
+      const damage = board.getByRole("status", { name: "Состояние ваших инструментов" });
+      const crew = page.getByRole("region", { name: "Участники" });
+      const own = crew.getByRole("listitem").filter({ has: page.getByText("Вы", { exact: true }) });
+      const toolEvent = board.getByRole("status", { name: "Поломка инструмента" });
+      const picker = page.getByRole("dialog", { name: "Выбрать цель" });
       await expect(damage).toHaveCount(0);
       await hand.getByRole("button", { name: "Раздельные тупики N–E", exact: true }).tap();
       await board.getByRole("button", { name: "Клетка 0, 1", exact: true }).tap();
@@ -231,6 +235,8 @@ test.describe("тестовая игра с ботами", () => {
       await expect(turn).toBeVisible();
       await expect(damage).toContainText("Туннели заблокированы");
       await expect(damage.getByText("Кирка", { exact: true })).toBeVisible();
+      await expect(toolEvent).toContainText("Ваш инструмент");
+      await expect(own.getByLabel("Поломка: Кирка")).toBeVisible();
       const blockedCard = hand.getByRole("button", { name: "Раздельные тупики N–W", exact: true });
       await expect(blockedCard).toHaveAccessibleDescription(/Туннели заблокированы.*Кирка/u);
       await blockedCard.tap();
@@ -241,17 +247,83 @@ test.describe("тестовая игра с ботами", () => {
       await expect(turn).toBeVisible();
       await expect(damage.getByText("Кирка", { exact: true })).toBeVisible();
       await hand.getByRole("button", { name: "Ремонт кирки", exact: true }).tap();
-      await hand.getByRole("combobox", { name: "Цель карты" }).selectOption({ label: "Старатель · Кирка" });
+      await hand.getByRole("button", { name: "Цель карты" }).tap();
+      await picker.getByRole("button", { name: "Вы · Кирка" }).tap();
       await confirm.tap();
       await expect(turn).toBeVisible();
       await expect(damage).toHaveCount(0);
+      await expect(own.getByLabel("Поломка: Кирка")).toHaveCount(0);
       await expect(journal.getByText("Старатель починил себе кирку")).toBeAttached();
       await hand.getByRole("button", { name: "Четыре раздельных тупика", exact: true }).tap();
       await expect(board.getByRole("button", { name: "Клетка 0, -1", exact: true })).toBeAttached();
       await hand.getByRole("button", { name: "Сломанная кирка", exact: true }).tap();
-      await hand.getByRole("combobox", { name: "Цель карты" }).selectOption({ label: "Бот 3" });
+      const bot = crew.getByRole("listitem").filter({ has: page.getByText("Бот 3", { exact: true }) });
+      const botColor = await bot.locator(".seat-color").evaluate((dot) => getComputedStyle(dot).backgroundColor);
+      await hand.getByRole("button", { name: "Цель карты" }).tap();
+      const option = picker.getByRole("button", { name: /^Бот 3(?:\s|$)/ });
+      await expect(option.getByText("Бот 3", { exact: true })).toHaveCSS("color", botColor);
+      await option.tap();
+      await expect(picker).toBeHidden();
+      await expect(journal.getByText("Старатель сломал кирку игроку «Бот 3»")).toHaveCount(0);
       await confirm.tap();
       await expect(journal.getByText("Старатель сломал кирку игроку «Бот 3»")).toBeAttached();
+      await expect(toolEvent).toContainText("Бот 3");
+      await expect(bot.getByLabel("Поломка: Кирка")).toBeVisible();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("последний туннель и золотая камера видны до итогов раунда", async ({ browser }, testInfo) => {
+    const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
+    try {
+      await context.addInitScript(seedRandom, 53);
+      const page = await context.newPage();
+      await page.goto(sitesUrl!);
+      await page.getByRole("button", { name: "Начать игру" }).tap();
+      await page.getByRole("button", { name: "Роль понятна" }).tap();
+      const board = page.getByRole("region", { name: "Карта шахты" });
+      const hand = page.getByRole("region", { name: "Ваша рука" });
+      const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
+      await expect(turn).toBeVisible();
+      await board.getByRole("button", { name: "Вся шахта" }).tap();
+      const camera = () => board.locator(".board-world").evaluate((world) => {
+        const { width, height } = world.parentElement!.getBoundingClientRect();
+        const { a, e, f } = new DOMMatrix(getComputedStyle(world).transform);
+        return { scale: a, x: (width / 2 - e) / a, y: (height / 2 - f) / a };
+      });
+      const fixedView = await camera();
+      for (const [card, cell] of [
+        ["Вертикальная развилка", "Клетка 0, -1"],
+        ["Горизонтальная развилка", "Клетка 3, 0"],
+        ["Перекрёсток", "Клетка 5, 0"],
+      ]) {
+        await expect(turn).toBeVisible();
+        await hand.getByRole("button", { name: card, exact: true }).first().tap();
+        await board.getByRole("button", { name: cell, exact: true }).tap();
+        await hand.getByRole("button", { name: "Подтвердить ход" }).tap();
+        await expect(turn).toBeHidden();
+      }
+      const finale = board.getByRole("region", { name: "Последний ход раунда" });
+      const summary = page.getByRole("dialog", { name: "Итоги раунда 1" });
+      await expect(finale.getByText("Последний туннель", { exact: true })).toBeVisible();
+      await expect(finale.getByText("Бот 3", { exact: true })).toBeVisible();
+      await expect(board.getByRole("img", { name: "Туннель 7, 0 · Автор: Бот 3" })).toBeVisible();
+      await expect(summary).toHaveCount(0);
+      await expect(finale.getByText("Золото найдено!", { exact: true })).toBeVisible();
+      await expect(summary).toHaveCount(0);
+      const revealedView = await camera();
+      expect(revealedView.scale).toBeCloseTo(fixedView.scale, 5);
+      expect(revealedView.x).toBeCloseTo(fixedView.x, 1);
+      expect(revealedView.y).toBeCloseTo(fixedView.y, 1);
+      await finale.locator(".gold-reveal-flip").evaluate(async (card) => {
+        await Promise.all(card.getAnimations().map((animation) => animation.finished));
+      });
+      await page.screenshot({ path: testInfo.outputPath("gold-reveal.png"), scale: "css" });
+      await expect(summary).toBeVisible();
+      await expect(finale).toHaveCount(0);
+      await summary.getByRole("button", { name: "Продолжить" }).tap();
+      await expect(page.getByRole("dialog", { name: "Моя роль" })).toBeVisible();
     } finally {
       await context.close();
     }

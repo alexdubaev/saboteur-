@@ -390,7 +390,7 @@ input::placeholder { color: #ad9dbe; }
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "turn tools" "stats stats" "crew crew";
 }
-.phone-turn { grid-area: turn; font: bold 1rem/1.1 Georgia, serif; }
+.phone-turn { grid-area: turn; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: bold 1rem/1.1 Georgia, serif; }
 .phone-utilities { grid-area: tools; display: flex; align-items: center; justify-content: end; gap: 4px; }
 .phone-utilities .button { white-space: nowrap; }
 .phone-role-name { display: none; }
@@ -404,6 +404,7 @@ input::placeholder { color: #ad9dbe; }
   grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(66px, max-content);
   overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin;
 }
+.phone-game .phone-crew .crew-scroll li { min-width: max-content; white-space: nowrap; }
 .phone-game .phone-crew li {
   display: flex; justify-content: space-between; align-items: center; column-gap: 3px;
   min-height: 20px; padding: 1px 3px; border: 1px solid var(--line); border-radius: 4px;
@@ -446,7 +447,6 @@ input::placeholder { color: #ad9dbe; }
 .phone-hand-header h2 { flex: none; font-size: .79rem; }
 .phone-hand-header h2 span { color: var(--gold); }
 .phone-hand-header > span { color: var(--muted); text-align: right; }
-.phone-hand-header select { min-width: 0; max-width: 48%; padding: 2px; border: 1px solid var(--line); border-radius: 3px; font-size: .73rem; background: var(--surface); }
 .phone-game .hand-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; overflow: visible; padding: 0; }
 .phone-game .hand-card {
   display: grid; justify-items: center; align-content: start; min-width: 0;
