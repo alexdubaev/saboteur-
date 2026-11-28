@@ -33,10 +33,11 @@ function matchPath(snapshot: RoomSnapshot): string {
   return `/api/rooms/${snapshot.room.roomId}`;
 }
 
-function openTestServer(activeDefinition = definition, hosted?: { origin: string; hostKey: string }) {
+function openTestServer(activeDefinition = definition, hosted?: { origin: string; hostKey: string; publicHosting?: boolean }) {
   db = connectDatabase(isolatedUrl.toString());
   expectedOrigin = hosted?.origin ?? origin;
-  return startServer({ db, definition: activeDefinition, origin: expectedOrigin, playtest: true, host: "127.0.0.1", port: 0, hostKey: hosted?.hostKey });
+  return startServer({ db, definition: activeDefinition, origin: expectedOrigin, playtest: true, host: "127.0.0.1", port: 0,
+    hostKey: hosted?.hostKey, publicHosting: hosted?.publicHosting });
 }
 
 async function stopTestServer(): Promise<void> {
@@ -556,6 +557,48 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     expect(current.match?.seats.every(({ role }) => role === undefined)).toBe(true);
   });
 
+  it("lets the host remove lobby guests, release their seats and start with the remaining players", async () => {
+    const [owner, teammate, offlineGuest, onlineGuest] = await Promise.all([
+      guest("Ведущий"), guest("Друг"), guest("Отключённый гость"), guest("Подключённый гость"),
+    ]);
+    let current = await room(owner);
+    for (const cookie of [teammate, offlineGuest, onlineGuest]) {
+      expect((await request("/api/rooms/join", cookie, { code: current.room.code })).status).toBe(200);
+    }
+    const teammateView = await snapshot(current, teammate);
+    const offlineView = await snapshot(current, offlineGuest);
+    const onlineView = await snapshot(current, onlineGuest);
+    const target = websocket(onlineGuest);
+    await once(target.socket, "open");
+    target.send({ type: "SUBSCRIBE", roomId: current.room.roomId });
+    await target.next(isSnapshot);
+    current = await command(current, owner, { type: "ADD_BOT" });
+    current = await command(current, teammate, { type: "SET_READY", ready: true });
+    current = await command(current, owner, { type: "SET_READY", ready: true });
+
+    const removeOffline = { type: "REMOVE_PLAYER", seatId: offlineView.room.mySeatId } as const;
+    expect(await httpCommand(current, teammate, envelope(current, removeOffline))).toMatchObject({ ok: false, code: "HOST_REQUIRED" });
+    const ownerSeat = current.room.mySeatId;
+    expect(await httpCommand(current, owner, envelope(current, { type: "REMOVE_PLAYER", seatId: ownerSeat })))
+      .toMatchObject({ ok: false, code: "INVALID_TARGET" });
+    expect(await httpCommand(current, owner, envelope(current, { type: "START_MATCH" })))
+      .toMatchObject({ ok: false, code: "SEATS_NOT_READY" });
+
+    current = await command(current, owner, removeOffline);
+    expect((await request(matchPath(current), offlineGuest)).status).toBe(403);
+    const closed = once(target.socket, "close");
+    current = await command(current, owner, { type: "REMOVE_PLAYER", seatId: onlineView.room.mySeatId });
+    expect(await target.next(isError)).toMatchObject({ code: "NOT_MEMBER" });
+    await closed;
+    expect(current.room.seats.map(({ name }) => name)).toEqual(["Ведущий", "Друг", "Бот 5"]);
+    expect((await request("/api/session", onlineGuest)).status).toBe(200);
+
+    current = await command(current, owner, { type: "START_MATCH" });
+    expect(current.match?.seats).toHaveLength(3);
+    expect(await httpCommand(current, owner, envelope(current, { type: "REMOVE_PLAYER", seatId: teammateView.room.mySeatId })))
+      .toMatchObject({ ok: false, code: "WRONG_PHASE" });
+  });
+
   it("serializes the last anonymous invitation seat and restores the admitted guest after start", async () => {
     const owner = await guest("Ведущий");
     let current = await room(owner);
@@ -663,5 +706,16 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     } finally {
       spectator.socket.close();
     }
+  });
+
+  it("lets a fresh visitor host from the ordinary game page while keeping room membership private", async () => {
+    await stopTestServer();
+    server = await openTestServer(definition, { hostKey: randomBytes(32).toString("hex"), origin: "https://public-playtest.invalid", publicHosting: true });
+    expect(await (await request("/api/entry")).json()).toEqual({ canCreateRooms: true });
+    const owner = await guest("Новый ведущий");
+    const privateRoom = await room(owner);
+    const stranger = await guest("Посетитель");
+    expect((await request(matchPath(privateRoom), stranger)).status).toBe(403);
+    expect((await request("/api/rooms/join", stranger, { code: privateRoom.room.code })).status).toBe(200);
   });
 });

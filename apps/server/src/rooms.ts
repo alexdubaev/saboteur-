@@ -360,6 +360,7 @@ export class Rooms {
       case "SET_READY":
       case "ADD_BOT":
       case "REMOVE_BOT":
+      case "REMOVE_PLAYER":
       case "SET_TIMER": {
         if (match) throw new RoomError("WRONG_PHASE");
         if (command.type !== "SET_READY" && !isHost) throw new RoomError("HOST_REQUIRED", 403);
@@ -381,7 +382,7 @@ export class Rooms {
   }
 
   private async changeLobby(client: PoolClient, { room, seats, seat }: RoomAccess, command: Extract<CommandEnvelope["command"], {
-    type: "SET_READY" | "ADD_BOT" | "REMOVE_BOT" | "SET_TIMER";
+    type: "SET_READY" | "ADD_BOT" | "REMOVE_BOT" | "REMOVE_PLAYER" | "SET_TIMER";
   }>): Promise<void> {
     switch (command.type) {
       case "SET_READY":
@@ -395,10 +396,13 @@ export class Rooms {
           [randomUUID(), room.room_id, `Бот ${position + 1}`, position]);
         break;
       }
-      case "REMOVE_BOT": {
-        const bot = seats.find((candidate) => candidate.user_id === null && candidate.seat_id === command.seatId);
-        if (!bot) throw new RoomError("INVALID_TARGET");
-        await client.query("DELETE FROM seats WHERE seat_id = $1", [bot.seat_id]);
+      case "REMOVE_BOT":
+      case "REMOVE_PLAYER": {
+        const target = seats.find((candidate) => candidate.seat_id === command.seatId);
+        if (!target || target.seat_id === seat.seat_id || (target.user_id === null) !== (command.type === "REMOVE_BOT")) {
+          throw new RoomError("INVALID_TARGET");
+        }
+        await client.query("DELETE FROM seats WHERE seat_id = $1", [target.seat_id]);
         break;
       }
       case "SET_TIMER":

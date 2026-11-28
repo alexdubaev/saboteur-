@@ -95,6 +95,7 @@ export class SoloMatch {
       case "SET_READY":
       case "ADD_BOT":
       case "REMOVE_BOT":
+      case "REMOVE_PLAYER":
       case "SET_TIMER":
       case "START_MATCH":
         throw new Error("WRONG_PHASE");

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { SessionView } from "../../../packages/protocol/src/index.js";
 import { corridorArt, logoArt } from "./art.js";
+import { ShareLink, shareUrl } from "./share-link.js";
 import { copy } from "./text.js";
 import { Avatar, Icon, Notice } from "./ui.js";
 
@@ -47,6 +48,7 @@ export function Menu({ session, invite, canCreateRooms, connecting, pending, err
             <button className="button primary entry-submit" disabled={pending} type="submit">{pending ? "Подождите…" : mode === "create" ? copy.create : copy.join}<span className="arrow" aria-hidden="true">→</span></button>
           </form>}
           {resume && !connecting && <button className="button secondary resume-room" disabled={pending} onClick={resume}>Вернуться в комнату</button>}
+          {!connecting && <ShareLink url={shareUrl()} label="Ссылка на игру" />}
           <ul className="home-facts" aria-label="Об экспедиции">
             <li><Icon name="invite" />3–10 игроков</li><li><Icon name="cards" />3 раунда</li><li><Icon name="gold" />1 золотая жила</li>
           </ul>

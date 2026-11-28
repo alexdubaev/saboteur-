@@ -24,8 +24,10 @@ async function readEntryAccess() {
     const url = new URL(window.location.href);
     url.hash = "";
     window.history.replaceState(null, "", url);
-    await request<{ ok: true }>("/session/host", { key: hostKey });
   }
+  const access = await request<{ canCreateRooms: boolean }>("/entry");
+  if (access.canCreateRooms || hostKey === null) return access;
+  await request<{ ok: true }>("/session/host", { key: hostKey });
   return request<{ canCreateRooms: boolean }>("/entry");
 }
 
