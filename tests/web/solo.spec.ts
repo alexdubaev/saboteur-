@@ -295,11 +295,25 @@ test.describe("тестовая игра с ботами", () => {
     try {
       await context.addInitScript(seedRandom, 41);
       await context.addInitScript(() => {
+        const create = AudioContext.prototype.createOscillator;
+        AudioContext.prototype.createOscillator = function () {
+          (window as Window & { testAudio?: AudioContext }).testAudio = this;
+          return create.call(this);
+        };
+        const resume = AudioContext.prototype.resume;
+        AudioContext.prototype.resume = function () {
+          if (document.documentElement.dataset.delayResume !== "yes") return resume.call(this);
+          delete document.documentElement.dataset.delayResume;
+          return new Promise<void>((resolve) => setTimeout(resolve, 100)).then(() => resume.call(this));
+        };
         const start = OscillatorNode.prototype.start;
         OscillatorNode.prototype.start = function (when?: number) {
           start.call(this, when);
           const root = document.documentElement;
           root.dataset.tones = String(Number(root.dataset.tones ?? 0) + 1);
+          if (this.frequency.value === 330 && this.type === "triangle") {
+            root.dataset.discardTones = String(Number(root.dataset.discardTones ?? 0) + 1);
+          }
         };
       });
       const page = await context.newPage();
@@ -312,15 +326,26 @@ test.describe("тестовая игра с ботами", () => {
       const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
       await expect(turn).toBeVisible();
       const hand = page.getByRole("region", { name: "Ваша рука" });
-      const discard = async () => {
+      const discard = async (checkCue?: () => Promise<void>) => {
         await hand.locator(".hand-card").first().tap();
         await hand.getByRole("button", { name: "Сбросить в закрытую" }).tap();
         await hand.getByRole("button", { name: "Подтвердить ход" }).tap();
         await expect(turn).toBeHidden();
+        await checkCue?.();
         await expect(turn).toBeVisible();
       };
       const first = await tones();
-      await discard();
+      const discardTones = () => page.evaluate(() => Number(document.documentElement.dataset.discardTones ?? 0));
+      const beforeDiscard = await discardTones();
+      await page.evaluate(async () => {
+        const context = (window as Window & { testAudio?: AudioContext }).testAudio;
+        if (!context) throw new Error("Audio context was not created");
+        await context.suspend();
+        document.documentElement.dataset.delayResume = "yes";
+      });
+      await discard(async () => {
+        await expect.poll(discardTones, { timeout: 280, intervals: [20, 20, 20] }).toBeGreaterThan(beforeDiscard);
+      });
       expect(await tones()).toBeGreaterThan(first);
       await page.getByRole("button", { name: "Выключить звук" }).tap();
       const muted = await tones();

@@ -16,6 +16,8 @@ export function createGameAudio() {
   const context = new AudioContext();
   const master = context.createGain();
   master.connect(context.destination);
+  let resuming: Promise<void> | null = null;
+  let queuedCue: Cue | null = null;
 
   function playCue(cue: Cue) {
     if (context.state !== "running" || master.gain.value === 0) return;
@@ -36,14 +38,25 @@ export function createGameAudio() {
   }
 
   return {
-    setEnabled(enabled: boolean) { master.gain.value = enabled ? .25 : 0; },
+    setEnabled(enabled: boolean) {
+      master.gain.value = enabled ? .25 : 0;
+      if (!enabled) queuedCue = null;
+    },
     async resume(preview: boolean) {
-      if (context.state !== "running") await context.resume();
-      if (preview) playCue(start);
+      if (context.state !== "running") {
+        resuming ??= context.resume().finally(() => { resuming = null; });
+        try { await resuming; } catch { queuedCue = null; return; }
+      }
+      const cue = queuedCue ?? (preview ? start : null);
+      queuedCue = null;
+      if (cue) playCue(cue);
     },
     playLatest(events: readonly { type: string }[]) {
       const event = events.findLast(({ type }) => cues[type] !== undefined);
-      if (event) playCue(cues[event.type]!);
+      if (!event || master.gain.value === 0) return;
+      const cue = cues[event.type]!;
+      if (resuming) queuedCue = cue;
+      else playCue(cue);
     },
   };
 }
