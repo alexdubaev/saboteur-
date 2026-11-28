@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { chatSchema, type ChatMessage, type WireCommand } from "../../../packages/protocol/src/index.js";
 import { corridorArt, logoArt } from "./art.js";
 import { Game, type MatchSnapshot } from "./game.js";
-import { createGameAudio } from "./game-audio.js";
+import { createGameAudio, preloadGameSounds } from "./game-audio.js";
 import { createSoloMatch, soloBotRange, type SoloMatch } from "./solo-match.js";
 import { copy, errorText } from "./text.js";
 import { Dialog, Icon, Notice, Rules } from "./ui.js";
@@ -116,10 +116,18 @@ export function SoloApp() {
 
   const snapshot = active?.snapshot;
   useEffect(() => {
+    if (sound) preloadGameSounds();
+  }, [sound]);
+
+  useEffect(() => {
     if (!snapshot || snapshot.sequence <= heardSequence.current) return;
     const previous = heardSequence.current;
     heardSequence.current = snapshot.sequence;
-    audio.current?.playLatest(snapshot.journal.filter(({ sequence }) => sequence > previous));
+    audio.current?.playLatest(
+      snapshot.journal.filter(({ sequence }) => sequence > previous),
+      snapshot.room.mySeatId,
+      snapshot.match.outcome?.reason === "ore",
+    );
   }, [snapshot]);
 
   useEffect(() => {

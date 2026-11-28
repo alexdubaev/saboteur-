@@ -289,14 +289,14 @@ test.describe("тестовая игра с ботами", () => {
     }
   });
 
-  test("звук запускается после касания и отключается на весь следующий ход", async ({ browser, browserName }) => {
+  test("звуки шахты запускаются после касания и ходы ботов звучат тише", async ({ browser, browserName }) => {
     test.skip(browserName !== "chromium", "Эта проверка использует Web Audio в Chromium");
     const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
     try {
       await context.addInitScript(seedRandom, 41);
       await context.addInitScript(() => {
-        const create = AudioContext.prototype.createOscillator;
-        AudioContext.prototype.createOscillator = function () {
+        const create = AudioContext.prototype.createBufferSource;
+        AudioContext.prototype.createBufferSource = function () {
           (window as Window & { testAudio?: AudioContext }).testAudio = this;
           return create.call(this);
         };
@@ -306,22 +306,30 @@ test.describe("тестовая игра с ботами", () => {
           delete document.documentElement.dataset.delayResume;
           return new Promise<void>((resolve) => setTimeout(resolve, 100)).then(() => resume.call(this));
         };
-        const start = OscillatorNode.prototype.start;
-        OscillatorNode.prototype.start = function (when?: number) {
-          start.call(this, when);
-          const root = document.documentElement;
-          root.dataset.tones = String(Number(root.dataset.tones ?? 0) + 1);
-          if (this.frequency.value === 330 && this.type === "triangle") {
-            root.dataset.discardTones = String(Number(root.dataset.discardTones ?? 0) + 1);
+        const gains = new WeakMap<AudioBufferSourceNode, GainNode>();
+        const connect = AudioNode.prototype.connect;
+        AudioNode.prototype.connect = function (this: AudioNode, ...args: unknown[]) {
+          if (this instanceof AudioBufferSourceNode && args[0] instanceof GainNode) {
+            gains.set(this, args[0]);
           }
+          return Reflect.apply(connect, this, args);
+        } as typeof connect;
+        const start = AudioBufferSourceNode.prototype.start;
+        AudioBufferSourceNode.prototype.start = function (when?: number, offset?: number, duration?: number) {
+          start.call(this, when, offset, duration);
+          const root = document.documentElement;
+          const playback = JSON.parse(root.dataset.playback ?? "[]");
+          playback.push({ volume: gains.get(this)?.gain.value, offset });
+          root.dataset.playback = JSON.stringify(playback);
         };
       });
       const page = await context.newPage();
       await page.goto(sitesUrl!);
-      const tones = () => page.evaluate(() => Number(document.documentElement.dataset.tones ?? 0));
-      expect(await tones()).toBe(0);
+      const playback = (): Promise<{ volume: number; offset: number }[]> =>
+        page.evaluate(() => JSON.parse(document.documentElement.dataset.playback ?? "[]"));
+      expect(await playback()).toHaveLength(0);
       await page.getByRole("button", { name: "Начать игру" }).tap();
-      await expect.poll(tones).toBeGreaterThan(0);
+      await expect.poll(async () => (await playback()).length).toBeGreaterThan(0);
       await page.getByRole("button", { name: "Роль понятна" }).tap();
       const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
       await expect(turn).toBeVisible();
@@ -334,9 +342,7 @@ test.describe("тестовая игра с ботами", () => {
         await checkCue?.();
         await expect(turn).toBeVisible();
       };
-      const first = await tones();
-      const discardTones = () => page.evaluate(() => Number(document.documentElement.dataset.discardTones ?? 0));
-      const beforeDiscard = await discardTones();
+      const first = (await playback()).length;
       await page.evaluate(async () => {
         const context = (window as Window & { testAudio?: AudioContext }).testAudio;
         if (!context) throw new Error("Audio context was not created");
@@ -344,15 +350,17 @@ test.describe("тестовая игра с ботами", () => {
         document.documentElement.dataset.delayResume = "yes";
       });
       await discard(async () => {
-        await expect.poll(discardTones, { timeout: 280, intervals: [20, 20, 20] }).toBeGreaterThan(beforeDiscard);
+        await expect.poll(async () => (await playback())[first]?.volume).toBe(1);
       });
-      expect(await tones()).toBeGreaterThan(first);
+      const played = await playback();
+      expect(played[first].offset).not.toBe(played[0].offset);
+      expect(played.slice(first + 1).some(({ volume }) => volume > 0 && volume < 1)).toBe(true);
       await page.getByRole("button", { name: "Выключить звук" }).tap();
-      const muted = await tones();
+      const muted = (await playback()).length;
       await discard();
-      expect(await tones()).toBe(muted);
+      expect(await playback()).toHaveLength(muted);
       await page.getByRole("button", { name: "Включить звук" }).tap();
-      await expect.poll(tones).toBeGreaterThan(muted);
+      await expect.poll(async () => (await playback()).length).toBeGreaterThan(muted);
     } finally {
       await context.close();
     }
