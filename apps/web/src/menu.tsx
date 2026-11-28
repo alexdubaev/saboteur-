@@ -32,23 +32,29 @@ export function Menu({ session, invite, canCreateRooms, connecting, pending, err
     <main className="home-stage">
       <div className="home-copy">
         <div className="home-inner">
-          <div className="eyebrow home-edition"><span aria-hidden="true">◆</span> {copy.alpha}<span className="edition-separator" />{copy.profile}</div>
-          <h1 className="home-logo"><img src={logoArt} width={1440} height={488} alt={copy.title} /></h1>
-          <p className="lead">Проложите путь к золоту. Среди участников могут быть предатели.</p>
-          {connecting ? <p className="entry-form soft-note" role="status">{connecting}</p> : <form className="entry-form" onSubmit={submit}>
-            {canCreateRooms ? <div className="entry-switch" role="group" aria-label="Способ входа">
-              <button type="button" className={mode === "create" ? "active" : ""} aria-pressed={mode === "create"} onClick={() => setMode("create")}><Icon name="pickaxe" />Создать</button>
-              <button type="button" className={mode === "join" ? "active" : ""} aria-pressed={mode === "join"} onClick={() => setMode("join")}><Icon name="invite" />Присоединиться</button>
-            </div> : <p className="soft-note">Откройте ссылку от ведущего или введите код приглашения.</p>}
-            {session
-              ? <div className="guest-id"><Avatar {...session} /><span>{session.name}</span></div>
-              : mode === "create" && <label className="field">Имя в экспедиции<input value={name} onChange={(event) => setName(event.target.value)} name="name" autoComplete="nickname" maxLength={32} placeholder="Ваше имя" required /></label>}
-            {mode === "join" && <label className="field">Код приглашения<input name="code" value={code} autoComplete="off" autoCapitalize="characters" maxLength={8} pattern="[23456789A-HJ-KM-NP-Z]{8}" onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="8 символов" required /></label>}
-            <Notice text={error} />
-            <button className="button primary entry-submit" disabled={pending} type="submit">{pending ? "Подождите…" : mode === "create" ? copy.create : copy.join}<span className="arrow" aria-hidden="true">→</span></button>
-          </form>}
-          {resume && !connecting && <button className="button secondary resume-room" disabled={pending} onClick={resume}>Вернуться в комнату</button>}
-          {!connecting && <ShareLink url={shareUrl()} label="Ссылка на игру" />}
+          <div className="home-heading">
+            <div className="eyebrow home-edition"><span aria-hidden="true">◆</span> {copy.alpha}<span className="edition-separator" />{copy.profile}</div>
+            <h1 className="home-logo"><img src={logoArt} width={1440} height={488} alt={copy.title} /></h1>
+            <p className="lead">Проложите путь к золоту. Среди участников могут быть предатели.</p>
+          </div>
+          <div className="home-entry">
+            {connecting ? <p className="entry-form soft-note" role="status">{connecting}</p> : <form className="entry-form" onSubmit={submit}>
+              {canCreateRooms ? <div className="entry-switch" role="group" aria-label="Способ входа">
+                <button type="button" className={mode === "create" ? "active" : ""} aria-pressed={mode === "create"} onClick={() => setMode("create")}><Icon name="pickaxe" />Создать</button>
+                <button type="button" className={mode === "join" ? "active" : ""} aria-pressed={mode === "join"} onClick={() => setMode("join")}><Icon name="invite" />Присоединиться</button>
+              </div> : <p className="soft-note">Откройте ссылку от ведущего или введите код приглашения.</p>}
+              {session
+                ? <div className="guest-id"><Avatar {...session} /><span>{session.name}</span></div>
+                : mode === "create" && <label className="field">Имя в экспедиции<input value={name} onChange={(event) => setName(event.target.value)} name="name" autoComplete="nickname" maxLength={32} placeholder="Ваше имя" required /></label>}
+              {mode === "join" && <label className="field">Код приглашения<input name="code" value={code} autoComplete="off" autoCapitalize="characters" maxLength={8} pattern="[23456789A-HJ-KM-NP-Z]{8}" onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="8 символов" required /></label>}
+              <Notice text={error} />
+              <button className="button primary entry-submit" disabled={pending} type="submit">{pending ? "Подождите…" : mode === "create" ? copy.create : copy.join}<span className="arrow" aria-hidden="true">→</span></button>
+            </form>}
+            {!connecting && <div className="home-actions">
+              {resume && <button className="button secondary resume-room" disabled={pending} onClick={resume}>Вернуться в комнату</button>}
+              <ShareLink url={shareUrl()} label="Ссылка на игру" />
+            </div>}
+          </div>
           <ul className="home-facts" aria-label="Об экспедиции">
             <li><Icon name="invite" />3–10 игроков</li><li><Icon name="cards" />3 раунда</li><li><Icon name="gold" />1 золотая жила</li>
           </ul>

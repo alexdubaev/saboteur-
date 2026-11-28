@@ -72,7 +72,8 @@ function gameArt(): Plugin {
 
 function webApp(): Plugin {
   const iconSizes = [192, 512];
-  const iconTitle = "За\u00a0золотом";
+  const name = "Золото и Предатели";
+  const iconTitle = name.replaceAll(" ", "\u00a0");
   return {
     name: "game-web-app",
     apply: "build",
@@ -94,7 +95,7 @@ function webApp(): Plugin {
         type: "asset",
         fileName: "manifest.webmanifest",
         source: JSON.stringify({
-          name: "Золото и предатели", short_name: iconTitle, lang: "ru",
+          name, short_name: iconTitle, lang: "ru",
           id: "/", start_url: "/", scope: "/", display: "standalone",
           background_color: "#100e20", theme_color: "#100e20", icons,
         }),
