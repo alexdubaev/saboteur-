@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { RoomSnapshot, SessionView, WireCommand } from "../../../packages/protocol/src/index.js";
+import type { JournalEntry, RoomSnapshot, SessionView, WireCommand } from "../../../packages/protocol/src/index.js";
 import { Game } from "./game.js";
+import { createGameAudio, preloadGameSounds } from "./game-audio.js";
 import { Lobby } from "./lobby.js";
 import { Menu, type EntryMode } from "./menu.js";
 import { errorCode, request, roomPath, sendCommand, sessionRequest, useRoomSocket } from "./network.js";
 import { copy, errorText } from "./text.js";
+import { getGoldFinale } from "./turn-presentation.js";
 import { Icon, Notice, Rules } from "./ui.js";
 
 const params = new URLSearchParams(window.location.search);
@@ -25,32 +27,70 @@ export function App() {
   const [state, setState] = useState<RoomSnapshot | null>(null);
   const [session, setSession] = useState<SessionView | null>(null);
   const [rules, setRules] = useState(false);
-  const [sound, setSound] = useState(() => localStorage.getItem(soundKey) === "on");
+  const [sound, setSound] = useState(() => {
+    try { return localStorage.getItem(soundKey) === "on"; } catch { return false; }
+  });
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [terminalLobby, setTerminalLobby] = useState<string | null>(null);
   const [resume, setResume] = useState(() => initialRoom ?? (invitation ? null : sessionStorage.getItem(savedRoomKey)));
   const inFlight = useRef(false);
   const room = useRef(initialRoom);
-  const audio = useRef<AudioContext | null>(null);
+  const audio = useRef<ReturnType<typeof createGameAudio> | null>(null);
+  const heard = useRef<{ roomId: string; sequence: number } | null>(null);
+  const finalLobby = state?.match?.matchId === terminalLobby;
+  const phase = state?.match?.phase;
+  const inMine = Boolean(phase) && !finalLobby && phase !== "MATCH_FINISHED" && phase !== "ABANDONED";
 
-  const playSound = () => {
-    const context = audio.current ?? new AudioContext();
-    audio.current = context;
-    void context.resume().then(() => {
-      const tone = context.createOscillator();
-      const volume = context.createGain();
-      tone.type = "sine";
-      tone.frequency.setValueAtTime(660, context.currentTime);
-      tone.frequency.exponentialRampToValueAtTime(910, context.currentTime + .1);
-      volume.gain.setValueAtTime(.04, context.currentTime);
-      volume.gain.exponentialRampToValueAtTime(.001, context.currentTime + .19);
-      tone.connect(volume);
-      volume.connect(context.destination);
-      tone.start();
-      tone.stop(context.currentTime + .2);
-    }).catch(() => undefined);
-  };
+  function enableAudio(preview: boolean) {
+    try {
+      const player = audio.current ??= createGameAudio();
+      player.setEnabled(true);
+      player.setAmbience(inMine && !document.hidden);
+      void player.resume(preview).catch(() => {});
+    } catch {
+      // The room is still playable when a browser blocks Web Audio.
+    }
+  }
+
+  function toggleSound() {
+    const enabled = !sound;
+    setSound(enabled);
+    if (enabled) enableAudio(true);
+    else audio.current?.setEnabled(false);
+    try { localStorage.setItem(soundKey, enabled ? "on" : "off"); } catch { /* Apply for this page only. */ }
+  }
+
+  const playGold = useCallback((event: JournalEntry) => {
+    if (!document.hidden) audio.current?.playLatest([event], "", true);
+  }, []);
+
+  useEffect(() => {
+    if (sound) preloadGameSounds();
+  }, [sound]);
+
+  useEffect(() => {
+    const sync = () => audio.current?.setAmbience(inMine && sound && !document.hidden);
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      document.removeEventListener("visibilitychange", sync);
+      audio.current?.setAmbience(false);
+    };
+  }, [inMine, sound]);
+
+  useEffect(() => {
+    const previous = heard.current;
+    heard.current = state && { roomId: state.room.roomId, sequence: state.sequence };
+    if (!state?.match || finalLobby || document.hidden || previous?.roomId !== state.room.roomId || previous.sequence >= state.sequence) return;
+    const events = state.journal.filter(({ sequence }) => sequence > previous.sequence);
+    const gold = getGoldFinale({ ...state, match: state.match }, events);
+    audio.current?.playLatest(
+      gold ? events.filter(({ type }) => type === "PLAY_TUNNEL") : events,
+      state.room.mySeatId,
+      state.match.outcome?.reason === "ore",
+    );
+  }, [state, finalLobby]);
 
   const accept = useCallback((snapshot: RoomSnapshot) => {
     if (snapshot.room.roomId !== room.current) return;
@@ -127,18 +167,19 @@ export function App() {
   };
 
   const enter = (mode: EntryMode, name: string, code: string) => mutation(async () => {
+    if (sound) enableAudio(true);
     if (!session) setSession(await sessionRequest(name));
     const snapshot = mode === "create"
       ? await request<RoomSnapshot>("/rooms", {})
       : await request<RoomSnapshot>("/rooms/join", { code });
     attach(snapshot);
-    if (sound) playSound();
   });
 
   const run = async (command: WireCommand) => {
     if (!state || status !== "open") return false;
     const { room: current, match } = state;
     return mutation(async () => {
+      if (sound) enableAudio(false);
       try {
         await sendCommand({
           roomId: current.roomId, matchId: match?.matchId ?? null,
@@ -148,7 +189,6 @@ export function App() {
         if (errorCode(failure) === "STALE_REVISION" || errorCode(failure) === "WRONG_PHASE") resync();
         throw failure;
       }
-      if (sound) playSound();
     });
   };
 
@@ -170,31 +210,34 @@ export function App() {
     reset();
   });
 
-  const finalLobby = state?.match?.matchId === terminalLobby;
   const blocked = pending || (state !== null && status !== "open");
+  const connectionStatus = state && status !== "open" ? status === "offline" ? copy.offline : copy.reconnect : undefined;
+  const soundControl = <button type="button" className="icon-button" aria-label={sound ? copy.soundOn : copy.soundOff}
+    title={sound ? copy.soundOn : copy.soundOff} aria-pressed={sound} onClick={toggleSound}>
+    <Icon name="volume" className={sound ? "" : "muted-icon"} />
+  </button>;
 
-  return <>
+  return <div className="network-app">
     <header className={`site-header${state ? " site-header-room" : ""}`}>
       <div className="site-name"><Icon name="lantern" />{copy.title}</div>
       <div className="header-actions">
         {state && <span className="room-header-code" title="Код приглашения">{state.room.code}</span>}
-        <button className="icon-button" aria-label={sound ? copy.soundOn : copy.soundOff} aria-pressed={sound} onClick={() => {
-          const enabled = !sound;
-          setSound(enabled);
-          localStorage.setItem(soundKey, enabled ? "on" : "off");
-          if (enabled) playSound();
-        }}><Icon name="volume" className={sound ? "" : "muted-icon"} /></button>
+        {soundControl}
         <button className="button secondary header-rules" onClick={() => setRules(true)}><Icon name="info" />{copy.rules}</button>
       </div>
     </header>
-    {state && status !== "open" && <p className="connection-status" role="status">{status === "offline" ? copy.offline : copy.reconnect}</p>}
     {state?.match && !finalLobby ? <Game key={state.match.matchId} snapshot={{ ...state, match: state.match }} pending={blocked} error={error} run={run} send={send}
+      openRules={() => setRules(true)} soundControl={soundControl} connectionStatus={connectionStatus} onGoldReveal={playGold}
       lobby={() => setTerminalLobby(state.match!.matchId)} exit={() => { setError(""); reset(true); }} />
       : state ? <>
+        {connectionStatus && <p className="connection-status" role="status">{connectionStatus}</p>}
         <div className="lobby-error"><Notice text={error} /></div>
         <Lobby snapshot={state} run={run} send={send} pending={blocked} leave={() => void leave()} />
       </> : <Menu session={session} invite={invitation} pending={pending} error={error} enter={(...args) => void enter(...args)}
-        resume={session && resume ? () => void mutation(async () => attach(await request<RoomSnapshot>(roomPath(resume)))) : undefined} />}
+        resume={session && resume ? () => void mutation(async () => {
+          if (sound) enableAudio(false);
+          attach(await request<RoomSnapshot>(roomPath(resume)));
+        }) : undefined} />}
     {rules && <Rules requiredOre={finalLobby ? undefined : state?.match?.requiredOre} close={() => setRules(false)} />}
-  </>;
+  </div>;
 }

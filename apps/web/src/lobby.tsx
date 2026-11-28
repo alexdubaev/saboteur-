@@ -7,6 +7,9 @@ import { Avatar, Icon } from "./ui.js";
 
 export type RunCommand = (command: WireCommand) => Promise<boolean>;
 
+const minParticipants = 3;
+const maxParticipants = 10;
+
 const inviteUrl = (code: string) => {
   const url = new URL(window.location.pathname, window.location.origin);
   url.searchParams.set("join", code);
@@ -33,7 +36,10 @@ export function Lobby({ snapshot, run, send, pending, leave }: { snapshot: RoomS
   const { room, match } = snapshot;
   const host = room.mySeatId === room.hostSeatId;
   const me = room.seats.find((seat) => seat.seatId === room.mySeatId);
-  const allReady = room.seats.length >= 3 && room.seats.every((seat) => seat.bot || (seat.ready && seat.present));
+  const botCount = room.seats.filter((seat) => seat.bot).length;
+  const freeSeats = maxParticipants - room.seats.length;
+  const enoughPlayers = room.seats.length >= minParticipants;
+  const allReady = enoughPlayers && room.seats.every((seat) => seat.bot || (seat.ready && seat.present));
   const copyInvite = async () => {
     try {
       await navigator.clipboard.writeText(inviteUrl(room.code));
@@ -49,7 +55,7 @@ export function Lobby({ snapshot, run, send, pending, leave }: { snapshot: RoomS
         <div>
           <p className="eyebrow">{copy.alpha} · {copy.profile}</p>
           <h1>{copy.lobby}</h1>
-          <p className="lobby-intro">Пригласите команду и отметьтесь перед спуском.</p>
+          <p className="lobby-intro">Пригласите друзей по ссылке. Ведущий может добавить ботов перед началом.</p>
         </div>
         <div className="invite">
           <span>Код приглашения</span><strong aria-label="Код приглашения" data-testid="invite-code">{room.code}</strong>
@@ -59,24 +65,26 @@ export function Lobby({ snapshot, run, send, pending, leave }: { snapshot: RoomS
       </section>
       <div className="lobby-body">
         <section className="panel crew-panel" aria-label={copy.crew}>
-          <div className="panel-heading"><h2>{copy.crew}</h2><span>{room.seats.length} / 10</span></div>
+          <div className="panel-heading"><h2>{copy.crew}</h2><span>{room.seats.length} / {maxParticipants}</span></div>
+          <p className="soft-note" role="status">Людей {room.seats.length - botCount} · Ботов {botCount} · Свободных мест {freeSeats}</p>
+          {!enoughPlayers && <p className="soft-note">Для старта нужно минимум {minParticipants} участника. {host && "Можно добавить ботов."}</p>}
+          {host && enoughPlayers && !allReady && <p className="soft-note">Дождитесь готовности всех игроков.</p>}
+          {host && !match && freeSeats === 0 && botCount > 0 && <p className="soft-note">Уберите бота, чтобы освободить место для друга.</p>}
+          <div className="lobby-actions" style={{ marginBottom: 14 }}>
+            {host && !match && <button className="button secondary" disabled={pending || freeSeats === 0} onClick={() => void run({ type: "ADD_BOT" })}><Icon name="cart" />Добавить бота</button>}
+            {!match && <button className="button secondary" disabled={pending || !me} aria-pressed={me?.ready ?? false} onClick={() => void run({ type: "SET_READY", ready: !me?.ready })}><Icon name="confirm" />{me?.ready ? copy.unready : copy.ready}</button>}
+            {host && <button className="button primary" disabled={pending || !allReady} onClick={() => void run({ type: match ? "REPLAY" : "START_MATCH" })}><Icon name="pickaxe" />{match ? "Играть снова" : copy.play}</button>}
+          </div>
           <ul className="lobby-seats">
             {room.seats.map((seat) => (
               <li key={seat.seatId}>
                 <Avatar {...seat} />
                 <div className="seat-name"><strong>{seat.name}</strong><small>{[seat.seatId === room.mySeatId && "Вы", seat.seatId === room.hostSeatId && "Ведущий", seat.bot && "Бот"].filter(Boolean).join(" · ")}</small></div>
                 <span className={seat.bot || (seat.present && seat.ready) ? "seat-ready" : "soft-note"}>{seat.bot || (seat.present && seat.ready) ? "Готов" : seat.present ? "Ждёт" : "Нет связи"}</span>
-                {host && !match && seat.bot && <button className="icon-button" aria-label={`Убрать бота ${seat.name}`} disabled={pending} onClick={() => void run({ type: "REMOVE_BOT", seatId: seat.seatId })}><Icon name="close" /></button>}
+                {host && !match && seat.bot && <button className="icon-button" aria-label={`Убрать бота ${seat.name}`} title="Убрать бота" disabled={pending} onClick={() => void run({ type: "REMOVE_BOT", seatId: seat.seatId })}><Icon name="close" /></button>}
               </li>
             ))}
           </ul>
-          {room.seats.length < 3 && <p className="soft-note">Для старта нужно минимум 3 участника.</p>}
-          {host && !allReady && room.seats.length >= 3 && <p className="soft-note">Дождитесь, пока все участники будут в комнате и отметят готовность.</p>}
-          <div className="lobby-actions">
-            {!match && <button className="button secondary" disabled={pending || !me} aria-pressed={me?.ready ?? false} onClick={() => void run({ type: "SET_READY", ready: !me?.ready })}><Icon name="confirm" />{me?.ready ? copy.unready : copy.ready}</button>}
-            {host && !match && <button className="button secondary" disabled={pending || room.seats.length >= 10} onClick={() => void run({ type: "ADD_BOT" })}><Icon name="cart" />Добавить бота</button>}
-            {host && <button className="button primary" disabled={pending || !allReady} onClick={() => void run({ type: match ? "REPLAY" : "START_MATCH" })}><Icon name="pickaxe" />{match ? "Играть снова" : copy.play}</button>}
-          </div>
         </section>
         <div className="lobby-side">
           <section className="panel setting-panel">

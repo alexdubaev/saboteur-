@@ -116,7 +116,11 @@ test("изолированные гости играют три раунда и 
         const width = (await startImage.boundingBox())!.width;
         await portrait.getByRole("button", { name: "Приблизить" }).tap();
         expect((await startImage.boundingBox())!.width).toBeGreaterThan(width);
-        await portrait.getByRole("button", { name: "Показать всё поле" }).tap();
+        await portrait.getByRole("button", { name: "Вся шахта" }).tap();
+        for (const phone of [portrait, landscape]) {
+          await expect(phone.getByRole("heading", { name: "Чат", exact: true })).toBeVisible();
+          await expect(phone.getByRole("heading", { name: "Журнал", exact: true })).toBeVisible();
+        }
         const desktopStart = host.getByRole("img", { name: "Вход в шахту" });
         const beforeKeyboard = (await desktopStart.boundingBox())!.width;
         const viewport = host.getByRole("region", { name: /^Поле шахты/ });
@@ -174,7 +178,8 @@ test("изолированные гости играют три раунда и 
             const tunnel = mine.getByRole("img", { name: new RegExp(`^Туннель .* · Автор: ${author}$`) });
             await expect(tunnel).toBeVisible();
             const frameColor = await tunnel.evaluate((image) => getComputedStyle(image.parentElement!, "::before").borderTopColor);
-            const nameColor = await page.getByRole("region", { name: "Участники" }).getByText(author, { exact: true })
+            const visibleAuthor = index > 0 && index === active.indexOf(true) ? "Вы" : author;
+            const nameColor = await page.getByRole("region", { name: "Участники" }).getByText(visibleAuthor, { exact: true })
               .locator(".seat-color").evaluate((dot) => getComputedStyle(dot).backgroundColor);
             expect(frameColor).toBe(nameColor);
             const lastGoal = (await mine.getByRole("img", { name: /^Камера 3 / }).boundingBox())!;

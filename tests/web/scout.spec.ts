@@ -35,8 +35,11 @@ test("новые правила показывают одну жилу, прив
   });
 
   await page.goto("/?room=" + roomId);
-  await expect(page.getByText("Золото 0/1")).toBeVisible();
-  await expect(page.getByText("Ходы 0", { exact: true })).toBeVisible();
+  const stats = page.getByLabel("Счётчики партии");
+  await expect(stats.getByRole("term").filter({ hasText: /^Золото$/ })).toBeVisible();
+  await expect(stats.getByRole("definition").filter({ hasText: /^0\/1$/ })).toBeVisible();
+  await expect(stats.getByRole("term").filter({ hasText: /^Ход$/ })).toBeVisible();
+  await expect(stats.getByRole("definition").filter({ hasText: /^0$/ })).toBeVisible();
   await page.getByRole("button", { name: "Разведка", exact: true }).click();
   await page.getByRole("button", { name: "Камера 1 · закрыта" }).click();
   await page.getByRole("button", { name: "Подтвердить ход" }).click();
