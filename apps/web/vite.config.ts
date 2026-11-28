@@ -73,7 +73,7 @@ function gameArt(): Plugin {
 function webApp(): Plugin {
   const iconSizes = [192, 512];
   const name = "Золото и Предатели";
-  const iconTitle = name.replaceAll(" ", "\u00a0");
+  const iconTitle = "ЗиП";
   return {
     name: "game-web-app",
     apply: "build",
