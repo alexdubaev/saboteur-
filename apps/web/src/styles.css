@@ -325,6 +325,15 @@ input::placeholder { color: #ad9dbe; }
 }
 .solo-app > .home-stage { flex: 1 0 auto; min-height: 0; }
 .solo-app .entry-fullscreen { justify-self: start; min-height: 34px; padding-block: 4px; font-size: .85rem; }
+.solo-start-controls { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.solo-start-controls label {
+  display: flex; align-items: center; gap: 6px; padding-inline: 8px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted);
+}
+.solo-start-controls select {
+  min-height: 42px; padding: 2px 4px; border: 0; color: var(--gold);
+  background: var(--surface); font-size: 1rem; font-weight: 650;
+}
 
 @media (max-width: 840px), (orientation: landscape) and (max-height: 520px) {
   .solo-app > .site-header { min-height: 0; padding-block: max(4px, env(safe-area-inset-top)) 4px; }
@@ -389,8 +398,12 @@ input::placeholder { color: #ad9dbe; }
 .phone-score > div { display: inline-flex; gap: 3px; }
 .phone-score dt { color: var(--muted); }
 .phone-score dd { margin: 0; color: var(--gold); font-weight: 650; font-variant-numeric: tabular-nums; }
-.phone-game .phone-crew { grid-area: crew; border: 0; background: transparent; padding: 0; overflow: visible; }
+.phone-game .phone-crew { grid-area: crew; min-width: 0; border: 0; background: transparent; padding: 0; overflow: visible; }
 .phone-game .phone-crew ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; overflow: visible; }
+.phone-game .phone-crew .crew-scroll {
+  grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(66px, max-content);
+  overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin;
+}
 .phone-game .phone-crew li {
   display: flex; justify-content: space-between; align-items: center; column-gap: 3px;
   min-height: 20px; padding: 1px 3px; border: 1px solid var(--line); border-radius: 4px;

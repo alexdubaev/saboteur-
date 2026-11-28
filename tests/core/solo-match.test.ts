@@ -12,14 +12,18 @@ test("the Sites adapter uses the same SHA-256 for card IDs and rule definitions"
   }
 });
 
-test("one human and two bots can complete all three rounds without a server and replay", async () => {
-  const match = new SoloMatch("  Старатель  ", await loadActiveDefinition(), () => 0.18);
+test.each([
+  { botCount: 2, handCount: 6, deckCount: 49 },
+  { botCount: 9, handCount: 4, deckCount: 27 },
+])("one human and $botCount bots can complete all three rounds without a server and replay", async ({ botCount, handCount, deckCount }) => {
+  const match = new SoloMatch("  Старатель  ", await loadActiveDefinition(), () => 0.18, botCount);
   const initial = match.snapshot();
+  expect(new Set(initial.room.seats.map(({ seatId }) => seatId)).size).toBe(botCount + 1);
   expect(initial.room.seats.map(({ name, bot }) => [name, bot])).toEqual([
-    ["Старатель", false], ["Бот 2", true], ["Бот 3", true],
+    ["Старатель", false], ...Array.from({ length: botCount }, (_, index) => [`Бот ${index + 2}`, true]),
   ]);
-  expect(initial.match).toMatchObject({ phase: "ROLE_REVEAL", requiredOre: 1, maxTurns: null, deckCount: 49 });
-  expect(initial.match.self.hand).toHaveLength(6);
+  expect(initial.match).toMatchObject({ phase: "ROLE_REVEAL", requiredOre: 1, maxTurns: null, deckCount });
+  expect(initial.match.self.hand).toHaveLength(handCount);
   expect(initial.match.seats.every((seat) => seat.role === undefined)).toBe(true);
   expect(initial.match.board.filter((tile) => tile.kind === "goal").every((tile) => tile.assetId === "goal-hidden")).toBe(true);
   expect(() => match.command({ type: "REPLAY" })).toThrow("WRONG_PHASE");
@@ -27,7 +31,7 @@ test("one human and two bots can complete all three rounds without a server and 
 
   const rounds = new Set<number>();
   let attributedTunnel = false;
-  for (let index = 0; index < 225; index++) {
+  for (let index = 0; index < 275; index++) {
     const snapshot = match.snapshot();
     const { match: view } = snapshot;
     if (view.phase === "ROUND_SUMMARY") rounds.add(view.roundNo);
@@ -55,4 +59,12 @@ test("one human and two bots can complete all three rounds without a server and 
   expect(replay.match).toMatchObject({ phase: "ROLE_REVEAL", roundNo: 1, self: { score: 0 } });
   expect(replay.match.matchId).not.toBe(initial.match.matchId);
   expect(replay.room.roomId).toBe(initial.room.roomId);
+  expect(replay.room.seats).toEqual(initial.room.seats);
+});
+
+test("rejects a bot count outside the ruleset before starting a solo match", async () => {
+  const definition = await loadActiveDefinition();
+  for (const count of [1, 10, 2.5]) {
+    expect(() => new SoloMatch("Старатель", definition, () => 0.18, count)).toThrow(RangeError);
+  }
 });

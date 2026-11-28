@@ -8,6 +8,20 @@ declare const __SITES_SOLO_DEFINITION__: Definition | undefined;
 
 type SoloSnapshot = RoomSnapshot & { match: PlayerView };
 
+function botRange(definition: Definition) {
+  const { min, max } = definition.ruleset.players;
+  return { min: min - 1, max: max - 1 };
+}
+
+function sitesDefinition(): Definition {
+  if (typeof __SITES_SOLO_DEFINITION__ === "undefined") throw new Error("Missing Sites solo definition");
+  return __SITES_SOLO_DEFINITION__;
+}
+
+export function soloBotRange() {
+  return botRange(sitesDefinition());
+}
+
 function randomFraction(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0] / 0x1_0000_0000;
 }
@@ -37,12 +51,18 @@ export class SoloMatch {
   #sequence = 0;
   #match: MatchState;
 
-  constructor(name: string, definition: Definition, private readonly rng: Rng) {
+  constructor(name: string, definition: Definition, private readonly rng: Rng, botCount = botRange(definition).min) {
+    const { min, max } = botRange(definition);
+    if (!Number.isInteger(botCount) || botCount < min || botCount > max) {
+      throw new RangeError(`Expected ${min}–${max} bots`);
+    }
     const guest = guestSchema.parse({ name });
     this.#seats = [
       { seatId: "solo", name: guest.name, avatarId: "guest", ready: true, present: true, bot: false },
-      { seatId: "bot-2", name: "Бот 2", avatarId: "bot", ready: true, present: true, bot: true },
-      { seatId: "bot-3", name: "Бот 3", avatarId: "bot", ready: true, present: true, bot: true },
+      ...Array.from({ length: botCount }, (_, index) => {
+        const number = index + 2;
+        return { seatId: `bot-${number}`, name: `Бот ${number}`, avatarId: "bot", ready: true, present: true, bot: true };
+      }),
     ];
     const started = this.#start(definition);
     this.#match = started.state;
@@ -136,7 +156,6 @@ export class SoloMatch {
   }
 }
 
-export function createSoloMatch(name: string): SoloMatch {
-  if (typeof __SITES_SOLO_DEFINITION__ === "undefined") throw new Error("Missing Sites solo definition");
-  return new SoloMatch(name, __SITES_SOLO_DEFINITION__, randomFraction);
+export function createSoloMatch(name: string, botCount: number): SoloMatch {
+  return new SoloMatch(name, sitesDefinition(), randomFraction, botCount);
 }

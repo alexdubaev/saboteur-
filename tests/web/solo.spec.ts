@@ -43,7 +43,7 @@ test.describe("тестовая игра с ботами", () => {
         await expect(page.getByRole("heading", { name: "Золото и предатели" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Создать комнату" })).toHaveCount(0);
         expect(await viewportFits()).toBe(true);
-        const play = page.getByRole("button", { name: "Играть с двумя ботами" });
+        const play = page.getByRole("button", { name: "Начать игру" });
         await expect(play).toBeInViewport({ ratio: 0.99 });
         await play.tap();
         const role = page.getByRole("dialog", { name: "Моя роль" });
@@ -200,7 +200,7 @@ test.describe("тестовая игра с ботами", () => {
 
         await page.getByRole("button", { name: "Выйти из партии" }).tap();
         await page.getByRole("dialog", { name: "Выйти из партии" }).getByRole("button", { name: "В меню" }).tap();
-        await expect(page.getByRole("button", { name: "Играть с двумя ботами" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Начать игру" })).toBeVisible();
         expect(networkCalls).toEqual([]);
         expect(errors).toEqual([]);
       } finally {
@@ -215,7 +215,7 @@ test.describe("тестовая игра с ботами", () => {
       await context.addInitScript(seedRandom, 22);
       const page = await context.newPage();
       await page.goto(sitesUrl!);
-      await page.getByRole("button", { name: "Играть с двумя ботами" }).tap();
+      await page.getByRole("button", { name: "Начать игру" }).tap();
       await page.getByRole("button", { name: "Роль понятна" }).tap();
       const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
       await expect(turn).toBeVisible();
@@ -252,6 +252,82 @@ test.describe("тестовая игра с ботами", () => {
       await hand.getByRole("combobox", { name: "Цель карты" }).selectOption({ label: "Бот 3" });
       await confirm.tap();
       await expect(journal.getByText("Старатель сломал кирку игроку «Бот 3»")).toBeAttached();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("девять ботов играют за одним столом", async ({ browser }) => {
+    const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
+    try {
+      await context.addInitScript(seedRandom, 41);
+      const page = await context.newPage();
+      await page.goto(sitesUrl!);
+      const count = page.getByRole("combobox", { name: "Число ботов" });
+      await expect(count).toHaveValue("2");
+      await count.selectOption("9");
+      await page.getByRole("button", { name: "Начать игру" }).tap();
+      await page.getByRole("button", { name: "Роль понятна" }).tap();
+      const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
+      await expect(turn).toBeVisible();
+      const crew = page.getByRole("region", { name: "Участники" });
+      await expect(crew.getByRole("listitem")).toHaveCount(10);
+      await crew.getByText("Бот 10", { exact: true }).scrollIntoViewIfNeeded();
+      await expect(crew.getByText("Бот 10", { exact: true })).toBeInViewport();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+      const hand = page.getByRole("region", { name: "Ваша рука" });
+      await expect(hand.locator(".hand-card")).toHaveCount(4);
+      await hand.locator(".hand-card").first().tap();
+      await hand.getByRole("button", { name: "Сбросить в закрытую" }).tap();
+      await hand.getByRole("button", { name: "Подтвердить ход" }).tap();
+      const journal = page.getByRole("region", { name: "Журнал", exact: true });
+      await expect(journal.getByText("Бот 10", { exact: true }).first()).toBeAttached({ timeout: 8000 });
+      await expect(turn).toBeVisible();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("звук запускается после касания и отключается на весь следующий ход", async ({ browser, browserName }) => {
+    test.skip(browserName !== "chromium", "Эта проверка использует Web Audio в Chromium");
+    const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
+    try {
+      await context.addInitScript(seedRandom, 41);
+      await context.addInitScript(() => {
+        const start = OscillatorNode.prototype.start;
+        OscillatorNode.prototype.start = function (when?: number) {
+          start.call(this, when);
+          const root = document.documentElement;
+          root.dataset.tones = String(Number(root.dataset.tones ?? 0) + 1);
+        };
+      });
+      const page = await context.newPage();
+      await page.goto(sitesUrl!);
+      const tones = () => page.evaluate(() => Number(document.documentElement.dataset.tones ?? 0));
+      expect(await tones()).toBe(0);
+      await page.getByRole("button", { name: "Начать игру" }).tap();
+      await expect.poll(tones).toBeGreaterThan(0);
+      await page.getByRole("button", { name: "Роль понятна" }).tap();
+      const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
+      await expect(turn).toBeVisible();
+      const hand = page.getByRole("region", { name: "Ваша рука" });
+      const discard = async () => {
+        await hand.locator(".hand-card").first().tap();
+        await hand.getByRole("button", { name: "Сбросить в закрытую" }).tap();
+        await hand.getByRole("button", { name: "Подтвердить ход" }).tap();
+        await expect(turn).toBeHidden();
+        await expect(turn).toBeVisible();
+      };
+      const first = await tones();
+      await discard();
+      expect(await tones()).toBeGreaterThan(first);
+      await page.getByRole("button", { name: "Выключить звук" }).tap();
+      const muted = await tones();
+      await discard();
+      expect(await tones()).toBe(muted);
+      await page.getByRole("button", { name: "Включить звук" }).tap();
+      await expect.poll(tones).toBeGreaterThan(muted);
     } finally {
       await context.close();
     }

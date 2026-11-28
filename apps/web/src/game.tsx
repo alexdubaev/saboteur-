@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { CardCommand, PlayerView, Position, Rotation } from "../../../packages/game-core/src/types.js";
 import type { RoomSnapshot } from "../../../packages/protocol/src/index.js";
 import { cardArt } from "./art.js";
@@ -134,10 +134,11 @@ function MatchResults({ snapshot, run, pending, error, lobby, solo }: { snapshot
 
 function Crew({ snapshot, authors, compact = false }: { snapshot: MatchSnapshot; authors: ReadonlyMap<string, TunnelAuthor>; compact?: boolean }) {
   const { room, match } = snapshot;
+  const scrollable = compact && room.seats.length > 3;
   return (
     <section className={`panel match-crew${compact ? " phone-crew" : ""}`} aria-label={copy.crew}>
       {!compact && <div className="panel-heading"><h2>{copy.crew}</h2><span>{room.seats.length}</span></div>}
-      <ul>
+      <ul className={scrollable ? "crew-scroll" : undefined} tabIndex={scrollable ? 0 : undefined}>
         {room.seats.map((seat) => {
           const info = match.seats.find(({ seatId }) => seatId === seat.seatId);
           const active = seat.seatId === match.turnSeatId;
@@ -182,7 +183,7 @@ function lastBoardMove(snapshot: MatchSnapshot): Position | null {
   return null;
 }
 
-export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; sendLocalMessage?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void; fullscreenControl?: { label: string; active: boolean; toggle: () => void } }) {
+export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl, soundControl }: { snapshot: MatchSnapshot; pending: boolean; error: string; run: RunCommand; send?: (message: string) => Promise<boolean>; sendLocalMessage?: (message: string) => Promise<boolean>; lobby: () => void; exit: () => void; openRules?: () => void; fullscreenControl?: { label: string; active: boolean; toggle: () => void }; soundControl?: ReactNode }) {
   const { match, room } = snapshot;
   const solo = !send;
   const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches) && solo;
@@ -302,6 +303,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
           </button>
           {fullscreenControl && <button className="button secondary" aria-label={fullscreenControl.label} aria-pressed={fullscreenControl.active}
             onClick={fullscreenControl.toggle}>{fullscreenControl.active ? "Свернуть" : "Экран"}</button>}
+          {soundControl}
           {match.self.scoutResults.length > 0 && <button className="icon-button" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" /></button>}
           {openRules && <button className="icon-button" aria-label={copy.rules} onClick={openRules}><Icon name="info" /></button>}
           <button className="icon-button" aria-label={leaveLabel} onClick={() => setModal("leave")}><Icon name="arrow-back" /></button>
@@ -313,6 +315,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
         </div>
         {counts}
         <div className="match-tools">
+          {soundControl}
           {fullscreenControl && <button className="button secondary" onClick={fullscreenControl.toggle}>{fullscreenControl.label}</button>}
           <button className="button secondary" title={copy.role} disabled={!roleName} onClick={() => setModal("role")}><Icon name="lock" />{solo && roleName ? roleName : copy.role}</button>
           {match.self.scoutResults.length > 0 && <button className="button secondary" aria-label="Моя разведка" onClick={() => setModal({ roundNo: match.roundNo })}><Icon name="scout" />Разведка</button>}

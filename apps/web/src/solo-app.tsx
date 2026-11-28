@@ -1,14 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { chatSchema, type ChatMessage, type WireCommand } from "../../../packages/protocol/src/index.js";
 import { corridorArt, logoArt } from "./art.js";
 import { Game, type MatchSnapshot } from "./game.js";
-import { createSoloMatch, type SoloMatch } from "./solo-match.js";
+import { createGameAudio } from "./game-audio.js";
+import { createSoloMatch, soloBotRange, type SoloMatch } from "./solo-match.js";
 import { copy, errorText } from "./text.js";
 import { Dialog, Icon, Notice, Rules } from "./ui.js";
 
 type ActiveMatch = { game: SoloMatch; snapshot: MatchSnapshot };
 
+const soundKey = "zoloto.solo-sound";
+
 export function SoloApp() {
+  const [botRange] = useState(soloBotRange);
+  const [botCount, setBotCount] = useState(botRange.min);
+  const [sound, setSound] = useState(() => {
+    try { return localStorage.getItem(soundKey) !== "off"; } catch { return true; }
+  });
+  const audio = useRef<ReturnType<typeof createGameAudio> | null>(null);
+  const heardSequence = useRef(0);
   const [active, setActive] = useState<ActiveMatch | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [fullscreenHelp, setFullscreenHelp] = useState(false);
@@ -42,12 +52,33 @@ export function SoloApp() {
     setFullscreenHelp(true);
   }
 
+  function enableAudio(preview: boolean) {
+    try {
+      const player = audio.current ??= createGameAudio();
+      player.setEnabled(true);
+      void player.resume(preview).catch(() => {});
+    } catch {
+      // Audio is optional when the browser cannot open an audio context.
+    }
+  }
+
+  function toggleSound() {
+    const enabled = !sound;
+    setSound(enabled);
+    if (enabled) enableAudio(true);
+    else audio.current?.setEnabled(false);
+    try { localStorage.setItem(soundKey, enabled ? "on" : "off"); } catch { /* Apply for this page only. */ }
+  }
+
   function start() {
     try {
-      const game = createSoloMatch("Старатель");
+      const game = createSoloMatch("Старатель", botCount);
+      const snapshot = game.snapshot();
+      heardSequence.current = snapshot.sequence;
+      if (sound) enableAudio(true);
       setError("");
       setChat([]);
-      setActive({ game, snapshot: game.snapshot() });
+      setActive({ game, snapshot });
     } catch {
       setError("Партию не удалось запустить. Попробуйте снова.");
     }
@@ -73,6 +104,7 @@ export function SoloApp() {
     const { game } = active;
     try {
       game.command(command);
+      if (sound) enableAudio(false);
       setError("");
       setActive({ game, snapshot: game.snapshot() });
       return true;
@@ -81,6 +113,14 @@ export function SoloApp() {
       return false;
     }
   }
+
+  const snapshot = active?.snapshot;
+  useEffect(() => {
+    if (!snapshot || snapshot.sequence <= heardSequence.current) return;
+    const previous = heardSequence.current;
+    heardSequence.current = snapshot.sequence;
+    audio.current?.playLatest(snapshot.journal.filter(({ sequence }) => sequence > previous));
+  }, [snapshot]);
 
   useEffect(() => {
     if (!active?.game.hasBotTurn()) return;
@@ -97,14 +137,22 @@ export function SoloApp() {
     return () => window.clearTimeout(timeout);
   }, [active]);
 
+  const soundControl = <button type="button" className="icon-button" aria-label={sound ? copy.soundOn : copy.soundOff}
+    title={sound ? copy.soundOn : copy.soundOff} aria-pressed={sound} onClick={toggleSound}>
+    <Icon name="volume" className={sound ? "" : "muted-icon"} />
+  </button>;
+
   return <div className="solo-app">
     <header className="site-header">
       <div className="site-name"><Icon name="lantern" />{copy.title}</div>
-      <button className="button secondary header-rules" onClick={() => setRulesOpen(true)}><Icon name="info" />{copy.rules}</button>
+      <div className="header-actions">
+        {!active && soundControl}
+        <button className="button secondary header-rules" onClick={() => setRulesOpen(true)}><Icon name="info" />{copy.rules}</button>
+      </div>
     </header>
     {active
       ? <Game key={active.snapshot.match.matchId} snapshot={{ ...active.snapshot, chat }} run={run} error={error} pending={false} lobby={menu} exit={menu}
-          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)}
+          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)} soundControl={soundControl}
           fullscreenControl={{ label: fullscreenLabel, active: fullscreen, toggle: () => void toggleFullscreen() }} />
       : <main className="home-stage">
         <div className="home-copy">
@@ -114,7 +162,17 @@ export function SoloApp() {
             <p className="lead">Проложите путь к золотой камере. Среди участников может быть предатель.</p>
             <div className="entry-form">
               <Notice text={error} />
-              <button className="button primary entry-submit" onClick={start}><Icon name="pickaxe" />Играть с двумя ботами</button>
+              <div className="solo-start-controls">
+                <label>Боты
+                  <select aria-label="Число ботов" value={botCount} onChange={(event) => setBotCount(Number(event.currentTarget.value))}>
+                    {Array.from({ length: botRange.max - botRange.min + 1 }, (_, index) => {
+                      const count = botRange.min + index;
+                      return <option key={count} value={count}>{count}</option>;
+                    })}
+                  </select>
+                </label>
+                <button className="button primary entry-submit" onClick={start}><Icon name="pickaxe" />Начать игру</button>
+              </div>
               <button className="button secondary entry-fullscreen" onClick={() => void toggleFullscreen()}>{fullscreenLabel}</button>
               <p className="soft-note">Партия проходит в этой вкладке и сбрасывается при обновлении.</p>
             </div>
