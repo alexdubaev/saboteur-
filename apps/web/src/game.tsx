@@ -80,7 +80,7 @@ function ScoutNotes({ snapshot, goalSlotId, close }: { snapshot: MatchSnapshot; 
   );
 }
 
-function RoundResults({ snapshot, run, pending, error }: { snapshot: MatchSnapshot; run: RunCommand; pending: boolean; error: string }) {
+function RoundResults({ snapshot, run, pending, error, stop }: { snapshot: MatchSnapshot; run: RunCommand; pending: boolean; error: string; stop?: () => void }) {
   const { match, room } = snapshot;
   if (!match.outcome) return null;
   const acknowledged = match.summaryAcknowledged.includes(room.mySeatId);
@@ -106,6 +106,7 @@ function RoundResults({ snapshot, run, pending, error }: { snapshot: MatchSnapsh
         <div><strong>Ваше начисление +{match.self.roundScore}</strong><small>Личный счёт: {match.self.score}</small></div>
       </div>
       {acknowledged ? <p role="status">Ждём подтверждения остальных…</p> : <button className="button primary" disabled={pending} onClick={() => void run({ type: "ACK_SUMMARY" })}>{copy.next}</button>}
+      {stop && <button className="button secondary" onClick={stop}>Остановить экспедицию</button>}
       <Notice text={error} />
     </Dialog>
   );
@@ -157,6 +158,7 @@ function Crew({ snapshot, authors, toolChange, compact = false }: {
               <div className="seat-name">
                 <strong><span className="seat-color" style={{ backgroundColor: authors.get(seat.seatId)?.color }} aria-hidden="true" />{own && compact ? "Вы" : seat.name}</strong>
                 {!compact && <small>{[own && "Вы", active && "Ходит", seat.bot && "Бот", !seat.present && !seat.bot && "Нет связи"].filter(Boolean).join(" · ") || "В шахте"}</small>}
+                {compact && !seat.present && !seat.bot && <span className="seat-offline">офлайн</span>}
               </div>
               <div className="seat-icons">
                 <span className="seat-cards" aria-label={`Карт в руке: ${info?.handCount ?? 0}`}><Icon name="cards" />{info?.handCount ?? 0}</span>
@@ -221,7 +223,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches);
   const leaveLabel = solo ? "Выйти из партии" : copy.leave;
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [modal, setModal] = useState<"role" | "leave" | ScoutModal | null>(null);
+  const [modal, setModal] = useState<"role" | "leave" | ScoutModal | { summaryRevision: number } | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const sendPhoneMessage = send ?? sendLocalMessage;
   const selected = selection?.revision === match.revision ? selection : null;
@@ -264,7 +266,8 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
     setSelection(null);
     if (move.type === "PLAY_SCOUT") setModal({ roundNo: match.roundNo, goalSlotId: move.goalSlotId });
   };
-  const scout = modal && typeof modal === "object" && modal.roundNo === match.roundNo ? modal : null;
+  const scout = modal && typeof modal === "object" && "roundNo" in modal && modal.roundNo === match.roundNo ? modal : null;
+  const summaryLeave = modal && typeof modal === "object" && "summaryRevision" in modal && match.phase === "ROUND_SUMMARY" && modal.summaryRevision === match.revision;
   const names = new Map(room.seats.map((seat) => [seat.seatId, seat.name]));
   const authors = new Map(match.seats.map(({ seatId }, index) =>
     [seatId, { name: names.get(seatId) ?? "Участник", color: seatColors[index] }] as const));
@@ -427,13 +430,13 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       </div>
       {rolePending || (modal === "role" && !summary && !final) ? <RoleCard snapshot={snapshot} mandatory={rolePending} close={() => setModal(null)} run={run} pending={pending} error={error} /> : null}
       {!rolePending && !final && !presentation.gold && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
-      {!rolePending && !summary && !final && modal === "leave" && <Dialog title={leaveLabel} close={() => setModal(null)}>
+      {!rolePending && !final && (modal === "leave" || summaryLeave) && <Dialog title={leaveLabel} close={() => setModal(null)}>
         <p>{solo ? "Если выйти сейчас, партия завершится." : "Вернитесь на этот адрес, чтобы снова занять своё место."}</p>
         <div className="dialog-actions"><button className="button secondary" onClick={exit}>В меню</button>
         {!solo && isHost && <button className="button secondary" disabled={pending} onClick={async () => { if (await run({ type: "ABANDON" })) setModal(null); }}>Остановить экспедицию</button>}</div>
         <Notice text={error} />
       </Dialog>}
-      {summary && !scout && !presentation.holdResults && <RoundResults snapshot={snapshot} run={run} pending={pending} error={error} />}
+      {summary && modal !== "leave" && !summaryLeave && !scout && !presentation.holdResults && <RoundResults snapshot={snapshot} run={run} pending={pending} error={error} stop={!solo && isHost ? () => setModal({ summaryRevision: match.revision }) : undefined} />}
       {final && <MatchResults snapshot={snapshot} run={run} pending={pending} error={error} lobby={lobby} solo={solo} />}
     </main>
   </>;

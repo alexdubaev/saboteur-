@@ -113,12 +113,17 @@ export class Rooms {
   }
 
   async joinInvitation(code: string, identity?: Identity): Promise<{ snapshot: RoomSnapshot; token?: string }> {
-    const { roomId, userId, token } = await transaction(this.db, async (client) => {
+    return transaction(this.db, async (client) => {
       const result = await client.query<Room>("SELECT * FROM rooms WHERE code = $1 AND (expires_at IS NULL OR expires_at > now()) FOR UPDATE", [code]);
       const room = result.rows[0];
       if (!room) throw new RoomError("ROOM_NOT_FOUND", 404);
       const seats = await this.seats(client, room.room_id);
-      if (identity && seats.some((seat) => seat.user_id === identity.userId)) return { roomId: room.room_id, userId: identity.userId };
+      if (identity && seats.some((seat) => seat.user_id === identity.userId)) {
+        const snapshots = await this.snapshotsInTransaction(client, room.room_id, [identity.userId]);
+        const snapshot = snapshots.get(identity.userId);
+        if (!snapshot) throw new Error("Admitted room member is missing from snapshot");
+        return { snapshot };
+      }
       if (room.current_match_id) throw new RoomError("MATCH_STARTED");
       if (seats.length >= this.definition.ruleset.players.max) throw new RoomError("ROOM_FULL");
       const position = (seats.at(-1)?.position ?? -1) + 1;
@@ -127,9 +132,11 @@ export class Rooms {
       await client.query("INSERT INTO seats (seat_id, room_id, user_id, name, avatar_id, position) VALUES ($1,$2,$3,$4,$5,$6)",
         [randomUUID(), room.room_id, guest.userId, guest.name, guest.avatarId, position]);
       await this.bumpSequence(client, room.room_id);
-      return { roomId: room.room_id, userId: guest.userId, token: admission.token };
+      const snapshots = await this.snapshotsInTransaction(client, room.room_id, [guest.userId]);
+      const snapshot = snapshots.get(guest.userId);
+      if (!snapshot) throw new Error("Admitted room member is missing from snapshot");
+      return { snapshot, token: admission.token };
     });
-    return { snapshot: await this.snapshot(roomId, userId), token };
   }
 
   async rename(roomId: string, userId: string, name: string): Promise<RoomSnapshot> {
@@ -184,58 +191,60 @@ export class Rooms {
   }
 
   async snapshots(roomId: string, userIds: readonly string[]): Promise<Map<string, RoomSnapshot>> {
-    return transaction(this.db, async (client) => {
-      const room = await this.room(client, roomId, "SHARE");
-      const seats = await this.seats(client, roomId);
-      const userSeats = seats.filter((seat) => seat.user_id !== null && userIds.includes(seat.user_id));
-      if (userSeats.length === 0) return new Map();
-      const match = await this.match(client, room.current_match_id);
-      const chat = await client.query<ChatMessage>(`
-        SELECT message_id AS "messageId", seat_id AS "seatId", author_name AS name, body AS text, created_at AS at
-        FROM chat_messages WHERE room_id = $1 ORDER BY sequence DESC LIMIT 50
-      `, [roomId]);
-      const journal = await client.query<JournalEntry>(`
-        SELECT sequence, actor_seat_id AS "actorSeatId", type, revision, created_at AS at, public_data AS data
-        FROM journal_events WHERE room_id = $1 ORDER BY sequence DESC LIMIT 100
-      `, [roomId]);
-      const tunnelAuthors = new Map<string, string>();
-      if (match?.state.board.length) {
-        const placements = await client.query<Pick<JournalEntry, "actorSeatId" | "type" | "data">>(`
-          SELECT actor_seat_id AS "actorSeatId", type, public_data AS data
-          FROM journal_events
-          WHERE room_id = $1 AND match_id = $2 AND type IN ('ROUND_SETUP', 'PLAY_TUNNEL')
-          ORDER BY sequence DESC
-        `, [roomId, match.match_id]);
-        for (const { actorSeatId, type, data } of placements.rows) {
-          if (type === "ROUND_SETUP") break;
-          if (!actorSeatId || typeof data?.x !== "number" || typeof data.y !== "number") continue;
-          const key = cellKey(data.x, data.y);
-          if (!tunnelAuthors.has(key)) tunnelAuthors.set(key, actorSeatId);
-        }
+    return transaction(this.db, (client) => this.snapshotsInTransaction(client, roomId, userIds));
+  }
+
+  private async snapshotsInTransaction(client: PoolClient, roomId: string, userIds: readonly string[]): Promise<Map<string, RoomSnapshot>> {
+    const room = await this.room(client, roomId, "SHARE");
+    const seats = await this.seats(client, roomId);
+    const userSeats = seats.filter((seat) => seat.user_id !== null && userIds.includes(seat.user_id));
+    if (userSeats.length === 0) return new Map();
+    const match = await this.match(client, room.current_match_id);
+    const chat = await client.query<ChatMessage>(`
+      SELECT message_id AS "messageId", seat_id AS "seatId", author_name AS name, body AS text, created_at AS at
+      FROM chat_messages WHERE room_id = $1 ORDER BY sequence DESC LIMIT 50
+    `, [roomId]);
+    const journal = await client.query<JournalEntry>(`
+      SELECT sequence, actor_seat_id AS "actorSeatId", type, revision, created_at AS at, public_data AS data
+      FROM journal_events WHERE room_id = $1 ORDER BY sequence DESC LIMIT 100
+    `, [roomId]);
+    const tunnelAuthors = new Map<string, string>();
+    if (match?.state.board.length) {
+      const placements = await client.query<Pick<JournalEntry, "actorSeatId" | "type" | "data">>(`
+        SELECT actor_seat_id AS "actorSeatId", type, public_data AS data
+        FROM journal_events
+        WHERE room_id = $1 AND match_id = $2 AND type IN ('ROUND_SETUP', 'PLAY_TUNNEL')
+        ORDER BY sequence DESC
+      `, [roomId, match.match_id]);
+      for (const { actorSeatId, type, data } of placements.rows) {
+        if (type === "ROUND_SETUP") break;
+        if (!actorSeatId || typeof data?.x !== "number" || typeof data.y !== "number") continue;
+        const key = cellKey(data.x, data.y);
+        if (!tunnelAuthors.has(key)) tunnelAuthors.set(key, actorSeatId);
       }
-      const visibleSeats = seats.map((seat) => ({
-        seatId: seat.seat_id, name: seat.name, avatarId: seat.avatar_id, ready: seat.ready,
-        present: seat.user_id === null || this.present(roomId, seat.seat_id), bot: seat.user_id === null,
-      }));
-      const visibleChat = chat.rows.reverse();
-      const visibleJournal = journal.rows.reverse().map(({ data, ...entry }) => data ? { ...entry, data } : entry);
-      return new Map(userSeats.map((seat) => {
-        const view = match && playerView(match.state, seat.seat_id);
-        for (const tile of view?.board ?? []) {
-          if (tile.kind !== "tunnel") continue;
-          const author = tunnelAuthors.get(cellKey(tile.x, tile.y));
-          if (author) tile.placedBySeatId = author;
-        }
-        return [seat.user_id as string, {
-          room: {
-            roomId, code: room.code, hostSeatId: room.host_seat_id, mySeatId: seat.seat_id, seats: visibleSeats,
-            turnTimeoutSeconds: room.turn_timeout_seconds, deadlineAt: match?.deadline_at?.toISOString() ?? null,
-          },
-          match: view,
-          chat: visibleChat, journal: visibleJournal, sequence: room.sequence,
-        }];
-      }));
-    });
+    }
+    const visibleSeats = seats.map((seat) => ({
+      seatId: seat.seat_id, name: seat.name, avatarId: seat.avatar_id, ready: seat.ready,
+      present: seat.user_id === null || this.present(roomId, seat.seat_id), bot: seat.user_id === null,
+    }));
+    const visibleChat = chat.rows.reverse();
+    const visibleJournal = journal.rows.reverse().map(({ data, ...entry }) => data ? { ...entry, data } : entry);
+    return new Map(userSeats.map((seat) => {
+      const view = match && playerView(match.state, seat.seat_id);
+      for (const tile of view?.board ?? []) {
+        if (tile.kind !== "tunnel") continue;
+        const author = tunnelAuthors.get(cellKey(tile.x, tile.y));
+        if (author) tile.placedBySeatId = author;
+      }
+      return [seat.user_id as string, {
+        room: {
+          roomId, code: room.code, hostSeatId: room.host_seat_id, mySeatId: seat.seat_id, seats: visibleSeats,
+          turnTimeoutSeconds: room.turn_timeout_seconds, deadlineAt: match?.deadline_at?.toISOString() ?? null,
+        },
+        match: view,
+        chat: visibleChat, journal: visibleJournal, sequence: room.sequence,
+      }];
+    }));
   }
 
   async command(userId: string, envelope: CommandEnvelope): Promise<{ ack: CommandAck; changed: boolean }> {
@@ -350,6 +359,9 @@ export class Rooms {
         const definition = this.definition;
         if (seats.length < definition.ruleset.players.min) throw new RoomError("NOT_ENOUGH_PLAYERS");
         if (seats.some((candidate) => !candidate.ready)) throw new RoomError("SEATS_NOT_READY");
+        if (seats.some((candidate) => candidate.user_id !== null && !this.present(room.room_id, candidate.seat_id))) {
+          throw new RoomError("SEATS_NOT_PRESENT");
+        }
         const secret = randomBytes(32);
         const state = newMatch(definition, { matchId: randomUUID(), seatIds: seats.map(({ seat_id }) => seat_id) }, rngFor(secret, "match"));
         const result = startRound(state, rngFor(secret, "start"));

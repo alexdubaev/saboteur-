@@ -490,7 +490,7 @@ input::placeholder { color: #ad9dbe; }
 .phone-score dt { color: var(--muted); }
 .phone-score dd { margin: 0; color: var(--gold); font-weight: 650; font-variant-numeric: tabular-nums; }
 .phone-game .phone-crew { grid-area: crew; min-width: 0; border: 0; background: transparent; padding: 0; overflow: visible; }
-.phone-game .phone-crew ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; overflow: visible; }
+.phone-game .phone-crew ul { display: grid; grid-auto-flow: column; grid-auto-columns: max-content; gap: 3px; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 .phone-game .phone-crew .crew-scroll {
   grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(66px, max-content);
   overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin;
@@ -500,7 +500,8 @@ input::placeholder { color: #ad9dbe; }
   display: flex; justify-content: space-between; align-items: center; column-gap: 3px;
   min-height: 20px; padding: 1px 3px; border: 1px solid var(--line); border-radius: 4px;
 }
-.phone-game .phone-crew .seat-name { display: block; min-width: 0; flex: 0 1 auto; }
+.phone-game .phone-crew .seat-name { display: flex; align-items: center; gap: 3px; min-width: 0; flex: 0 1 auto; }
+.phone-game .phone-crew .seat-offline { color: #ffb5b5; font-size: .62rem; flex: none; white-space: nowrap; }
 .phone-game .phone-crew strong { display: block; font-size: .7rem; }
 .phone-game .phone-crew .seat-icons { gap: 2px; }
 .phone-game .phone-crew .seat-cards { font-size: .68rem; }

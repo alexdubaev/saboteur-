@@ -43,3 +43,14 @@ test("R01: rejects mismatched ports on adjacent fixed tiles before a match start
     },
   }, catalog)).toThrow(/fixed board ports/i);
 });
+
+test("a shuffled setup must require a move to win", () => {
+  const catalog = validateCatalog(rawCatalog);
+  const board = {
+    ...rawRuleset.board,
+    goalSlots: [{ id: "east", x: 1, y: 0 }, ...rawRuleset.board.goalSlots.slice(1)],
+  };
+  expect(() => validateRuleset({ ...rawRuleset, board }, catalog)).not.toThrow();
+  const victory = { ...rawRuleset.victory, prospectors: { ...rawRuleset.victory.prospectors, required: 1 } };
+  expect(() => validateRuleset({ ...rawRuleset, board, victory }, catalog)).toThrow(/initial board/i);
+});

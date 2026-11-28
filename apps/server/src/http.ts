@@ -149,7 +149,7 @@ export async function startServer({ db, definition, origin, playtest, host, port
   let closing = false;
 
   const present = (roomId: string, seatId: string) =>
-    [...(subscriptions.get(roomId) ?? [])].some((connection) => connection.subscription?.seatId === seatId);
+    [...(subscriptions.get(roomId) ?? [])].some((connection) => connection.socket.readyState === WebSocket.OPEN && connection.subscription?.seatId === seatId);
   const rooms = new Rooms(db, definition, playtest, present);
 
   async function authenticate(token?: string): Promise<Identity> {
@@ -191,7 +191,7 @@ export async function startServer({ db, definition, origin, playtest, host, port
           const failure = safeError(error);
           for (const { socket } of audience) {
             send(socket, { type: "ERROR", code: failure.code });
-            if (failure.status === 404) socket.close(1008);
+            socket.close(failure.status === 404 ? 1008 : 1011);
           }
         }
       }
@@ -433,6 +433,7 @@ export async function startServer({ db, definition, origin, playtest, host, port
             const failure = safeError(error);
             send(ws, { type: "ERROR", code: failure.code });
             if (failure.status === 401 || failure.status === 429) ws.close(1008);
+            else if (failure.status === 500) ws.close(1011);
           }).finally(() => {
             connection.pending--;
           });
