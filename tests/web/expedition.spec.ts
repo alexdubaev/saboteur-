@@ -46,6 +46,40 @@ test("личная ссылка ведущего открывает создан
   expect(claimed).toBe(true);
 });
 
+test("отправка обычной ссылки убирает старый ключ и учитывает отмену меню отправки", async ({ page }) => {
+  let claims = 0;
+  await page.route("**/api/entry", (route) => route.fulfill({ json: { canCreateRooms: true } }));
+  await page.route("**/api/session", (route) => route.fulfill({ status: 401, json: { code: "UNAUTHENTICATED" } }));
+  await page.route("**/api/session/host", (route) => {
+    claims++;
+    return route.fulfill({ status: 403, json: { code: "HOST_LINK_REQUIRED" } });
+  });
+  await page.addInitScript(() => {
+    Object.defineProperties(navigator, {
+      share: { configurable: true, value: async ({ url }: ShareData) => {
+        document.body.dataset.shared = url;
+        throw new DOMException("Отмена", "AbortError");
+      } },
+      clipboard: { configurable: true, value: { writeText: async (url: string) => { document.body.dataset.copied = url; } } },
+    });
+  });
+
+  await page.goto("/#host=" + "b".repeat(64));
+  await expect(page.getByRole("button", { name: "Создать комнату" })).toBeVisible();
+  expect(new URL(page.url()).hash).toBe("");
+  expect(claims).toBe(0);
+
+  const url = new URL("/", page.url()).href;
+  const share = page.getByRole("button", { name: "Поделиться", exact: true });
+  await share.click();
+  await expect(page.locator("body")).toHaveAttribute("data-shared", url);
+  expect(await page.locator("body").getAttribute("data-copied")).toBeNull();
+
+  await page.evaluate(() => Object.defineProperty(navigator, "share", { value: undefined }));
+  await share.click();
+  await expect(page.locator("body")).toHaveAttribute("data-copied", url);
+});
+
 test("изолированные гости играют три раунда и возвращаются после потери связи", async ({ browser }, testInfo) => {
   test.setTimeout(240_000);
   const contexts = await Promise.all([

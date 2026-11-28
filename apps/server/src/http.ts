@@ -26,7 +26,7 @@ const HOST_COOKIE = "gold_host";
 const HOST_KEY = /^[a-f0-9]{64}$/;
 const hostClaimSchema = z.strictObject({ key: z.string().regex(HOST_KEY) });
 
-type Options = { db: Pool; definition: Definition; origin: string; playtest: boolean; host: string; port: number; hostKey?: string };
+type Options = { db: Pool; definition: Definition; origin: string; playtest: boolean; host: string; port: number; hostKey?: string; publicHosting?: boolean };
 type Subscription = { roomId: string; seatId: string; lastSequence: number };
 type Connection = {
   socket: WebSocket;
@@ -130,10 +130,10 @@ function matchesKey(candidate: string | undefined, expected: string) {
   return Boolean(candidate && HOST_KEY.test(candidate) && timingSafeEqual(Buffer.from(candidate, "hex"), Buffer.from(expected, "hex")));
 }
 
-export async function startServer({ db, definition, origin, playtest, host, port, hostKey }: Options) {
+export async function startServer({ db, definition, origin, playtest, host, port, hostKey, publicHosting = false }: Options) {
   if (hostKey !== undefined && !HOST_KEY.test(hostKey)) throw new Error("PLAYTEST_HOST_KEY must contain 64 lowercase hexadecimal characters");
   const hostGrant = hostKey && createHmac("sha256", Buffer.from(hostKey, "hex")).update("gold-trail:host-grant:v1").digest("hex");
-  const canCreateRooms = (cookie?: string) => hostGrant === undefined || matchesKey(cookie, hostGrant);
+  const canCreateRooms = (cookie?: string) => publicHosting || hostGrant === undefined || matchesKey(cookie, hostGrant);
   const guestCookie = { httpOnly: true, sameSite: "Strict" as const, secure: origin.startsWith("https://"), path: "/", maxAge: SESSION_AGE_SECONDS };
   const app = new Hono<{ Bindings: { incoming: IncomingMessage } }>();
   const http = createServer({ requestTimeout: 15_000, headersTimeout: 10_000 }, getRequestListener(app.fetch));

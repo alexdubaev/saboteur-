@@ -2,19 +2,14 @@ import { useState, type FormEvent } from "react";
 import type { RoomSnapshot, WireCommand } from "../../../packages/protocol/src/index.js";
 import { junctionArt } from "./art.js";
 import { Messages } from "./messages.js";
+import { ShareLink, shareUrl } from "./share-link.js";
 import { copy } from "./text.js";
-import { Avatar, Icon } from "./ui.js";
+import { Avatar, Dialog, Icon } from "./ui.js";
 
 export type RunCommand = (command: WireCommand) => Promise<boolean>;
 
 const minParticipants = 3;
 const maxParticipants = 10;
-
-const inviteUrl = (code: string) => {
-  const url = new URL(window.location.pathname, window.location.origin);
-  url.searchParams.set("join", code);
-  return url.href;
-};
 
 function TimerSetup({ seconds, disabled, run }: { seconds: number | null; disabled: boolean; run: RunCommand }) {
   const [value, setValue] = useState(seconds?.toString() ?? "");
@@ -45,24 +40,16 @@ function EditName({ current, pending, rename, cancel }: { current: string; pendi
 }
 
 export function Lobby({ snapshot, run, send, rename, pending, leave }: { snapshot: RoomSnapshot; run: RunCommand; send: (message: string) => Promise<boolean>; rename: (name: string) => Promise<boolean>; pending: boolean; leave: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [removalSeatId, setRemovalSeatId] = useState<string | null>(null);
   const { room, match } = snapshot;
   const host = room.mySeatId === room.hostSeatId;
   const me = room.seats.find((seat) => seat.seatId === room.mySeatId);
+  const playerToRemove = host && !match && room.seats.find(({ seatId, bot }) => seatId === removalSeatId && seatId !== room.mySeatId && !bot);
   const botCount = room.seats.filter((seat) => seat.bot).length;
   const freeSeats = maxParticipants - room.seats.length;
   const enoughPlayers = room.seats.length >= minParticipants;
   const allReady = enoughPlayers && room.seats.every((seat) => seat.bot || (seat.ready && seat.present));
-  const copyInvite = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteUrl(room.code));
-      setCopied(true);
-    } catch {
-      setShowInvite(true);
-    }
-  };
 
   return (
     <main className="lobby-shell" aria-label={copy.lobby}>
@@ -74,8 +61,7 @@ export function Lobby({ snapshot, run, send, rename, pending, leave }: { snapsho
         </div>
         <div className="invite">
           <span>Код приглашения</span><strong aria-label="Код приглашения" data-testid="invite-code">{room.code}</strong>
-          <button className="button secondary" onClick={() => void copyInvite()}><Icon name="copy" />{copied ? "Ссылка скопирована" : "Скопировать ссылку"}</button>
-          {showInvite && <input className="chat-input" aria-label="Ссылка приглашения" value={inviteUrl(room.code)} readOnly autoFocus onFocus={(event) => event.currentTarget.select()} />}
+          <ShareLink url={shareUrl(room.code)} label="Ссылка приглашения" showCopy />
         </div>
       </section>
       <div className="lobby-body">
@@ -99,6 +85,7 @@ export function Lobby({ snapshot, run, send, rename, pending, leave }: { snapsho
                 <div className="seat-name"><strong>{seat.name}</strong><small>{[seat.seatId === room.mySeatId && "Вы", seat.seatId === room.hostSeatId && "Ведущий", seat.bot && "Бот"].filter(Boolean).join(" · ")}</small></div>
                 <span className={seat.bot || (seat.present && seat.ready) ? "seat-ready" : "soft-note"}>{seat.bot || (seat.present && seat.ready) ? "Готов" : seat.present ? "Ждёт" : "Нет связи"}</span>
                 {host && !match && seat.bot && <button className="icon-button" aria-label={`Убрать бота ${seat.name}`} title="Убрать бота" disabled={pending} onClick={() => void run({ type: "REMOVE_BOT", seatId: seat.seatId })}><Icon name="close" /></button>}
+                {host && !match && !seat.bot && seat.seatId !== room.mySeatId && <button className="icon-button" type="button" aria-label={`Удалить игрока ${seat.name}`} title="Удалить игрока" disabled={pending} onClick={() => setRemovalSeatId(seat.seatId)}><Icon name="close" /></button>}
               </li>
             ))}
           </ul>
@@ -113,6 +100,16 @@ export function Lobby({ snapshot, run, send, rename, pending, leave }: { snapsho
         </div>
       </div>
       <footer className="lobby-footer"><p className="soft-note">{copy.preview}</p><button className="button secondary" disabled={pending} onClick={leave}>{copy.leave}</button></footer>
+      {playerToRemove && <Dialog title="Удалить игрока?" close={() => setRemovalSeatId(null)}>
+        <p>{playerToRemove.name} покинет лобби.</p>
+        <div className="dialog-actions">
+          <button className="button secondary" type="button" autoFocus onClick={() => setRemovalSeatId(null)}>Отмена</button>
+          <button className="button danger" type="button" disabled={pending} onClick={() => {
+            setRemovalSeatId(null);
+            void run({ type: "REMOVE_PLAYER", seatId: playerToRemove.seatId });
+          }}>Удалить</button>
+        </div>
+      </Dialog>}
     </main>
   );
 }

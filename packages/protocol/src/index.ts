@@ -12,6 +12,7 @@ export const commandSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("SET_READY"), ready: z.boolean() }),
   z.strictObject({ type: z.literal("ADD_BOT") }),
   z.strictObject({ type: z.literal("REMOVE_BOT"), seatId: opaqueId }),
+  z.strictObject({ type: z.literal("REMOVE_PLAYER"), seatId: opaqueId }),
   z.strictObject({ type: z.literal("SET_TIMER"), seconds: z.int().min(5).max(300).nullable() }),
   z.strictObject({ type: z.literal("START_MATCH") }),
   z.strictObject({ type: z.literal("REPLAY") }),

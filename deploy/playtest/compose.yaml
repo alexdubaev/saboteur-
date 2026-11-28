@@ -40,6 +40,7 @@ services:
       PORT: "4174"
       PLAYTEST_MODE: "1"
       PLAYTEST_HOST_KEY: ${PLAYTEST_HOST_KEY:?Generate a private host invitation key}
+      PLAYTEST_PUBLIC_HOSTING: ${PLAYTEST_PUBLIC_HOSTING:-0}
     volumes:
       - ./release:/srv/game:ro
     networks: [gateway, data]
