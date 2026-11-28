@@ -116,12 +116,24 @@ export function SoloApp() {
   }
 
   const snapshot = active?.snapshot;
+  const phase = snapshot?.match.phase;
+  const inMine = Boolean(snapshot) && phase !== "MATCH_FINISHED" && phase !== "ABANDONED";
   const playGold = useCallback((event: JournalEntry) => {
     audio.current?.playLatest([event], "", true);
   }, []);
   useEffect(() => {
     if (sound) preloadGameSounds();
   }, [sound]);
+
+  useEffect(() => {
+    const sync = () => audio.current?.setAmbience(inMine && sound && !document.hidden);
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      document.removeEventListener("visibilitychange", sync);
+      audio.current?.setAmbience(false);
+    };
+  }, [inMine, sound]);
 
   useEffect(() => {
     if (!snapshot || snapshot.sequence <= heardSequence.current) return;

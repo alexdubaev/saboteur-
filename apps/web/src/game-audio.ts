@@ -17,6 +17,12 @@ const cues: Partial<Record<string, SoundName>> = {
 };
 const start: Cue = { sound: "start", volume: 1 };
 const botVolume = .43;
+const background: readonly Cue[] = [
+  { sound: "minePick", volume: .34 },
+  { sound: "mineCart", volume: .38 },
+  { sound: "minePick", volume: .34 },
+  { sound: "mineVoices", volume: .35 },
+];
 let samplesRequest: Promise<ArrayBuffer> | null = null;
 
 function loadSamples() {
@@ -42,11 +48,14 @@ export function createGameAudio() {
   let loading: Promise<void> | null = null;
   let buffer: AudioBuffer | null = null;
   let queuedCue: Cue | null = null;
+  let ambience = false;
+  let cave: AudioBufferSourceNode | null = null;
+  let detail: AudioBufferSourceNode | null = null;
+  let detailTimer: number | undefined;
+  let nextDetail = 0;
 
-  function playQueued() {
-    if (!queuedCue || !buffer || resuming || context.state !== "running" || master.gain.value === 0) return;
-    const { sound, volume } = queuedCue;
-    queuedCue = null;
+  function playClip({ sound, volume }: Cue, loop = false) {
+    if (!buffer) return;
     const variants = sounds[sound];
     const last = lastVariant.get(sound);
     // Choose freely on the first play, then exclude the previous variation.
@@ -58,16 +67,70 @@ export function createGameAudio() {
     const gain = context.createGain();
     gain.gain.value = volume;
     source.buffer = buffer;
-    source.connect(gain).connect(master);
-    source.addEventListener("ended", () => { source.disconnect(); gain.disconnect(); }, { once: true });
-    source.start(0, offset, duration);
+    source.connect(gain);
+    const pan = sound === "mineCart" && typeof context.createStereoPanner === "function" ? context.createStereoPanner() : null;
+    if (pan) {
+      const direction = Math.random() < .5 ? -1 : 1;
+      pan.pan.setValueAtTime(.65 * direction, context.currentTime);
+      pan.pan.linearRampToValueAtTime(-.65 * direction, context.currentTime + duration);
+      gain.connect(pan).connect(master);
+    } else {
+      gain.connect(master);
+    }
+    source.addEventListener("ended", () => {
+      if (detail === source) detail = null;
+      source.disconnect();
+      gain.disconnect();
+      pan?.disconnect();
+    }, { once: true });
+    if (loop) {
+      source.loop = true;
+      source.loopStart = offset;
+      source.loopEnd = offset + duration;
+      source.start(0, offset);
+    } else {
+      source.start(0, offset, duration);
+    }
+    return { source, duration };
   }
+
+  function playQueued() {
+    if (!queuedCue || !buffer || resuming || context.state !== "running" || master.gain.value === 0) return;
+    const cue = queuedCue;
+    queuedCue = null;
+    playClip(cue);
+  }
+
+  function scheduleDetail(delay: number) {
+    detailTimer = window.setTimeout(() => {
+      if (!cave || context.state !== "running") return;
+      const clip = playClip(background[nextDetail]);
+      detail = clip?.source ?? null;
+      nextDetail = (nextDetail + 1) % background.length;
+      scheduleDetail((clip?.duration ?? 0) * 1000 + 4600 + Math.random() * 4400);
+    }, delay);
+  }
+
+  function syncAmbience() {
+    if (!ambience || !buffer || master.gain.value === 0 || context.state !== "running") {
+      window.clearTimeout(detailTimer);
+      cave?.stop();
+      detail?.stop();
+      cave = detail = null;
+      return;
+    }
+    if (cave) return;
+    cave = playClip({ sound: "mineBed", volume: .23 }, true)?.source ?? null;
+    scheduleDetail(1200 + Math.random() * 1050);
+  }
+
+  context.addEventListener("statechange", syncAmbience);
 
   function prepareSamples() {
     if (buffer || loading) return;
     loading = loadSamples()
       .then((bytes) => context.decodeAudioData(bytes.slice(0)))
-      .then((decoded) => { buffer = decoded; playQueued(); })
+      .then((decoded) => { buffer = decoded; playQueued(); syncAmbience(); })
       .catch(() => { queuedCue = null; })
       .finally(() => { loading = null; });
   }
@@ -76,6 +139,11 @@ export function createGameAudio() {
     setEnabled(enabled: boolean) {
       master.gain.value = enabled ? .54 : 0;
       if (!enabled) queuedCue = null;
+      syncAmbience();
+    },
+    setAmbience(active: boolean) {
+      ambience = active;
+      syncAmbience();
     },
     async resume(preview: boolean) {
       if (preview) queuedCue ??= start;
@@ -85,6 +153,7 @@ export function createGameAudio() {
         try { await resuming; } catch { queuedCue = null; return; }
       }
       playQueued();
+      syncAmbience();
     },
     playLatest(events: readonly JournalEntry[], ownSeatId: string, foundGold: boolean) {
       if (master.gain.value === 0 || (context.state !== "running" && !resuming)) return;

@@ -374,7 +374,7 @@ test.describe("тестовая игра с ботами", () => {
     }
   });
 
-  test("звуки шахты запускаются после касания и ходы ботов звучат тише", async ({ browser, browserName }) => {
+  test("звуки шахты запускаются после касания, фон затихает при выключении звука и смене вкладки", async ({ browser, browserName }) => {
     test.skip(browserName !== "chromium", "Эта проверка использует Web Audio в Chromium");
     const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
     try {
@@ -404,17 +404,28 @@ test.describe("тестовая игра с ботами", () => {
           start.call(this, when, offset, duration);
           const root = document.documentElement;
           const playback = JSON.parse(root.dataset.playback ?? "[]");
-          playback.push({ volume: gains.get(this)?.gain.value, offset });
+          playback.push({ volume: gains.get(this)?.gain.value, offset, loop: this.loop });
           root.dataset.playback = JSON.stringify(playback);
+        };
+        const stop = AudioBufferSourceNode.prototype.stop;
+        AudioBufferSourceNode.prototype.stop = function (when?: number) {
+          stop.call(this, when);
+          if (!this.loop) return;
+          const root = document.documentElement;
+          root.dataset.stoppedLoops = String(Number(root.dataset.stoppedLoops ?? 0) + 1);
         };
       });
       const page = await context.newPage();
+      await page.clock.install();
       await page.goto(sitesUrl!);
-      const playback = (): Promise<{ volume: number; offset: number }[]> =>
+      const playback = (): Promise<{ volume: number; offset: number; loop: boolean }[]> =>
         page.evaluate(() => JSON.parse(document.documentElement.dataset.playback ?? "[]"));
+      const effects = async () => (await playback()).filter(({ volume }) => volume >= .4);
+      const stoppedLoops = () => page.evaluate(() => Number(document.documentElement.dataset.stoppedLoops ?? 0));
       expect(await playback()).toHaveLength(0);
       await page.getByRole("button", { name: "Начать игру" }).tap();
-      await expect.poll(async () => (await playback()).length).toBeGreaterThan(0);
+      await expect.poll(async () => (await effects()).length).toBeGreaterThan(0);
+      await expect.poll(async () => (await playback()).filter(({ loop }) => loop).length).toBe(1);
       await page.getByRole("button", { name: "Роль понятна" }).tap();
       const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
       await expect(turn).toBeVisible();
@@ -427,7 +438,7 @@ test.describe("тестовая игра с ботами", () => {
         await checkCue?.();
         await expect(turn).toBeVisible();
       };
-      const first = (await playback()).length;
+      const first = (await effects()).length;
       await page.evaluate(async () => {
         const context = (window as Window & { testAudio?: AudioContext }).testAudio;
         if (!context) throw new Error("Audio context was not created");
@@ -435,17 +446,42 @@ test.describe("тестовая игра с ботами", () => {
         document.documentElement.dataset.delayResume = "yes";
       });
       await discard(async () => {
-        await expect.poll(async () => (await playback())[first]?.volume).toBe(1);
+        await expect.poll(async () => (await effects())[first]?.volume).toBe(1);
       });
-      const played = await playback();
+      const played = await effects();
       expect(played[first].offset).not.toBe(played[0].offset);
       expect(played.slice(first + 1).some(({ volume }) => volume > 0 && volume < 1)).toBe(true);
+      const beforeMute = await stoppedLoops();
       await page.getByRole("button", { name: "Выключить звук" }).tap();
+      expect(await stoppedLoops()).toBeGreaterThan(beforeMute);
       const muted = (await playback()).length;
       await discard();
       expect(await playback()).toHaveLength(muted);
       await page.getByRole("button", { name: "Включить звук" }).tap();
       await expect.poll(async () => (await playback()).length).toBeGreaterThan(muted);
+      await page.clock.runFor(42000);
+      const voicesAndTools = (await playback()).filter(({ volume, loop }) => volume < .4 && !loop);
+      expect(new Set(voicesAndTools.map(({ volume }) => volume)).size).toBe(3);
+
+      const beforeHide = await stoppedLoops();
+      await page.evaluate(() => {
+        Object.defineProperty(document, "hidden", { configurable: true, value: true });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(await stoppedLoops()).toBeGreaterThan(beforeHide);
+      const hidden = (await playback()).length;
+      await page.clock.runFor(12000);
+      expect(await playback()).toHaveLength(hidden);
+      await page.evaluate(() => {
+        Reflect.deleteProperty(document, "hidden");
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await expect.poll(async () => (await playback()).length).toBeGreaterThan(hidden);
+      const beforeExit = await stoppedLoops();
+      await page.getByRole("button", { name: "Выйти из партии" }).tap();
+      await page.getByRole("dialog", { name: "Выйти из партии" }).getByRole("button", { name: "В меню" }).tap();
+      await expect(page.getByRole("button", { name: "Начать игру" })).toBeVisible();
+      expect(await stoppedLoops()).toBeGreaterThan(beforeExit);
     } finally {
       await context.close();
     }
