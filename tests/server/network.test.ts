@@ -148,6 +148,7 @@ async function startHumanMatch(timer: number | null = null) {
     const joined = await response.json() as RoomSnapshot;
     bySeat.set(joined.room.mySeatId, cookie);
   }
+  await connectPlayers(current, cookies);
   if (timer) current = await command(current, cookies[0], { type: "SET_TIMER", seconds: timer });
   for (const cookie of cookies) current = await command(current, cookie, { type: "SET_READY", ready: true });
   current = await command(current, cookies[0], { type: "START_MATCH" });
@@ -191,6 +192,16 @@ function websocket(cookie?: string, requestOrigin = expectedOrigin) {
   };
 }
 
+async function connectPlayers(current: RoomSnapshot, cookies: readonly string[]) {
+  return Promise.all(cookies.map(async (cookie) => {
+    const connection = websocket(cookie);
+    await once(connection.socket, "open");
+    connection.send({ type: "SUBSCRIBE", roomId: current.room.roomId });
+    await connection.next(isSnapshot);
+    return connection;
+  }));
+}
+
 const isSnapshot = (message: ServerMessage): message is Extract<ServerMessage, { type: "SNAPSHOT" }> => message.type === "SNAPSHOT";
 const isError = (message: ServerMessage): message is Extract<ServerMessage, { type: "ERROR" }> => message.type === "ERROR";
 
@@ -228,6 +239,75 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
         await admin.end();
       }
     }
+  });
+
+  it("rolls back anonymous admission when its initial snapshot fails", async () => {
+    const owner = await guest();
+    const initial = await room(owner);
+    const before = await identityCounts();
+    if (!db) throw new Error("Test database is unavailable");
+    await db.query("ALTER TABLE chat_messages RENAME TO chat_messages_unavailable");
+    try {
+      const response = await request("/api/rooms/join", undefined, { code: initial.room.code });
+      expect(response.status).toBe(500);
+      expect(response.headers.has("set-cookie")).toBe(false);
+    } finally {
+      await db.query("ALTER TABLE chat_messages_unavailable RENAME TO chat_messages");
+    }
+    expect(await identityCounts()).toEqual(before);
+    expect((await snapshot(initial, owner)).room.seats).toHaveLength(1);
+  });
+
+  it("requires ready human players to be connected before starting", async () => {
+    const cookies = await Promise.all([guest(), guest(), guest()]);
+    let current = await room(cookies[0]);
+    for (const cookie of cookies.slice(1)) await request("/api/rooms/join", cookie, { code: current.room.code });
+    for (const cookie of cookies) current = await command(current, cookie, { type: "SET_READY", ready: true });
+    expect(await httpCommand(current, cookies[0], envelope(current, { type: "START_MATCH" })))
+      .toMatchObject({ ok: false, code: "SEATS_NOT_PRESENT" });
+  });
+
+  it("closes a failed initial subscription so a fresh connection can resync", async () => {
+    const owner = await guest();
+    const initial = await room(owner);
+    if (!db) throw new Error("Test database is unavailable");
+    await db.query("ALTER TABLE chat_messages RENAME TO chat_messages_unavailable");
+    const connection = websocket(owner);
+    try {
+      await once(connection.socket, "open");
+      const closed = once(connection.socket, "close");
+      connection.send({ type: "SUBSCRIBE", roomId: initial.room.roomId });
+      await Promise.race([closed, new Promise((_, reject) => setTimeout(() => reject(new Error("Socket remained open")), 2000))]);
+    } finally {
+      await db.query("ALTER TABLE chat_messages_unavailable RENAME TO chat_messages");
+      connection.socket.terminate();
+    }
+    const [reconnected] = await connectPlayers(initial, [owner]);
+    reconnected.socket.close();
+  });
+
+  it("closes an established subscription after a transient broadcast failure", async () => {
+    const owner = await guest();
+    const initial = await room(owner);
+    const connection = websocket(owner);
+    await once(connection.socket, "open");
+    connection.send({ type: "SUBSCRIBE", roomId: initial.room.roomId });
+    await connection.next(isSnapshot);
+    if (!db) throw new Error("Test database is unavailable");
+    await db.query("ALTER TABLE chat_messages RENAME TO chat_messages_unavailable");
+    try {
+      const closed = once(connection.socket, "close");
+      await httpCommand(initial, owner, envelope(initial, { type: "SET_READY", ready: true }));
+      await Promise.race([closed, new Promise((_, reject) => setTimeout(() => reject(new Error("Socket remained open")), 2000))]);
+    } finally {
+      await db.query("ALTER TABLE chat_messages_unavailable RENAME TO chat_messages");
+      connection.socket.terminate();
+    }
+    const reconnected = websocket(owner);
+    await once(reconnected.socket, "open");
+    reconnected.send({ type: "SUBSCRIBE", roomId: initial.room.roomId });
+    expect((await reconnected.next(isSnapshot)).room.seats[0].ready).toBe(true);
+    reconnected.socket.close();
   });
 
   it("N01 isolates room membership and transfers the lobby host", async () => {
@@ -455,6 +535,9 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     const timed = await snapshot(after, cookies[0]);
     expect(timed.journal.findLast(({ type }) => type === "DISCARD")?.data).toBeUndefined();
     const abandoned = await command(timed, cookies[0], { type: "ABANDON" });
+    expect(await httpCommand(abandoned, cookies[0], envelope(abandoned, { type: "REPLAY" })))
+      .toMatchObject({ ok: false, code: "SEATS_NOT_PRESENT" });
+    await connectPlayers(abandoned, cookies);
     const replay = await command(abandoned, cookies[0], { type: "REPLAY" });
     expect(replay.match?.matchId).not.toBe(before.match?.matchId);
     expect(replay.match).toMatchObject({ requiredOre: 1, maxTurns: null });
@@ -507,6 +590,7 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     }
     for (const cookie of cookies) current = await command(current, cookie, { type: "SET_READY", ready: true });
 
+    await connectPlayers(current, cookies);
     const addBot = { type: "ADD_BOT" } as const;
     const startMatch = { type: "START_MATCH" } as const;
     expect(await httpCommand(current, teammate, envelope(current, addBot))).toMatchObject({ ok: false, code: "HOST_REQUIRED" });
@@ -541,6 +625,7 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     current = await command(current, owner, { type: "ADD_BOT" });
     current = await command(current, teammate, { type: "SET_READY", ready: true });
     current = await command(current, owner, { type: "SET_READY", ready: true });
+    await connectPlayers(current, [owner, teammate]);
     current = await command(current, owner, { type: "START_MATCH" });
     current = await command(await snapshot(current, owner), owner, { type: "ACK_ROLE" });
     current = await command(await snapshot(current, teammate), teammate, { type: "ACK_ROLE" });
@@ -593,6 +678,7 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
     expect(current.room.seats.map(({ name }) => name)).toEqual(["Ведущий", "Друг", "Бот 5"]);
     expect((await request("/api/session", onlineGuest)).status).toBe(200);
 
+    await connectPlayers(current, [owner, teammate]);
     current = await command(current, owner, { type: "START_MATCH" });
     expect(current.match?.seats).toHaveLength(3);
     expect(await httpCommand(current, owner, envelope(current, { type: "REMOVE_PLAYER", seatId: teammateView.room.mySeatId })))
@@ -622,6 +708,7 @@ network("Network / PostgreSQL", { timeout: 20_000 }, () => {
 
     current = await command(current, cookie, { type: "SET_READY", ready: true });
     current = await command(current, owner, { type: "SET_READY", ready: true });
+    await connectPlayers(current, [owner, cookie]);
     current = await command(current, owner, { type: "START_MATCH" });
     const after = await identityCounts();
     const late = await request("/api/rooms/join", undefined, invitation);

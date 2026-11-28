@@ -24,6 +24,7 @@ CARD_SIZES = {"standard": (512, 768), "compact": (256, 384)}
 OPPOSITE = dict(zip("NESW", "SWNE"))
 IMAGE_SUFFIXES = {".webp", ".png", ".jpg", ".jpeg", ".svg", ".gif", ".avif", ".ico"}
 ARCHIVE_SUFFIXES = {".zip", ".tar", ".gz", ".7z", ".rar"}
+APP_ICONS = {f"assets/branding/app-icon-{size}.png": size for size in (192, 512)}
 
 
 def require(condition, detail):
@@ -322,6 +323,7 @@ def check_dist(entries, dist):
     require(dist.is_dir() and (dist / "index.html").is_file(), f"No Vite build found at {dist}")
     expected = Counter(entry["sha256"] for entry in entries)
     actual = Counter()
+    missing_icons = set(APP_ICONS)
     errors = []
     for path in dist.rglob("*"):
         relative = path.relative_to(dist)
@@ -335,8 +337,19 @@ def check_dist(entries, dist):
             actual[digest] += 1
             if digest not in expected:
                 errors.append(f"WebP outside the runtime allowlist: {relative}")
+        elif relative.as_posix() in APP_ICONS:
+            name = relative.as_posix()
+            size = APP_ICONS[name]
+            missing_icons.remove(name)
+            data = path.read_bytes()
+            if data != (ROOT / name).read_bytes():
+                errors.append(f"App icon differs from its runtime source: {name}")
+            else:
+                raster(data, (size, size), name, "PNG")
         elif suffix in IMAGE_SUFFIXES or suffix in ARCHIVE_SUFFIXES:
             errors.append(f"Unexpected raster/source format in output: {relative}")
+    for name in sorted(missing_icons):
+        errors.append(f"Missing app icon: {name}")
     for digest, count in (expected - actual).items():
         paths = [entry["path"] for entry in entries if entry["sha256"] == digest]
         errors.append(f"Missing {count} allowlisted WebP output(s): {', '.join(paths)}")

@@ -160,6 +160,7 @@ const errors: Record<string, string> = {
   INVALID_PAYLOAD: "Проверьте введённые данные.",
   HOST_REQUIRED: "Это действие доступно ведущему.",
   SEATS_NOT_READY: "Дождитесь готовности всех участников.",
+  SEATS_NOT_PRESENT: "Дождитесь подключения всех участников.",
   NOT_ENOUGH_PLAYERS: "Для старта нужно минимум 3 участника.",
   PLAYTEST_REQUIRED: "Боты доступны в режиме тестирования.",
   INVALID_REQUEST: "Проверьте введённые данные.",

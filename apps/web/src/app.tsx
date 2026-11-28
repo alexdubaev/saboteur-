@@ -69,6 +69,7 @@ export function App() {
   const entryLoad = useRef<ReturnType<typeof loadEntry> | null>(null);
   const inFlight = useRef(false);
   const room = useRef(initialRoom);
+  const roomGeneration = useRef(0);
   const heard = useRef<{ roomId: string; sequence: number } | null>(null);
   const finalLobby = state?.match?.matchId === terminalLobby;
 
@@ -96,6 +97,7 @@ export function App() {
   }, []);
 
   const attach = useCallback((snapshot: RoomSnapshot) => {
+    roomGeneration.current++;
     room.current = snapshot.room.roomId;
     sessionStorage.setItem(savedRoomKey, room.current);
     setResume(room.current);
@@ -105,6 +107,7 @@ export function App() {
   }, [accept]);
 
   const reset = useCallback((keepRoom = false) => {
+    roomGeneration.current++;
     room.current = null;
     setRoomAddress(null);
     if (!keepRoom) {
@@ -205,12 +208,14 @@ export function App() {
 
   const send = async (message: string) => {
     if (!state) return false;
+    const generation = roomGeneration.current;
     try {
       const snapshot = await request<RoomSnapshot>(roomPath(state.room.roomId) + "/chat", { text: message });
+      if (generation !== roomGeneration.current) return false;
       accept(snapshot);
       return true;
     } catch (failure) {
-      showError(errorCode(failure));
+      if (generation === roomGeneration.current) showError(errorCode(failure));
       return false;
     }
   };

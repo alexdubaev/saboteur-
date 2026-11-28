@@ -182,6 +182,12 @@ export function validateRuleset(raw: unknown, catalog: Catalog): Ruleset {
   ensure(board.goalSlots.length === board.goalContents.length, "Goal slots and contents do not match");
   const oreCount = board.goalContents.filter(content => content === "ore").length;
   ensure(oreCount >= victory.prospectors.required, "Victory requires more ore than the board provides");
+  // Goals are terminal, so only direct neighbours can be connected before the first move.
+  const connectedAtSetup = board.origin.connections.flat().filter(port => {
+    const { x, y } = beside(board.origin, port);
+    return fixedCells.has(cellKey(x, y));
+  }).length;
+  ensure(connectedAtSetup < victory.prospectors.required, "Initial board could already satisfy the ore victory condition");
   ensure(board.goalContents.every(content => content !== "barren") || board.goalAssets.barrenOptions.length > 0,
     "Barren goals require a public asset");
   unique([board.goalAssets.hidden, board.goalAssets.ore, ...board.goalAssets.barrenOptions], "goal asset ID");
