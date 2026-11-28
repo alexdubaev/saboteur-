@@ -9,6 +9,7 @@ type BoardMove = Extract<CardCommand, { type: "PLAY_TUNNEL" | "PLAY_COLLAPSE" | 
 type Camera = { x: number; y: number; scale: number };
 type FixedView = { center: Position; scale: number; overview: boolean };
 type Bounds = { minX: number; maxX: number; minY: number; maxY: number };
+type BoardFinale = { tunnel: Position; goal: Position; notice: ReactNode };
 export type TunnelAuthor = { name: string; color: string };
 export type BoardTurnEffects = {
   sequence: number;
@@ -29,6 +30,7 @@ type BoardProps = {
   status?: ReactNode;
   effects?: BoardTurnEffects;
   overlay?: ReactNode;
+  finale?: BoardFinale;
 };
 
 const tileWidth = 72;
@@ -42,6 +44,24 @@ const zoom = (view: Camera, scale: number, from: Position, to = from): Camera =>
   const factor = scale / view.scale;
   return { scale, x: to.x - (from.x - view.x) * factor, y: to.y - (from.y - view.y) * factor };
 };
+
+function frameFinalMove(view: Camera, size: { width: number; height: number }, { tunnel, goal }: BoardFinale): Camera {
+  if (!size.width || !size.height) return view;
+  const left = Math.min(tunnel.x, goal.x) * tileWidth;
+  const right = (Math.max(tunnel.x, goal.x) + 1) * tileWidth;
+  const top = Math.min(tunnel.y, goal.y) * tileHeight;
+  const bottom = (Math.max(tunnel.y, goal.y) + 1) * tileHeight;
+  const margin = Math.min(17, size.width * .1, size.height * .14);
+  const noticeHeight = Math.min(52, size.height * .44);
+  const scale = Math.min(view.scale, (size.width - 2 * margin) / (right - left),
+    (size.height - margin - noticeHeight) / (bottom - top));
+  const centered = zoom(view, scale, { x: size.width / 2, y: size.height / 2 });
+  return {
+    scale,
+    x: Math.max(margin - left * scale, Math.min(centered.x, size.width - margin - right * scale)),
+    y: Math.max(noticeHeight - top * scale, Math.min(centered.y, size.height - margin - bottom * scale)),
+  };
+}
 
 const labelTile = (tile: PublicBoardTile) => {
   if (tile.kind === "origin") return "Вход в шахту";
@@ -57,7 +77,7 @@ function TileImage({ id, rotation, large, name, eager }: { id: string; rotation:
     : <span className="tile-unavailable" aria-label={name}>?</span>;
 }
 
-export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false, status, effects, overlay }: BoardProps) {
+export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false, status, effects, overlay, finale }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Position>());
   const start = useRef<Position | null>(null);
@@ -93,13 +113,15 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
     x: size.width / 2 - (point.x + .5) * tileWidth * workScale,
     y: size.height / 2 - (point.y + .5) * tileHeight * workScale,
   };
-  const view = fixedView ? {
+  const tableView = fixedView ? {
     scale: fixedView.scale,
     x: size.width / 2 - fixedView.center.x * fixedView.scale,
     y: size.height / 2 - fixedView.center.y * fixedView.scale,
   } : phone ? work : fit;
-  const current = useRef(view);
-  useEffect(() => { current.current = view; }, [view]);
+  const view = finale ? frameFinalMove(tableView, size, finale) : tableView;
+  const framing = Boolean(finale);
+  const current = useRef(tableView);
+  useEffect(() => { current.current = tableView; }, [tableView]);
   const large = tileWidth * view.scale * window.devicePixelRatio > 256;
   const moveByCell = new Map(moves.map((move) => {
     const position = positionOf(move);
@@ -117,13 +139,14 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
   }, []);
 
   const updateCamera = useCallback((change: (previous: Camera) => Camera, overview = false) => {
+    if (framing) return;
     const next = change(current.current);
     current.current = next;
     setFixedView({
       scale: next.scale, overview,
       center: { x: (size.width / 2 - next.x) / next.scale, y: (size.height / 2 - next.y) / next.scale },
     });
-  }, [size]);
+  }, [size, framing]);
 
   const showOverview = () => updateCamera(() => fit, true);
 
@@ -151,7 +174,7 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
   const scaleBy = (factor: number) => updateCamera((previous) =>
     zoom(previous, clamped(previous.scale * factor), { x: size.width / 2, y: size.height / 2 }));
   const down = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || pointers.current.size >= 2) return;
+    if (framing || event.button !== 0 || pointers.current.size >= 2) return;
     const point = { x: event.clientX, y: event.clientY };
     if (!pointers.current.size) {
       start.current = point;
@@ -191,7 +214,7 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
     if (pointers.current.size === 0) setPanning(false);
   };
   const keyboard = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) return;
+    if (framing || event.target !== event.currentTarget) return;
     const pan: Record<string, Position> = {
       ArrowLeft: { x: 50, y: 0 }, ArrowRight: { x: -50, y: 0 },
       ArrowUp: { x: 0, y: 50 }, ArrowDown: { x: 0, y: -50 },
@@ -235,9 +258,11 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
             const landed = tile.kind === "tunnel" && same(effects?.placed ?? null, tile);
             const camera = tile.goalSlotId ? `Камера ${tile.goalSlotId.replace(/^g/, "")}` : null;
             const cameraLabel = tile.revealed ? tile.assetId === "goal-gold" ? "Жила" : "Порода" : camera;
-            const flipped = tile.kind === "goal" && tile.revealed && tile.goalSlotId && effects?.revealed?.includes(tile.goalSlotId);
+            const finalTile = Boolean(finale && same(finale.tunnel, tile));
+            const finalGoal = Boolean(finale && same(finale.goal, tile));
+            const flipped = tile.kind === "goal" && tile.revealed && tile.goalSlotId && (finalGoal || effects?.revealed?.includes(tile.goalSlotId));
             const golden = flipped && effects?.goldFinale && tile.assetId === "goal-gold";
-            const className = `board-tile tile-${tile.kind}${same(last, tile) ? " last-tile" : ""}${selected ? " tile-selected" : ""}${author ? " tile-authored" : ""}${landed ? " tile-arrived" : ""}${flipped ? " tile-revealing" : ""}${golden ? " tile-gold-finale" : ""}`;
+            const className = `board-tile tile-${tile.kind}${same(last, tile) ? " last-tile" : ""}${selected ? " tile-selected" : ""}${author ? " tile-authored" : ""}${landed ? " tile-arrived" : ""}${finalTile ? " tile-final-tunnel" : ""}${flipped ? " tile-revealing" : ""}${golden ? " tile-gold-finale" : ""}`;
             const style = { left: tile.x * tileWidth, top: tile.y * tileHeight, color: author?.color };
             const turnSequence = landed || flipped ? effects?.sequence : undefined;
             const front = <>
@@ -271,20 +296,21 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
             {effects?.collapsed && <span className="tile-collapse-dust" key={effects.sequence} data-turn-sequence={effects.sequence} aria-hidden="true" />}
           </div>}
         </div>
+        {finale?.notice}
       </div>
-      {overlay}
-      {!status && <div className="board-title"><Icon name="lantern" /><h2>{copy.mine}</h2></div>}
+      {!finale && overlay}
+      {!status && !finale && <div className="board-title"><Icon name="lantern" /><h2>{copy.mine}</h2></div>}
       <div className="board-controls" aria-label="Управление картой">
-        <button className="icon-button" onClick={() => scaleBy(1.22)} aria-label="Приблизить">{phone ? "+" : <Icon name="zoom-in" />}</button>
-        <button className="icon-button" onClick={() => scaleBy(1 / 1.22)} aria-label="Отдалить">{phone ? "−" : <Icon name="zoom-out" />}</button>
+        <button className="icon-button" disabled={framing} onClick={() => scaleBy(1.22)} aria-label="Приблизить">{phone ? "+" : <Icon name="zoom-in" />}</button>
+        <button className="icon-button" disabled={framing} onClick={() => scaleBy(1 / 1.22)} aria-label="Отдалить">{phone ? "−" : <Icon name="zoom-out" />}</button>
         {phone ? <>
-          <button className="button secondary" onClick={showOverview} aria-pressed={fixedView?.overview ?? false}>Вся шахта</button>
-          <button className="button secondary" onClick={() => setFixedView(null)} aria-pressed={!fixedView} title="Вернуть автослежение за ходами">К ходу</button>
+          <button className="button secondary" disabled={framing} onClick={showOverview} aria-pressed={fixedView?.overview ?? false}>Вся шахта</button>
+          <button className="button secondary" disabled={framing} onClick={() => setFixedView(null)} aria-pressed={!fixedView} title="Вернуть автослежение за ходами">К ходу</button>
         </> : <>
-          <button className="icon-button" onClick={showOverview} aria-label="Показать всё поле"><Icon name="settings" /></button>
-          <button className="icon-button" onClick={() => { const origin = tiles.find((tile) => tile.kind === "origin"); if (origin) focusTile(origin); }} aria-label="Ко входу"><Icon name="home" /></button>
-          {goals.length > 0 && <button className="icon-button" onClick={() => focusTile(goals[Math.floor(goals.length / 2)])} aria-label="К камерам"><Icon name="gold" /></button>}
-          {last && <button className="icon-button" onClick={() => focusTile(last)} aria-label="К последнему ходу"><Icon name="arrow-back" /></button>}
+          <button className="icon-button" disabled={framing} onClick={showOverview} aria-label="Показать всё поле"><Icon name="settings" /></button>
+          <button className="icon-button" disabled={framing} onClick={() => { const origin = tiles.find((tile) => tile.kind === "origin"); if (origin) focusTile(origin); }} aria-label="Ко входу"><Icon name="home" /></button>
+          {goals.length > 0 && <button className="icon-button" disabled={framing} onClick={() => focusTile(goals[Math.floor(goals.length / 2)])} aria-label="К камерам"><Icon name="gold" /></button>}
+          {last && <button className="icon-button" disabled={framing} onClick={() => focusTile(last)} aria-label="К последнему ходу"><Icon name="arrow-back" /></button>}
         </>}
       </div>
     </section>

@@ -283,20 +283,19 @@ test.describe("тестовая игра с ботами", () => {
       await page.getByRole("button", { name: "Начать игру" }).tap();
       await page.getByRole("button", { name: "Роль понятна" }).tap();
       const board = page.getByRole("region", { name: "Карта шахты" });
+      const viewport = board.getByRole("region", { name: /^Поле шахты/ });
       const hand = page.getByRole("region", { name: "Ваша рука" });
       const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
       await expect(turn).toBeVisible();
       await board.getByRole("button", { name: "Вся шахта" }).tap();
-      const camera = () => board.locator(".board-world").evaluate((world) => {
+      const camera = () => page.locator(".board-world").evaluate((world) => {
         const { width, height } = world.parentElement!.getBoundingClientRect();
         const { a, e, f } = new DOMMatrix(getComputedStyle(world).transform);
         return { scale: a, x: (width / 2 - e) / a, y: (height / 2 - f) / a };
       });
-      const fixedView = await camera();
       for (const [card, cell] of [
         ["Вертикальная развилка", "Клетка 0, -1"],
         ["Горизонтальная развилка", "Клетка 3, 0"],
-        ["Перекрёсток", "Клетка 5, 0"],
       ]) {
         await expect(turn).toBeVisible();
         await hand.getByRole("button", { name: card, exact: true }).first().tap();
@@ -304,24 +303,38 @@ test.describe("тестовая игра с ботами", () => {
         await hand.getByRole("button", { name: "Подтвердить ход" }).tap();
         await expect(turn).toBeHidden();
       }
-      const finale = board.getByRole("region", { name: "Последний ход раунда" });
+      await expect(turn).toBeVisible();
+      await hand.getByRole("button", { name: "Перекрёсток", exact: true }).first().tap();
+      await board.getByRole("button", { name: "Клетка 5, 0", exact: true }).tap();
+      for (let step = 0; step < 6; step++) await board.getByRole("button", { name: "Приблизить" }).tap();
+      const fixedView = await camera();
+      await expect(viewport.getByRole("img", { name: /^Камера 2 · закрыта/ })).not.toBeInViewport();
+      await hand.getByRole("button", { name: "Подтвердить ход" }).tap();
+
+      const finale = viewport.getByRole("region", { name: "Последний ход раунда" });
       const summary = page.getByRole("dialog", { name: "Итоги раунда 1" });
       await expect(finale.getByText("Последний туннель", { exact: true })).toBeVisible();
       await expect(finale.getByText("Бот 3", { exact: true })).toBeVisible();
-      await expect(board.getByRole("img", { name: "Туннель 7, 0 · Автор: Бот 3" })).toBeVisible();
+      const world = viewport.locator(".board-world");
+      const tunnel = world.getByRole("img", { name: "Туннель 7, 0 · Автор: Бот 3" });
+      await expect(tunnel).toBeInViewport({ ratio: .9 });
       await expect(summary).toHaveCount(0);
       await expect(finale.getByText("Золото найдено!", { exact: true })).toBeVisible();
       await expect(summary).toHaveCount(0);
       const revealedView = await camera();
       expect(revealedView.scale).toBeCloseTo(fixedView.scale, 5);
-      expect(revealedView.x).toBeCloseTo(fixedView.x, 1);
-      expect(revealedView.y).toBeCloseTo(fixedView.y, 1);
-      await finale.locator(".gold-reveal-flip").evaluate(async (card) => {
+      expect(revealedView.x).toBeGreaterThan(fixedView.x);
+      await world.locator(".tile-gold-finale .tile-turnover").evaluate(async (card) => {
         await Promise.all(card.getAnimations().map((animation) => animation.finished));
       });
+      await expect(world.getByRole("img", { name: /^Камера 2 · золотая жила/ })).toBeInViewport({ ratio: .9 });
       await page.screenshot({ path: testInfo.outputPath("gold-reveal.png"), scale: "css" });
       await expect(summary).toBeVisible();
-      await expect(finale).toHaveCount(0);
+      await expect(page.locator(".gold-reveal")).toHaveCount(0);
+      const restored = await camera();
+      expect(restored.scale).toBeCloseTo(fixedView.scale, 5);
+      expect(restored.x).toBeCloseTo(fixedView.x, 1);
+      expect(restored.y).toBeCloseTo(fixedView.y, 1);
       await summary.getByRole("button", { name: "Продолжить" }).tap();
       await expect(page.getByRole("dialog", { name: "Моя роль" })).toBeVisible();
     } finally {

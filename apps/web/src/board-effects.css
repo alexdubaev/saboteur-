@@ -3,6 +3,11 @@
   animation: board-tile-landing 300ms cubic-bezier(.2, .82, .34, 1) both;
 }
 
+.board-tile.tile-final-tunnel {
+  outline: 3px solid currentColor;
+  outline-offset: -2px;
+}
+
 @keyframes board-tile-landing {
   0% { opacity: .45; transform: translateY(-13%) scale(1.13); box-shadow: 0 12px 20px #080610b5; }
   57% { opacity: 1; transform: translateY(1%) scale(.98); box-shadow: 0 0 0 3px currentColor; }

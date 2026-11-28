@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CSSProperties } from "react";
 import type { JournalEntry } from "../../../packages/protocol/src/index.js";
-import { boardArt } from "./art.js";
 import type { TunnelAuthor } from "./board.js";
 import { tools } from "./text.js";
 import { goldFlipDelay, type GoldFinale, type ToolChange } from "./turn-presentation.js";
@@ -21,24 +19,8 @@ export function GoldReveal({ scene, author, onReveal }: {
   }, [scene, onReveal]);
 
   return <div className={`gold-reveal${revealed ? " gold-reveal-open" : ""}`} aria-label="Последний ход раунда" role="region">
-    <div className="gold-reveal-layout">
-      <strong className="gold-reveal-title" role="status">{revealed ? "Золото найдено!" : "Последний туннель"}</strong>
-      <div className="gold-reveal-cards" aria-hidden="true">
-        <div className="gold-reveal-tunnel" style={{ "--tunnel-author": author?.color } as CSSProperties}>
-          <img src={boardArt(scene.tunnel.assetId, "compact")} alt="" width={256} height={384}
-            style={{ transform: `rotate(${scene.tunnel.rotation}deg)` }} />
-        </div>
-        <span className="gold-reveal-link" />
-        <div className="gold-reveal-perspective">
-          <div className="gold-reveal-flip">
-            <img src={boardArt("goal-hidden", "compact")} alt="" width={256} height={384} />
-            <img className="gold-reveal-face" src={boardArt(scene.goal.assetId, "compact")} alt="" width={256} height={384}
-              style={{ rotate: `${scene.goal.rotation}deg` }} />
-          </div>
-        </div>
-      </div>
-      {author && <p className="gold-reveal-credit"><strong style={{ color: author.color }}>{author.name}</strong> проложил последний туннель</p>}
-    </div>
+    <strong className="gold-reveal-title" role="status">{revealed ? "Золото найдено!" : "Последний туннель"}</strong>
+    {author && <p className="gold-reveal-credit"><strong style={{ color: author.color }}>{author.name}</strong> проложил последний туннель</p>}
   </div>;
 }
 
