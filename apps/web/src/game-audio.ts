@@ -1,62 +1,102 @@
-type Cue = { wave: OscillatorType; notes: readonly number[]; seconds: number };
+import type { JournalEntry } from "../../../packages/protocol/src/index.js";
+import mineSoundsUrl from "./audio/mine.mp3?url";
+import sounds from "./audio/mine.json" with { type: "json" };
 
-const start: Cue = { wave: "sine", notes: [392, 523], seconds: .09 };
-const cues: Partial<Record<string, Cue>> = {
-  PLAY_TUNNEL: { wave: "triangle", notes: [196], seconds: .11 },
-  PLAY_BREAK: { wave: "triangle", notes: [260, 135], seconds: .08 },
-  PLAY_REPAIR: { wave: "sine", notes: [440, 660], seconds: .1 },
-  PLAY_COLLAPSE: { wave: "sawtooth", notes: [90, 56], seconds: .115 },
-  PLAY_SCOUT: { wave: "sine", notes: [540, 450], seconds: .09 },
-  DISCARD: { wave: "triangle", notes: [330], seconds: .07 },
-  GOAL_REVEALED: { wave: "sine", notes: [523, 659], seconds: .095 },
-  ROUND_RESOLVED: { wave: "sine", notes: [330, 440, 588], seconds: .12 },
+type SoundName = keyof typeof sounds;
+type Cue = { sound: SoundName; volume: number };
+
+const cues: Partial<Record<string, SoundName>> = {
+  PLAY_TUNNEL: "tunnel",
+  PLAY_BREAK: "break",
+  PLAY_REPAIR: "repair",
+  PLAY_COLLAPSE: "collapse",
+  PLAY_SCOUT: "scout",
+  DISCARD: "discard",
+  GOAL_REVEALED: "reveal",
+  ROUND_RESOLVED: "round",
 };
+const start: Cue = { sound: "start", volume: 1 };
+const botVolume = .43;
+let samplesRequest: Promise<ArrayBuffer> | null = null;
+
+function loadSamples() {
+  return samplesRequest ??= fetch(mineSoundsUrl).then((response) => {
+    if (!response.ok) throw new Error("Mine sound effects are unavailable");
+    return response.arrayBuffer();
+  }).catch((error) => {
+    samplesRequest = null;
+    throw error;
+  });
+}
+
+export function preloadGameSounds() {
+  if (typeof AudioContext !== "undefined") void loadSamples().catch(() => {});
+}
 
 export function createGameAudio() {
   const context = new AudioContext();
   const master = context.createGain();
   master.connect(context.destination);
+  const lastVariant = new Map<SoundName, number>();
   let resuming: Promise<void> | null = null;
+  let loading: Promise<void> | null = null;
+  let buffer: AudioBuffer | null = null;
   let queuedCue: Cue | null = null;
 
-  function playCue(cue: Cue) {
-    if (context.state !== "running" || master.gain.value === 0) return;
-    cue.notes.forEach((frequency, index) => {
-      const time = context.currentTime + index * cue.seconds;
-      const oscillator = context.createOscillator();
-      const envelope = context.createGain();
-      oscillator.type = cue.wave;
-      oscillator.frequency.value = frequency;
-      envelope.gain.setValueAtTime(0, time);
-      envelope.gain.linearRampToValueAtTime(.22, time + .008);
-      envelope.gain.linearRampToValueAtTime(0, time + cue.seconds);
-      oscillator.connect(envelope).connect(master);
-      oscillator.addEventListener("ended", () => { oscillator.disconnect(); envelope.disconnect(); }, { once: true });
-      oscillator.start(time);
-      oscillator.stop(time + cue.seconds);
-    });
+  function playQueued() {
+    if (!queuedCue || !buffer || resuming || context.state !== "running" || master.gain.value === 0) return;
+    const { sound, volume } = queuedCue;
+    queuedCue = null;
+    const variants = sounds[sound];
+    const last = lastVariant.get(sound);
+    // Choose freely on the first play, then exclude the previous variation.
+    const index = last === undefined ? Math.floor(Math.random() * variants.length) :
+      (last + 1 + Math.floor(Math.random() * (variants.length - 1))) % variants.length;
+    lastVariant.set(sound, index);
+    const [offset, duration] = variants[index];
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    gain.gain.value = volume;
+    source.buffer = buffer;
+    source.connect(gain).connect(master);
+    source.addEventListener("ended", () => { source.disconnect(); gain.disconnect(); }, { once: true });
+    source.start(0, offset, duration);
+  }
+
+  function prepareSamples() {
+    if (buffer || loading) return;
+    loading = loadSamples()
+      .then((bytes) => context.decodeAudioData(bytes.slice(0)))
+      .then((decoded) => { buffer = decoded; playQueued(); })
+      .catch(() => { queuedCue = null; })
+      .finally(() => { loading = null; });
   }
 
   return {
     setEnabled(enabled: boolean) {
-      master.gain.value = enabled ? .25 : 0;
+      master.gain.value = enabled ? .54 : 0;
       if (!enabled) queuedCue = null;
     },
     async resume(preview: boolean) {
+      if (preview) queuedCue ??= start;
+      prepareSamples();
       if (context.state !== "running") {
         resuming ??= context.resume().finally(() => { resuming = null; });
         try { await resuming; } catch { queuedCue = null; return; }
       }
-      const cue = queuedCue ?? (preview ? start : null);
-      queuedCue = null;
-      if (cue) playCue(cue);
+      playQueued();
     },
-    playLatest(events: readonly { type: string }[]) {
+    playLatest(events: readonly JournalEntry[], ownSeatId: string, foundGold: boolean) {
+      if (master.gain.value === 0 || (context.state !== "running" && !resuming)) return;
       const event = events.findLast(({ type }) => cues[type] !== undefined);
-      if (!event || master.gain.value === 0) return;
-      const cue = cues[event.type]!;
-      if (resuming) queuedCue = cue;
-      else playCue(cue);
+      if (!event) return;
+      const roundEnd = event.type === "ROUND_RESOLVED";
+      const bot = !roundEnd && event.actorSeatId !== null && event.actorSeatId !== ownSeatId;
+      queuedCue = {
+        sound: roundEnd && foundGold ? "gold" : cues[event.type]!,
+        volume: bot ? botVolume : 1,
+      };
+      playQueued();
     },
   };
 }
