@@ -70,16 +70,17 @@ function gameArt(): Plugin {
   };
 }
 
-function sitesWebApp(): Plugin {
+function webApp(): Plugin {
   const iconSizes = [192, 512];
-  const iconTitle = "За золотом";
+  const iconTitle = "За\u00a0золотом";
   return {
-    name: "sites-web-app",
+    name: "game-web-app",
+    apply: "build",
     transformIndexHtml: {
       order: "post",
       handler: () => [
         { tag: "link", attrs: { rel: "manifest", href: "/manifest.webmanifest" } },
-        { tag: "link", attrs: { rel: "apple-touch-icon", href: "/assets/branding/app-icon-192.png" } },
+        { tag: "link", attrs: { rel: "apple-touch-icon", sizes: "192x192", href: "/assets/branding/app-icon-192.png" } },
         { tag: "meta", attrs: { name: "apple-mobile-web-app-title", content: iconTitle } },
       ],
     },
@@ -94,7 +95,7 @@ function sitesWebApp(): Plugin {
         fileName: "manifest.webmanifest",
         source: JSON.stringify({
           name: "Золото и предатели", short_name: iconTitle, lang: "ru",
-          start_url: "/", scope: "/", display: "standalone",
+          id: "/", start_url: "/", scope: "/", display: "standalone",
           background_color: "#100e20", theme_color: "#100e20", icons,
         }),
       });
@@ -103,12 +104,13 @@ function sitesWebApp(): Plugin {
 }
 
 export default defineConfig(async ({ mode }): Promise<UserConfig> => {
+  const plugins = [gameArt(), react(), webApp()];
   if (mode === "sites") {
     const definition = await loadActiveDefinition(workspace);
     return {
       root,
       publicDir: false,
-      plugins: [gameArt(), react(), sitesWebApp()],
+      plugins,
       define: { __SITES_SOLO_DEFINITION__: JSON.stringify(definition) },
       resolve: {
         alias: [{ find: /^node:crypto$/, replacement: join(root, "src/solo-sha256.ts") }],
@@ -120,7 +122,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   return {
     root,
     publicDir: false,
-    plugins: [gameArt(), react()],
+    plugins,
     server: {
       fs: { strict: true, allow: [root] },
       proxy: { "/api": "http://127.0.0.1:4174", "/ws": { target: "http://127.0.0.1:4174", ws: true } },

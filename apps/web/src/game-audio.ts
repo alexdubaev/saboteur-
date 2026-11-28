@@ -1,5 +1,8 @@
 import type { JournalEntry } from "../../../packages/protocol/src/index.js";
+import ambienceUrl from "./audio/mine-ambience.mp3?url";
 import mineSoundsUrl from "./audio/mine.mp3?url";
+import startUrl from "./audio/mine-start.mp3?url";
+import turnUrl from "./audio/mine-turn.mp3?url";
 import bank from "./audio/mine.json" with { type: "json" };
 
 const sounds = { ...bank, turn: [[bank.minePick[0][0] + .168, .32]] };
@@ -38,7 +41,7 @@ function loadSamples() {
   });
 }
 
-export function createGameAudio() {
+function createEffectsAudio() {
   const context = new AudioContext();
   const master = context.createGain();
   master.connect(context.destination);
@@ -50,12 +53,11 @@ export function createGameAudio() {
   let notifiedTurn: string | null = null;
   let turnQueued = false;
   let ambience = false;
-  let cave: AudioBufferSourceNode | null = null;
   let detail: AudioBufferSourceNode | null = null;
   let detailTimer: number | undefined;
   let nextDetail = 0;
 
-  function playClip({ sound, volume }: Cue, loop = false, when = 0) {
+  function playClip({ sound, volume }: Cue, when = 0) {
     if (!buffer) return;
     const variants = sounds[sound];
     const last = lastVariant.get(sound);
@@ -84,14 +86,7 @@ export function createGameAudio() {
       gain.disconnect();
       pan?.disconnect();
     }, { once: true });
-    if (loop) {
-      source.loop = true;
-      source.loopStart = offset;
-      source.loopEnd = offset + duration;
-      source.start(when, offset);
-    } else {
-      source.start(when, offset, duration);
-    }
+    source.start(when, offset, duration);
     return { source, duration };
   }
 
@@ -104,14 +99,15 @@ export function createGameAudio() {
     }
     if (turnQueued) {
       turnQueued = false;
-      playClip(turnAlert, false, context.currentTime + .16);
-      playClip(turnAlert, false, context.currentTime + .46);
+      playClip(turnAlert, context.currentTime + .16);
+      playClip(turnAlert, context.currentTime + .46);
     }
   }
 
   function scheduleDetail(delay: number) {
     detailTimer = window.setTimeout(() => {
-      if (!cave || context.state !== "running") return;
+      detailTimer = undefined;
+      if (!ambience || context.state !== "running") return;
       const clip = playClip(background[nextDetail]);
       detail = clip?.source ?? null;
       nextDetail = (nextDetail + 1) % background.length;
@@ -122,14 +118,12 @@ export function createGameAudio() {
   function syncAmbience() {
     if (!ambience || !buffer || master.gain.value === 0 || context.state !== "running") {
       window.clearTimeout(detailTimer);
-      cave?.stop();
+      detailTimer = undefined;
       detail?.stop();
-      cave = detail = null;
+      detail = null;
       return;
     }
-    if (cave) return;
-    cave = playClip({ sound: "mineBed", volume: .23 }, true)?.source ?? null;
-    scheduleDetail(1200 + Math.random() * 1050);
+    if (detailTimer === undefined) scheduleDetail(1200 + Math.random() * 1050);
   }
 
   context.addEventListener("statechange", () => {
@@ -193,6 +187,86 @@ export function createGameAudio() {
         volume: bot ? botVolume : 1,
       };
       playQueued();
+    },
+  };
+}
+
+export function createGameAudio() {
+  const background = new Audio(ambienceUrl);
+  background.loop = true;
+  let effects: ReturnType<typeof createEffectsAudio> | undefined;
+  try {
+    if (typeof AudioContext !== "undefined") effects = createEffectsAudio();
+  } catch {
+    // A media element can still play the ambience and alerts when Web Audio is unavailable.
+  }
+  const fallback = effects ? undefined : new Audio();
+  let fallbackSource: string | undefined;
+  let seenTurn: string | null = null;
+  let pendingTurn: string | null = null;
+  let playingTurn: string | null = null;
+  let enabled = false;
+  let ambience = false;
+
+  function playFallback(url: string) {
+    if (!fallback || !enabled || !ambience) return;
+    if (fallbackSource === url) fallback.currentTime = 0;
+    else {
+      fallback.src = url;
+      fallbackSource = url;
+    }
+    return fallback.play();
+  }
+
+  function playPendingTurn() {
+    const turn = pendingTurn;
+    if (!turn || playingTurn === turn) return;
+    const playback = playFallback(turnUrl);
+    if (!playback) return;
+    playingTurn = turn;
+    void playback.then(() => {
+      if (pendingTurn === turn) pendingTurn = null;
+    }, () => {}).finally(() => {
+      if (playingTurn === turn) playingTurn = null;
+    });
+  }
+
+  function pauseMedia() {
+    if (!background.paused) background.pause();
+    if (fallback && !fallback.paused) fallback.pause();
+  }
+
+  return {
+    setEnabled(active: boolean) {
+      enabled = active;
+      effects?.setEnabled(active);
+      if (!active) pauseMedia();
+    },
+    setAmbience(active: boolean) {
+      ambience = active;
+      effects?.setAmbience(active);
+      if (!active) pauseMedia();
+    },
+    resume(preview: boolean) {
+      // Keep play() in the gesture handler call stack on iOS.
+      const started = enabled && ambience && background.paused ? background.play() : Promise.resolve();
+      if (effects) void effects.resume(preview).catch(() => {});
+      else if (pendingTurn) playPendingTurn();
+      else if (preview) void playFallback(startUrl)?.catch(() => {});
+      return started;
+    },
+    setOwnTurn(turnKey: string | null) {
+      if (effects) effects.setOwnTurn(turnKey);
+      else if (turnKey && seenTurn !== turnKey) {
+        seenTurn = pendingTurn = turnKey;
+        playPendingTurn();
+      } else if (!turnKey) {
+        pendingTurn = null;
+        if (fallbackSource === turnUrl) fallback?.pause();
+      }
+    },
+    playLatest(events: readonly JournalEntry[], ownSeatId: string, foundGold: boolean) {
+      effects?.playLatest(events, ownSeatId, foundGold);
     },
   };
 }

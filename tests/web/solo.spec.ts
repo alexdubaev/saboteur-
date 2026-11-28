@@ -374,6 +374,57 @@ test.describe("тестовая игра с ботами", () => {
     }
   });
 
+  test("фон и стартовый звук включаются через медиаплеер при заблокированном автозапуске", async ({ browser, browserName }) => {
+    test.skip(browserName !== "chromium", "Проверка подменяет политику автозапуска Chromium");
+    const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
+    try {
+      await context.addInitScript(seedRandom, 41);
+      await context.addInitScript(() => {
+        Object.defineProperty(window, "AudioContext", { value: undefined, configurable: true });
+        const play = HTMLMediaElement.prototype.play;
+        let interacted = false;
+        document.addEventListener("touchend", (event) => {
+          interacted = true;
+          if (event.target instanceof Element && event.target.closest(".own-turn")) {
+            delete document.documentElement.dataset.blockNativeTurn;
+          }
+        }, true);
+        HTMLMediaElement.prototype.play = function () {
+          if (!interacted) return Promise.reject(new DOMException("Autoplay blocked", "NotAllowedError"));
+          if (/mine-turn/.test(this.src) && document.documentElement.dataset.blockNativeTurn === "yes") {
+            document.documentElement.dataset.nativeTurnAttempt = "blocked";
+            return Promise.reject(new DOMException("Turn requires another gesture", "NotAllowedError"));
+          }
+          this.addEventListener("playing", () => {
+            const root = document.documentElement;
+            if (/mine-ambience/.test(this.currentSrc)) root.dataset.nativeAmbience = "playing";
+            if (/mine-start/.test(this.currentSrc)) root.dataset.nativeStart = "playing";
+            if (/mine-turn/.test(this.currentSrc)) root.dataset.nativeTurn = "playing";
+          }, { once: true });
+          return play.call(this);
+        };
+      });
+      const page = await context.newPage();
+      await page.goto(sitesUrl!);
+      const startSound = page.getByRole("button", { name: "Включить звук", exact: true });
+      await expect(startSound).toBeVisible();
+      await startSound.tap();
+      await expect(page.locator("html")).toHaveAttribute("data-native-ambience", "playing");
+      await expect(page.locator("html")).toHaveAttribute("data-native-start", "playing");
+      await expect(page.getByRole("button", { name: "Выключить звук", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Начать игру" }).tap();
+      await page.evaluate(() => { document.documentElement.dataset.blockNativeTurn = "yes"; });
+      await page.getByRole("button", { name: "Роль понятна" }).tap();
+      const turn = page.getByRole("heading", { name: "Ваш ход", exact: true }).locator(".own-turn");
+      await expect(turn).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("data-native-turn-attempt", "blocked");
+      await turn.tap();
+      await expect(page.locator("html")).toHaveAttribute("data-native-turn", "playing");
+    } finally {
+      await context.close();
+    }
+  });
+
   test("фон шахты запускается в меню, сохраняется в партии и учитывает выключение звука", async ({ browser, browserName }) => {
     test.skip(browserName !== "chromium", "Эта проверка использует Web Audio в Chromium");
     const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
@@ -427,12 +478,18 @@ test.describe("тестовая игра с ботами", () => {
           playback.push({ volume: gains.get(this)?.gain.value, offset, loop: this.loop });
           root.dataset.playback = JSON.stringify(playback);
         };
-        const stop = AudioBufferSourceNode.prototype.stop;
-        AudioBufferSourceNode.prototype.stop = function (when?: number) {
-          stop.call(this, when);
-          if (!this.loop) return;
-          const root = document.documentElement;
-          root.dataset.stoppedLoops = String(Number(root.dataset.stoppedLoops ?? 0) + 1);
+        const playMedia = HTMLMediaElement.prototype.play;
+        HTMLMediaElement.prototype.play = function () {
+          if (this.loop) (window as Window & { testAmbience?: HTMLMediaElement }).testAmbience = this;
+          return playMedia.call(this);
+        };
+        const pauseMedia = HTMLMediaElement.prototype.pause;
+        HTMLMediaElement.prototype.pause = function () {
+          if (this.loop && !this.paused) {
+            const root = document.documentElement;
+            root.dataset.stoppedLoops = String(Number(root.dataset.stoppedLoops ?? 0) + 1);
+          }
+          pauseMedia.call(this);
         };
       });
       const page = await context.newPage();
@@ -444,13 +501,15 @@ test.describe("тестовая игра с ботами", () => {
       const effects = async () => (await playback()).filter((clip) => clip.volume >= .4 && !turnAlert(clip));
       const turnAlerts = async () => (await playback()).filter(turnAlert).length;
       const stoppedLoops = () => page.evaluate(() => Number(document.documentElement.dataset.stoppedLoops ?? 0));
+      const ambiencePlaying = () => page.evaluate(() => (window as Window & { testAmbience?: HTMLMediaElement }).testAmbience?.paused === false);
       await expect(page.locator("html")).toHaveAttribute("data-autoplay-attempted", "yes");
       expect(await playback()).toHaveLength(0);
       await page.getByRole("img", { name: "Золото и предатели" }).tap();
-      await expect.poll(async () => (await playback()).filter(({ loop }) => loop).length).toBe(1);
+      await expect.poll(ambiencePlaying).toBe(true);
+      const beforeStart = await stoppedLoops();
       await page.getByRole("button", { name: "Начать игру" }).tap();
       await expect.poll(async () => (await effects()).length).toBeGreaterThan(0);
-      await expect.poll(async () => (await playback()).filter(({ loop }) => loop).length).toBe(1);
+      expect(await stoppedLoops()).toBe(beforeStart);
       await page.getByRole("button", { name: "Роль понятна" }).tap();
       const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
       await expect(turn).toBeVisible();
@@ -506,7 +565,7 @@ test.describe("тестовая игра с ботами", () => {
         Reflect.deleteProperty(document, "hidden");
         document.dispatchEvent(new Event("visibilitychange"));
       });
-      await expect.poll(async () => (await playback()).length).toBeGreaterThan(hidden);
+      await expect.poll(ambiencePlaying).toBe(true);
       const beforeExit = await stoppedLoops();
       await page.getByRole("button", { name: "Выйти из партии" }).tap();
       await page.getByRole("dialog", { name: "Выйти из партии" }).getByRole("button", { name: "В меню" }).tap();
@@ -517,6 +576,7 @@ test.describe("тестовая игра с ботами", () => {
       await expect(page.getByRole("button", { name: "Включить звук" })).toBeVisible();
       await page.getByRole("img", { name: "Золото и предатели" }).tap();
       expect(await playback()).toHaveLength(0);
+      expect(await ambiencePlaying()).toBe(false);
     } finally {
       await context.close();
     }
