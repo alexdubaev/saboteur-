@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "cards": [
+    {
+      "id": "board-start",
+      "source": "board-art-v2-candidates/board-start.png",
+      "sourceSha256": "50a61fbdd917284fff0a3f8a4d416431f9e6f1ffe698e355561394442b3bc400",
+      "status": "art-review-required",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/board/tiles/board-start.webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 108302,
+          "sha256": "22ef338334cc2d8ae7f52fecae5d1b152d182c83d7947f7b04001b46926cfb39"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/board/tiles/compact/board-start.webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 46070,
+          "sha256": "11cfa4c1bf082b26e35f46c7188ed66e07dde4d64bbb78f51dde7981e454fdb8"
+        }
+      ]
+    },
+    {
+      "id": "goal-gold",
+      "source": "board-art-v2-candidates/goal-gold.png",
+      "sourceSha256": "29283bc2d658775cbd1d1fd3bd6e17cd7c07637b1c7c091ad621add370e1dcc7",
+      "status": "art-review-required",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/board/tiles/goal-gold.webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 118608,
+          "sha256": "7073174edfdb802938dc03b04064e4c2e7efd499334ee3c07cf83d3c58928ddc"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/board/tiles/compact/goal-gold.webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 45870,
+          "sha256": "b2a72be2d13f1258b307246252fccf9554111d9e816732a8ec5e6ceeb217983b"
+        }
+      ]
+    },
+    {
+      "id": "goal-empty-a",
+      "source": "board-art-v2-candidates/goal-empty-a.png",
+      "sourceSha256": "68c73c90bbeef25b1470daa21bba69ce1bb1bdf77861b35763cc45608604b38f",
+      "status": "art-review-required",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/board/tiles/goal-empty-a.webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 112782,
+          "sha256": "e3e2d1b0a03948273a0960df44c531af9fb4588f019b35124a4fc7864b9efcee"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/board/tiles/compact/goal-empty-a.webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 42840,
+          "sha256": "1ea3112cd3f6315081738fa74ad0733d36c06ac5e05e37386cbe3a140ace5e12"
+        }
+      ]
+    },
+    {
+      "id": "goal-empty-b",
+      "source": "board-art-v2-candidates/goal-empty-b.png",
+      "sourceSha256": "af9794754ff5574e32eb3ba984200ff86e8ba836ac87a0a8760c2054587454a1",
+      "status": "art-review-required",
+      "variants": [
+        {
+          "purpose": "standard",
+          "path": "assets/board/tiles/goal-empty-b.webp",
+          "width": 512,
+          "height": 768,
+          "bytes": 110612,
+          "sha256": "a3fba8ef0079cc1028c90d3be7e47afdfc6a13849979dee21e9e04941b7871d5"
+        },
+        {
+          "purpose": "compact",
+          "path": "assets/board/tiles/compact/goal-empty-b.webp",
+          "width": 256,
+          "height": 384,
+          "bytes": 41332,
+          "sha256": "ba325f64f84f745629b8d94e172c6c39ee6e7e14aa1288211904c766c15cb99d"
+        }
+      ]
+    }
+  ]
+}

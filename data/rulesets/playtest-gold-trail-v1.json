@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "id": "playtest-gold-trail-v1",
+  "status": "internal-playtest",
+  "ownerApprovedForRelease": false,
+  "description": "Правила локальной альфы «Золото и предатели». Старатели ищут одну золотую камеру. Раунд заканчивается с находкой или после расходования карт.",
+  "catalog": "data/card-catalog-v2.json",
+  "players": {
+    "min": 3,
+    "max": 10
+  },
+  "rounds": 3,
+  "handSizeByPlayers": {
+    "3": 6,
+    "4": 6,
+    "5": 6,
+    "6": 5,
+    "7": 5,
+    "8": 4,
+    "9": 4,
+    "10": 4
+  },
+  "traitorCountByPlayers": {
+    "3": 1,
+    "4": 1,
+    "5": 1,
+    "6": 2,
+    "7": 2,
+    "8": 2,
+    "9": 3,
+    "10": 3
+  },
+  "traitorlessChancePercentByPlayers": {
+    "3": 20,
+    "4": 20
+  },
+  "deck": {
+    "tunnelCopies": 40,
+    "actionCopies": 27,
+    "total": 67,
+    "copies": {
+      "tunnel-straight-ns": 5,
+      "tunnel-straight-ew": 6,
+      "tunnel-turn-ne": 4,
+      "tunnel-turn-nw": 4,
+      "tunnel-tee-nes": 4,
+      "tunnel-tee-new": 4,
+      "tunnel-cross": 4,
+      "tunnel-dead-end-n": 1,
+      "tunnel-dead-end-e": 1,
+      "tunnel-separated-n-s": 1,
+      "tunnel-separated-e-w": 1,
+      "tunnel-separated-n-e": 1,
+      "tunnel-separated-n-w": 1,
+      "tunnel-separated-n-e-s": 1,
+      "tunnel-separated-n-e-w": 1,
+      "tunnel-separated-n-e-s-w": 1,
+      "action-break-pickaxe": 2,
+      "action-break-lantern": 3,
+      "action-break-cart": 2,
+      "action-repair-pickaxe": 3,
+      "action-repair-lantern": 3,
+      "action-repair-cart": 3,
+      "action-repair-pickaxe-or-lantern": 2,
+      "action-repair-lantern-or-cart": 1,
+      "action-repair-pickaxe-or-cart": 1,
+      "action-collapse": 3,
+      "action-scout": 4
+    }
+  },
+  "board": {
+    "coordinateLimit": 128,
+    "origin": {
+      "x": 0,
+      "y": 0,
+      "assetId": "board-start",
+      "connections": [
+        [
+          "N",
+          "E",
+          "S",
+          "W"
+        ]
+      ]
+    },
+    "goalSlots": [
+      {
+        "id": "g1",
+        "x": 8,
+        "y": -2
+      },
+      {
+        "id": "g2",
+        "x": 8,
+        "y": 0
+      },
+      {
+        "id": "g3",
+        "x": 8,
+        "y": 2
+      }
+    ],
+    "goalContents": [
+      "ore",
+      "barren",
+      "barren"
+    ],
+    "publicGoalPorts": [
+      "W"
+    ],
+    "goalTerminal": true,
+    "goalAssets": {
+      "hidden": "goal-hidden",
+      "ore": "goal-gold",
+      "barrenOptions": [
+        "goal-empty-a",
+        "goal-empty-b"
+      ]
+    }
+  },
+  "turn": {
+    "actionsPerTurn": 1,
+    "drawAfterNonterminalMove": 1,
+    "refillDiscard": false,
+    "maxTurnsFormula": null,
+    "skipEmptyHand": true,
+    "timeoutDefaultSeconds": null,
+    "timeoutPolicy": "discard-first-by-instance-order"
+  },
+  "tools": {
+    "types": [
+      "pickaxe",
+      "lantern",
+      "cart"
+    ],
+    "anyBreakBlocksTunnel": true,
+    "allowSelfBreak": false,
+    "allowDuplicateBreak": false,
+    "repairOneAtATime": true
+  },
+  "victory": {
+    "prospectors": {
+      "type": "simultaneously-reachable-ore",
+      "required": 1
+    },
+    "traitors": {
+      "type": "turn-budget-or-exhaustion-without-goal"
+    }
+  },
+  "rewards": {
+    "mode": "numeric-ledger",
+    "prospectorWinEach": 2,
+    "prospectorFinisherBonus": 1,
+    "traitorWinFormula": {
+      "base": 2,
+      "missingConnectedOreMultiplier": 0
+    },
+    "privateUntilMatchEnd": true,
+    "illustrations": {
+      "1": "reward-gold-one",
+      "2": "reward-gold-two",
+      "3": "reward-gold-three"
+    }
+  },
+  "startingSeat": {
+    "firstRound": "random",
+    "nextRound": "advance-previous-round-starter"
+  },
+  "publication": {
+    "internalOnly": true,
+    "requiresOwnerApprovedRuleset": true,
+    "requiresRightsReview": true
+  }
+}
