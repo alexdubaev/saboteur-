@@ -18,7 +18,8 @@ async function main() {
 
   try {
     await db.query("SELECT 1 FROM rooms LIMIT 0");
-    const server = await startServer({ db, definition, origin: origin.origin, playtest: process.env.PLAYTEST_MODE === "1", host, port });
+    const server = await startServer({ db, definition, origin: origin.origin, playtest: process.env.PLAYTEST_MODE === "1", host, port,
+      hostKey: process.env.PLAYTEST_HOST_KEY });
     console.log(JSON.stringify({ event: "server_listening", host, port: server.port }));
     const shutdown = () => {
       void server.close().then(() => db.end()).then(

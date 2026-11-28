@@ -39,6 +39,7 @@ services:
       HOST: 0.0.0.0
       PORT: "4174"
       PLAYTEST_MODE: "1"
+      PLAYTEST_HOST_KEY: ${PLAYTEST_HOST_KEY:?Generate a private host invitation key}
     volumes:
       - ./release:/srv/game:ro
     networks: [gateway, data]
@@ -57,9 +58,6 @@ services:
 
   gateway:
     image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
-    environment:
-      PLAYTEST_USER: ${PLAYTEST_USER:?Set the group access username}
-      PLAYTEST_HASH: ${PLAYTEST_HASH:?Set a bcrypt hash for group access}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./release/web:/srv/web:ro
