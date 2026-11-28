@@ -1,45 +1,21 @@
 .gold-reveal {
-  --scene-card-width: clamp(48px, 12dvh, 112px);
   position: absolute;
   z-index: 5;
-  inset: 0 0 calc(var(--table-control, 40px) + 4px);
-  display: grid;
-  place-items: center;
-  padding: 5px;
+  inset: 5px auto auto 50%;
+  translate: -50% 0;
+  width: max-content;
+  max-width: calc(100% - 12px);
+  padding: 3px 9px 4px;
+  border: 1px solid #a3774a;
+  border-radius: 7px;
+  background: #22172a;
+  box-shadow: 0 3px 8px #08060c9e;
+  text-align: center;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, #302449fa 18%, #120c1ad6 60%, #100b1770 100%);
 }
-.gold-reveal-layout { display: grid; justify-items: center; gap: clamp(4px, 1.2dvh, 12px); max-width: 100%; }
-.gold-reveal-title { color: #ffe0a3; font: bold clamp(1rem, 3.2dvh, 2rem)/1.05 Georgia, serif; }
+.gold-reveal-title { display: block; color: #ffe0a3; font: bold clamp(.9rem, 2.5dvh, 1.2rem)/1.1 Georgia, serif; }
 .gold-reveal-open .gold-reveal-title { text-shadow: 0 0 .65em #f3ad5eaa; }
-.gold-reveal-cards { display: flex; align-items: center; gap: 8px; }
-.gold-reveal-tunnel, .gold-reveal-perspective { width: var(--scene-card-width); aspect-ratio: 2 / 3; }
-.gold-reveal-tunnel {
-  position: relative; overflow: hidden; border-radius: 5px; box-shadow: 0 7px 18px #07050bc7;
-  animation: gold-tunnel-settle 300ms cubic-bezier(.18,.8,.27,1) both;
-}
-.gold-reveal-tunnel::after {
-  position: absolute; inset: 0; content: ""; border: 2px solid var(--tunnel-author, #edc383); border-radius: inherit;
-}
-.gold-reveal-cards img { display: block; width: 100%; height: 100%; border-radius: 5px; }
-.gold-reveal-link { width: clamp(12px, 4vw, 38px); height: 2px; background: #eac586; box-shadow: 0 0 7px #ffa747; }
-.gold-reveal-perspective { perspective: 340px; }
-.gold-reveal-flip { position: relative; height: 100%; transform-style: preserve-3d; }
-.gold-reveal-flip img { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
-.gold-reveal-flip .gold-reveal-face { transform: rotateY(180deg); box-shadow: 0 0 26px #ffc154a8; }
-.gold-reveal-open .gold-reveal-flip { animation: gold-reveal-flip 780ms cubic-bezier(.38,.08,.22,1) both; }
-.gold-reveal-credit { margin: 0; color: #e1d3ea; font-size: clamp(.66rem, 1.75dvh, .9rem); text-align: center; }
-@keyframes gold-tunnel-settle {
-  from { opacity: .08; transform: translate(-9px, -16px) scale(1.12) rotate(-5deg); }
-  72% { opacity: 1; transform: translateY(1px) scale(.98); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes gold-reveal-flip {
-  from { transform: rotateY(0); }
-  56% { transform: rotateY(158deg) scale(1.1); }
-  80% { transform: rotateY(180deg) scale(1.15); }
-  to { transform: rotateY(180deg) scale(1.08); }
-}
+.gold-reveal-credit { margin: 1px 0 0; color: #e1d3ea; font-size: .7rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .move-feedback {
   --event-tone: #f7939e;
   z-index: 5; position: absolute; inset: 6px 6px auto auto;
@@ -73,10 +49,6 @@
   8%, 40% { box-shadow: inset 0 0 0 2px var(--pulse-color), inset 0 0 10px var(--pulse-color); opacity: 1; }
   24%, 100% { opacity: 0; }
 }
-@media (orientation: landscape) and (max-height: 520px) {
-  .gold-reveal { --scene-card-width: clamp(39px, 17dvh, 76px); }
-}
 @media (prefers-reduced-motion: reduce) {
-  .gold-reveal-tunnel, .gold-reveal-open .gold-reveal-flip, .move-feedback, .crew-event-pulse { animation: none; }
-  .gold-reveal-open .gold-reveal-flip { transform: rotateY(180deg); }
+  .move-feedback, .crew-event-pulse { animation: none; }
 }

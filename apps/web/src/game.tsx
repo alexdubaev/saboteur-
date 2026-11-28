@@ -365,9 +365,12 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       <div className="table-layout">
         <Board key={match.matchId} tiles={match.board} authors={authors} moves={boardMoves} staged={staged} asset={handCard?.assetId} last={lastBoardMove(snapshot)} choose={choose}
           phone={phone} effects={presentation.board}
-          overlay={presentation.gold
-            ? <GoldReveal key={presentation.gold.event.sequence} scene={presentation.gold} author={authors.get(presentation.gold.actorSeatId ?? "")} onReveal={onGoldReveal} />
-            : presentation.tool && <ToolFeedback key={presentation.tool.sequence} change={presentation.tool} authors={authors} mySeatId={room.mySeatId} />}
+          finale={presentation.gold ? {
+            tunnel: presentation.gold.tunnel, goal: presentation.gold.goal,
+            notice: <GoldReveal key={presentation.gold.event.sequence} scene={presentation.gold}
+              author={authors.get(presentation.gold.actorSeatId ?? "")} onReveal={onGoldReveal} />,
+          } : undefined}
+          overlay={presentation.tool && <ToolFeedback key={presentation.tool.sequence} change={presentation.tool} authors={authors} mySeatId={room.mySeatId} />}
           status={tunnelsBlocked ? <div className="tool-status" role="status" aria-label="Состояние ваших инструментов">
             <div className="tool-status-heading" id={toolStatusId}>
               <strong>Туннели заблокированы</strong>
