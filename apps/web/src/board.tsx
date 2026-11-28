@@ -3,12 +3,20 @@ import type { CardCommand, Position, PublicBoardTile } from "../../../packages/g
 import { boardArt, junctionArt } from "./art.js";
 import { copy } from "./text.js";
 import { Icon } from "./ui.js";
+import "./board-effects.css";
 
 type BoardMove = Extract<CardCommand, { type: "PLAY_TUNNEL" | "PLAY_COLLAPSE" | "PLAY_SCOUT" }>;
 type Camera = { x: number; y: number; scale: number };
 type FixedView = { center: Position; scale: number; overview: boolean };
 type Bounds = { minX: number; maxX: number; minY: number; maxY: number };
 export type TunnelAuthor = { name: string; color: string };
+export type BoardTurnEffects = {
+  sequence: number;
+  placed?: Position;
+  collapsed?: Position;
+  revealed?: readonly string[];
+  goldFinale?: boolean;
+};
 type BoardProps = {
   tiles: PublicBoardTile[];
   authors: ReadonlyMap<string, TunnelAuthor>;
@@ -19,6 +27,8 @@ type BoardProps = {
   choose: (move: CardCommand) => void;
   phone?: boolean;
   status?: ReactNode;
+  effects?: BoardTurnEffects;
+  overlay?: ReactNode;
 };
 
 const tileWidth = 72;
@@ -40,14 +50,14 @@ const labelTile = (tile: PublicBoardTile) => {
   return `Камера ${tile.goalSlotId?.replace(/^g/, "") ?? ""} · ${status}${tile.reachable && tile.revealed ? " · доступна" : ""}`;
 };
 
-function TileImage({ id, rotation, large, name }: { id: string; rotation: number; large: boolean; name: string }) {
+function TileImage({ id, rotation, large, name, eager }: { id: string; rotation: number; large: boolean; name: string; eager?: boolean }) {
   const src = boardArt(id, large ? "standard" : "compact") ?? boardArt(id, "compact");
   return src
-    ? <img src={src} className="tile-image" alt={name} draggable={false} loading="lazy" width={512} height={768} style={{ transform: `rotate(${rotation}deg)` }} />
+    ? <img src={src} className="tile-image" alt={name} draggable={false} loading={eager ? "eager" : "lazy"} width={512} height={768} style={{ transform: `rotate(${rotation}deg)` }} />
     : <span className="tile-unavailable" aria-label={name}>?</span>;
 }
 
-export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false, status }: BoardProps) {
+export function Board({ tiles, authors, moves, staged, asset, last, choose, phone = false, status, effects, overlay }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Position>());
   const start = useRef<Position | null>(null);
@@ -199,6 +209,8 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
   const stagedPosition = staged && "x" in staged ? staged : staged?.type === "PLAY_SCOUT"
     ? tiles.find((tile) => tile.goalSlotId === staged.goalSlotId) ?? null : null;
   const goals = tiles.filter((tile) => tile.kind === "goal");
+  const collapse = effects?.collapsed ?? last;
+  const showCollapse = collapse && !byCell.has(cell(collapse));
 
   return (
     <section className={status ? "mine mine-with-status" : "mine"} aria-label={copy.mine}>
@@ -220,16 +232,30 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
             const author = tile.kind === "tunnel" && tile.placedBySeatId ? authors.get(tile.placedBySeatId) : undefined;
             const name = author ? `${labelTile(tile)} · Автор: ${author.name}` : labelTile(tile);
             const selected = stagedPosition && same(stagedPosition, tile);
-            const className = `board-tile tile-${tile.kind}${same(last, tile) ? " last-tile" : ""}${selected ? " tile-selected" : ""}${author ? " tile-authored" : ""}`;
+            const landed = tile.kind === "tunnel" && same(effects?.placed ?? null, tile);
+            const camera = tile.goalSlotId ? `Камера ${tile.goalSlotId.replace(/^g/, "")}` : null;
+            const cameraLabel = tile.revealed ? tile.assetId === "goal-gold" ? "Жила" : "Порода" : camera;
+            const flipped = tile.kind === "goal" && tile.revealed && tile.goalSlotId && effects?.revealed?.includes(tile.goalSlotId);
+            const golden = flipped && effects?.goldFinale && tile.assetId === "goal-gold";
+            const className = `board-tile tile-${tile.kind}${same(last, tile) ? " last-tile" : ""}${selected ? " tile-selected" : ""}${author ? " tile-authored" : ""}${landed ? " tile-arrived" : ""}${flipped ? " tile-revealing" : ""}${golden ? " tile-gold-finale" : ""}`;
             const style = { left: tile.x * tileWidth, top: tile.y * tileHeight, color: author?.color };
-            const content = <>
-              <TileImage id={tile.assetId} rotation={tile.rotation} large={large} name={action ? "" : name} />
-
-              {tile.goalSlotId && <span className="tile-label">{tile.revealed ? tile.assetId === "goal-gold" ? "Жила" : "Порода" : `Камера ${tile.goalSlotId.replace(/^g/, "")}`}</span>}
+            const turnSequence = landed || flipped ? effects?.sequence : undefined;
+            const front = <>
+              <TileImage id={tile.assetId} rotation={tile.rotation} large={large} name={action ? "" : name} eager={landed || Boolean(flipped)} />
+              {camera && <span className="tile-label">{cameraLabel}</span>}
             </>;
+            const content = flipped ? (
+              <span className="tile-turnover" key={turnSequence}>
+                <span className="tile-face tile-face-closed" aria-hidden="true">
+                  <TileImage id="goal-hidden" rotation={0} large={large} name="" eager />
+                  <span className="tile-label">{camera}</span>
+                </span>
+                <span className="tile-face tile-face-open">{front}</span>
+              </span>
+            ) : front;
             return action
-              ? <button key={key} className={`${className} tile-target`} style={style} title={author ? name : undefined} onClick={() => choose(action)} aria-label={name} aria-pressed={Boolean(selected)}>{content}</button>
-              : <div key={key} className={className} style={style} title={name}>{content}</div>;
+              ? <button key={key} className={`${className} tile-target`} data-turn-sequence={turnSequence} style={style} title={author ? name : undefined} onClick={() => choose(action)} aria-label={name} aria-pressed={Boolean(selected)}>{content}</button>
+              : <div key={key} className={className} data-turn-sequence={turnSequence} style={style} title={name}>{content}</div>;
           })}
           {moves.filter((action): action is Extract<BoardMove, { type: "PLAY_TUNNEL" }> => action.type === "PLAY_TUNNEL" && !byCell.has(cell(action))).map((action) => {
             const selected = staged?.type === "PLAY_TUNNEL" && same(staged, action);
@@ -241,9 +267,12 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
               </button>
             );
           })}
-          {last && !byCell.has(cell(last)) && <div className="board-tile last-tile collapsed-tile" style={{ left: last.x * tileWidth, top: last.y * tileHeight }} aria-label="Последний обвал" />}
+          {showCollapse && <div className="board-tile last-tile collapsed-tile" style={{ left: collapse.x * tileWidth, top: collapse.y * tileHeight }} aria-label="Последний обвал">
+            {effects?.collapsed && <span className="tile-collapse-dust" key={effects.sequence} data-turn-sequence={effects.sequence} aria-hidden="true" />}
+          </div>}
         </div>
       </div>
+      {overlay}
       {!status && <div className="board-title"><Icon name="lantern" /><h2>{copy.mine}</h2></div>}
       <div className="board-controls" aria-label="Управление картой">
         <button className="icon-button" onClick={() => scaleBy(1.22)} aria-label="Приблизить">{phone ? "+" : <Icon name="zoom-in" />}</button>
