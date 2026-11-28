@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { chatSchema, type ChatMessage, type JournalEntry, type WireCommand } from "../../../packages/protocol/src/index.js";
 import { corridorArt, logoArt } from "./art.js";
 import { Game, type MatchSnapshot } from "./game.js";
-import { createGameAudio, preloadGameSounds } from "./game-audio.js";
 import { createSoloMatch, soloBotRange, type SoloMatch } from "./solo-match.js";
 import { copy, errorText } from "./text.js";
 import { getGoldFinale } from "./turn-presentation.js";
 import { Dialog, Icon, Notice, Rules } from "./ui.js";
+import { useGameAudio } from "./use-game-audio.js";
 
 type ActiveMatch = { game: SoloMatch; snapshot: MatchSnapshot };
 
@@ -15,10 +15,7 @@ const soundKey = "zoloto.solo-sound";
 export function SoloApp() {
   const [botRange] = useState(soloBotRange);
   const [botCount, setBotCount] = useState(botRange.min);
-  const [sound, setSound] = useState(() => {
-    try { return localStorage.getItem(soundKey) !== "off"; } catch { return true; }
-  });
-  const audio = useRef<ReturnType<typeof createGameAudio> | null>(null);
+  const { audio, sound, enableAudio, toggleSound } = useGameAudio(soundKey);
   const heardSequence = useRef(0);
   const [active, setActive] = useState<ActiveMatch | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -51,24 +48,6 @@ export function SoloApp() {
       // The browser or its host can reject a fullscreen request.
     }
     setFullscreenHelp(true);
-  }
-
-  function enableAudio(preview: boolean) {
-    try {
-      const player = audio.current ??= createGameAudio();
-      player.setEnabled(true);
-      void player.resume(preview).catch(() => {});
-    } catch {
-      // Audio is optional when the browser cannot open an audio context.
-    }
-  }
-
-  function toggleSound() {
-    const enabled = !sound;
-    setSound(enabled);
-    if (enabled) enableAudio(true);
-    else audio.current?.setEnabled(false);
-    try { localStorage.setItem(soundKey, enabled ? "on" : "off"); } catch { /* Apply for this page only. */ }
   }
 
   function start() {
@@ -116,24 +95,10 @@ export function SoloApp() {
   }
 
   const snapshot = active?.snapshot;
-  const phase = snapshot?.match.phase;
-  const inMine = Boolean(snapshot) && phase !== "MATCH_FINISHED" && phase !== "ABANDONED";
   const playGold = useCallback((event: JournalEntry) => {
-    audio.current?.playLatest([event], "", true);
-  }, []);
-  useEffect(() => {
-    if (sound) preloadGameSounds();
-  }, [sound]);
-
-  useEffect(() => {
-    const sync = () => audio.current?.setAmbience(inMine && sound && !document.hidden);
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => {
-      document.removeEventListener("visibilitychange", sync);
-      audio.current?.setAmbience(false);
-    };
-  }, [inMine, sound]);
+    if (!document.hidden) audio.current?.playLatest([event], "", true);
+  }, [audio]);
+  const ownTurnChanged = useCallback((turnKey: string | null) => audio.current?.setOwnTurn(turnKey), [audio]);
 
   useEffect(() => {
     if (!snapshot || snapshot.sequence <= heardSequence.current) return;
@@ -146,7 +111,7 @@ export function SoloApp() {
       snapshot.room.mySeatId,
       snapshot.match.outcome?.reason === "ore",
     );
-  }, [snapshot]);
+  }, [snapshot, audio]);
 
   useEffect(() => {
     if (!active?.game.hasBotTurn()) return;
@@ -178,7 +143,7 @@ export function SoloApp() {
     </header>
     {active
       ? <Game key={active.snapshot.match.matchId} snapshot={{ ...active.snapshot, chat }} run={run} error={error} pending={false} lobby={menu} exit={menu}
-          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)} soundControl={soundControl} onGoldReveal={playGold}
+          sendLocalMessage={sendLocalMessage} openRules={() => setRulesOpen(true)} soundControl={soundControl} onGoldReveal={playGold} onTurnChange={ownTurnChanged}
           fullscreenControl={{ label: fullscreenLabel, active: fullscreen, toggle: () => void toggleFullscreen() }} />
       : <main className="home-stage">
         <div className="home-copy">

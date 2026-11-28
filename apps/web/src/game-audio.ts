@@ -1,6 +1,8 @@
 import type { JournalEntry } from "../../../packages/protocol/src/index.js";
 import mineSoundsUrl from "./audio/mine.mp3?url";
-import sounds from "./audio/mine.json" with { type: "json" };
+import bank from "./audio/mine.json" with { type: "json" };
+
+const sounds = { ...bank, turn: [[bank.minePick[0][0] + .168, .32]] };
 
 type SoundName = keyof typeof sounds;
 type Cue = { sound: SoundName; volume: number };
@@ -16,6 +18,7 @@ const cues: Partial<Record<string, SoundName>> = {
   ROUND_RESOLVED: "round",
 };
 const start: Cue = { sound: "start", volume: 1 };
+const turnAlert: Cue = { sound: "turn", volume: .78 };
 const botVolume = .43;
 const background: readonly Cue[] = [
   { sound: "minePick", volume: .34 },
@@ -35,10 +38,6 @@ function loadSamples() {
   });
 }
 
-export function preloadGameSounds() {
-  if (typeof AudioContext !== "undefined") void loadSamples().catch(() => {});
-}
-
 export function createGameAudio() {
   const context = new AudioContext();
   const master = context.createGain();
@@ -48,13 +47,15 @@ export function createGameAudio() {
   let loading: Promise<void> | null = null;
   let buffer: AudioBuffer | null = null;
   let queuedCue: Cue | null = null;
+  let notifiedTurn: string | null = null;
+  let turnQueued = false;
   let ambience = false;
   let cave: AudioBufferSourceNode | null = null;
   let detail: AudioBufferSourceNode | null = null;
   let detailTimer: number | undefined;
   let nextDetail = 0;
 
-  function playClip({ sound, volume }: Cue, loop = false) {
+  function playClip({ sound, volume }: Cue, loop = false, when = 0) {
     if (!buffer) return;
     const variants = sounds[sound];
     const last = lastVariant.get(sound);
@@ -87,18 +88,25 @@ export function createGameAudio() {
       source.loop = true;
       source.loopStart = offset;
       source.loopEnd = offset + duration;
-      source.start(0, offset);
+      source.start(when, offset);
     } else {
-      source.start(0, offset, duration);
+      source.start(when, offset, duration);
     }
     return { source, duration };
   }
 
   function playQueued() {
-    if (!queuedCue || !buffer || resuming || context.state !== "running" || master.gain.value === 0) return;
-    const cue = queuedCue;
-    queuedCue = null;
-    playClip(cue);
+    if (!buffer || context.state !== "running" || master.gain.value === 0) return;
+    if (queuedCue) {
+      const cue = queuedCue;
+      queuedCue = null;
+      playClip(cue);
+    }
+    if (turnQueued) {
+      turnQueued = false;
+      playClip(turnAlert, false, context.currentTime + .16);
+      playClip(turnAlert, false, context.currentTime + .46);
+    }
   }
 
   function scheduleDetail(delay: number) {
@@ -124,7 +132,10 @@ export function createGameAudio() {
     scheduleDetail(1200 + Math.random() * 1050);
   }
 
-  context.addEventListener("statechange", syncAmbience);
+  context.addEventListener("statechange", () => {
+    playQueued();
+    syncAmbience();
+  });
 
   function prepareSamples() {
     if (buffer || loading) return;
@@ -138,7 +149,10 @@ export function createGameAudio() {
   return {
     setEnabled(enabled: boolean) {
       master.gain.value = enabled ? .54 : 0;
-      if (!enabled) queuedCue = null;
+      if (!enabled) {
+        queuedCue = null;
+        turnQueued = false;
+      }
       syncAmbience();
     },
     setAmbience(active: boolean) {
@@ -149,11 +163,24 @@ export function createGameAudio() {
       if (preview) queuedCue ??= start;
       prepareSamples();
       if (context.state !== "running") {
-        resuming ??= context.resume().finally(() => { resuming = null; });
-        try { await resuming; } catch { queuedCue = null; return; }
+        // An autoplay attempt can stay pending until a trusted gesture retries resume().
+        const attempt = context.resume();
+        resuming = attempt;
+        try { await attempt; } catch {
+          if (resuming === attempt) queuedCue = null;
+          return;
+        } finally {
+          if (resuming === attempt) resuming = null;
+        }
       }
       playQueued();
       syncAmbience();
+    },
+    setOwnTurn(turnKey: string | null) {
+      if (turnKey && turnKey === notifiedTurn) return;
+      if (turnKey) notifiedTurn = turnKey;
+      turnQueued = turnKey !== null && master.gain.value > 0;
+      playQueued();
     },
     playLatest(events: readonly JournalEntry[], ownSeatId: string, foundGold: boolean) {
       if (master.gain.value === 0 || (context.state !== "running" && !resuming)) return;

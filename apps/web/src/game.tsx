@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { CardCommand, PlayerView, Position, Rotation } from "../../../packages/game-core/src/types.js";
 import type { JournalEntry, RoomSnapshot } from "../../../packages/protocol/src/index.js";
 import { cardArt } from "./art.js";
@@ -205,9 +205,16 @@ type GameProps = {
   soundControl?: ReactNode;
   connectionStatus?: string | undefined;
   onGoldReveal?: (event: JournalEntry) => void;
+  onTurnChange?: (turnKey: string | null) => void;
 };
 
-export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl, soundControl, connectionStatus, onGoldReveal }: GameProps) {
+function TurnHeading({ label, turnKey, className }: { label: string; turnKey: string | null; className?: string }) {
+  return <h1 className={className} aria-live="polite" aria-atomic="true">
+    {turnKey ? <span key={turnKey} className="own-turn">{label}</span> : label}
+  </h1>;
+}
+
+export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl, soundControl, connectionStatus, onGoldReveal, onTurnChange }: GameProps) {
   const { match, room } = snapshot;
   const presentation = useTurnPresentation(snapshot);
   const solo = !send;
@@ -222,6 +229,16 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   const damagedTools = match.seats.find((seat) => seat.seatId === room.mySeatId)?.brokenTools ?? [];
   const tunnelsBlocked = damagedTools.length > 0;
   const me = match.turnSeatId === room.mySeatId && match.phase === "TURN";
+  const turnKey = me ? `${match.matchId}:${match.roundNo}:${match.turnNumber}` : null;
+  const reportedTurn = useRef<string | null>(null);
+  useEffect(() => {
+    if (turnKey === reportedTurn.current || (turnKey && connectionStatus)) return;
+    reportedTurn.current = turnKey;
+    onTurnChange?.(turnKey);
+  }, [turnKey, connectionStatus, onTurnChange]);
+  useEffect(() => () => {
+    if (reportedTurn.current) onTurnChange?.(null);
+  }, [onTurnChange]);
   const handCard = match.self.hand.find((card) => card.instanceId === selected?.instanceId);
   const moves = match.moves.filter((move): move is CardCommand => "instanceId" in move && move.instanceId === selected?.instanceId);
   const tunnel = handCard?.typeId.startsWith("tunnel-") ?? false;
@@ -329,7 +346,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
         if (event.key.toLowerCase() === "r" && selected && tunnel) rotate();
       }}>
       {phone ? <header className="phone-table-header">
-        <h1 className="phone-turn" aria-live="polite">{actorLabel}</h1>
+        <TurnHeading label={actorLabel} turnKey={turnKey} className="phone-turn" />
         <dl className="phone-score" aria-label="Счётчики партии">
           <div><dt>Раунд</dt><dd>{match.roundNo}/{match.rounds}</dd></div>
           <div><dt>Ход</dt><dd>{match.turnNumber}{match.maxTurns !== null ? `/${match.maxTurns}` : ""}</dd></div>
@@ -354,7 +371,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       </header> : <header className="match-header">
         <div className="match-progress">
           <span className="eyebrow">Раунд {match.roundNo} из {match.rounds}</span>
-          <h1 aria-live="polite">{actorLabel}</h1>
+          <TurnHeading label={actorLabel} turnKey={turnKey} />
         </div>
         {counts}
         <div className="match-tools">

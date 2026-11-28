@@ -374,7 +374,7 @@ test.describe("тестовая игра с ботами", () => {
     }
   });
 
-  test("звуки шахты запускаются после касания, фон затихает при выключении звука и смене вкладки", async ({ browser, browserName }) => {
+  test("фон шахты запускается в меню, сохраняется в партии и учитывает выключение звука", async ({ browser, browserName }) => {
     test.skip(browserName !== "chromium", "Эта проверка использует Web Audio в Chromium");
     const context = await browser.newContext({ ...devices["iPhone 13"], viewport: screens[0] });
     try {
@@ -386,7 +386,27 @@ test.describe("тестовая игра с ботами", () => {
           return create.call(this);
         };
         const resume = AudioContext.prototype.resume;
+        const contextState = Object.getOwnPropertyDescriptor(BaseAudioContext.prototype, "state")!.get!;
+        let autoplayBlocked = true;
+        Object.defineProperty(AudioContext.prototype, "state", {
+          configurable: true,
+          get(this: AudioContext) { return autoplayBlocked ? "suspended" : contextState.call(this); },
+        });
+        let releaseAutoplay: (() => void) | undefined;
         AudioContext.prototype.resume = function () {
+          const root = document.documentElement;
+          if (root.dataset.autoplayAttempted !== "yes") {
+            root.dataset.autoplayAttempted = "yes";
+            return new Promise<void>((resolve) => { releaseAutoplay = resolve; });
+          }
+          if (releaseAutoplay) {
+            const release = releaseAutoplay;
+            releaseAutoplay = undefined;
+            autoplayBlocked = false;
+            const retry = resume.call(this);
+            void retry.then(release, release);
+            return retry;
+          }
           if (document.documentElement.dataset.delayResume !== "yes") return resume.call(this);
           delete document.documentElement.dataset.delayResume;
           return new Promise<void>((resolve) => setTimeout(resolve, 100)).then(() => resume.call(this));
@@ -420,16 +440,25 @@ test.describe("тестовая игра с ботами", () => {
       await page.goto(sitesUrl!);
       const playback = (): Promise<{ volume: number; offset: number; loop: boolean }[]> =>
         page.evaluate(() => JSON.parse(document.documentElement.dataset.playback ?? "[]"));
-      const effects = async () => (await playback()).filter(({ volume }) => volume >= .4);
+      const turnAlert = ({ volume }: { volume: number }) => Math.abs(volume - .78) < .001;
+      const effects = async () => (await playback()).filter((clip) => clip.volume >= .4 && !turnAlert(clip));
+      const turnAlerts = async () => (await playback()).filter(turnAlert).length;
       const stoppedLoops = () => page.evaluate(() => Number(document.documentElement.dataset.stoppedLoops ?? 0));
+      await expect(page.locator("html")).toHaveAttribute("data-autoplay-attempted", "yes");
       expect(await playback()).toHaveLength(0);
+      await page.getByRole("img", { name: "Золото и предатели" }).tap();
+      await expect.poll(async () => (await playback()).filter(({ loop }) => loop).length).toBe(1);
       await page.getByRole("button", { name: "Начать игру" }).tap();
       await expect.poll(async () => (await effects()).length).toBeGreaterThan(0);
       await expect.poll(async () => (await playback()).filter(({ loop }) => loop).length).toBe(1);
       await page.getByRole("button", { name: "Роль понятна" }).tap();
       const turn = page.getByRole("heading", { name: "Ваш ход", exact: true });
       await expect(turn).toBeVisible();
+      await expect.poll(turnAlerts).toBe(2);
       const hand = page.getByRole("region", { name: "Ваша рука" });
+      await hand.locator(".hand-card").first().tap();
+      expect(await turnAlerts()).toBe(2);
+      await hand.locator(".hand-card").first().tap();
       const discard = async (checkCue?: () => Promise<void>) => {
         await hand.locator(".hand-card").first().tap();
         await hand.getByRole("button", { name: "Сбросить в закрытую" }).tap();
@@ -448,6 +477,7 @@ test.describe("тестовая игра с ботами", () => {
       await discard(async () => {
         await expect.poll(async () => (await effects())[first]?.volume).toBe(1);
       });
+      await expect.poll(turnAlerts).toBe(4);
       const played = await effects();
       expect(played[first].offset).not.toBe(played[0].offset);
       expect(played.slice(first + 1).some(({ volume }) => volume > 0 && volume < 1)).toBe(true);
@@ -481,7 +511,12 @@ test.describe("тестовая игра с ботами", () => {
       await page.getByRole("button", { name: "Выйти из партии" }).tap();
       await page.getByRole("dialog", { name: "Выйти из партии" }).getByRole("button", { name: "В меню" }).tap();
       await expect(page.getByRole("button", { name: "Начать игру" })).toBeVisible();
-      expect(await stoppedLoops()).toBeGreaterThan(beforeExit);
+      expect(await stoppedLoops()).toBe(beforeExit);
+      await page.getByRole("button", { name: "Выключить звук" }).tap();
+      await page.reload();
+      await expect(page.getByRole("button", { name: "Включить звук" })).toBeVisible();
+      await page.getByRole("img", { name: "Золото и предатели" }).tap();
+      expect(await playback()).toHaveLength(0);
     } finally {
       await context.close();
     }

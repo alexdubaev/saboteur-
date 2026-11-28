@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { JournalEntry, RoomSnapshot, SessionView, WireCommand } from "../../../packages/protocol/src/index.js";
 import { Game } from "./game.js";
-import { createGameAudio, preloadGameSounds } from "./game-audio.js";
 import { Lobby } from "./lobby.js";
 import { Menu, type EntryMode } from "./menu.js";
 import { ApiError, errorCode, request, roomPath, sendCommand, sessionRequest, useRoomSocket } from "./network.js";
 import { copy, errorText } from "./text.js";
 import { getGoldFinale } from "./turn-presentation.js";
 import { Icon, Notice, Rules } from "./ui.js";
+import { useGameAudio } from "./use-game-audio.js";
 
 const params = new URLSearchParams(window.location.search);
 const invitation = params.get("join")?.trim().toUpperCase();
@@ -61,9 +61,7 @@ export function App() {
   const [canCreateRooms, setCanCreateRooms] = useState(false);
   const [connecting, setConnecting] = useState(true);
   const [rules, setRules] = useState(false);
-  const [sound, setSound] = useState(() => {
-    try { return localStorage.getItem(soundKey) === "on"; } catch { return false; }
-  });
+  const { audio, sound, enableAudio, toggleSound } = useGameAudio(soundKey);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [terminalLobby, setTerminalLobby] = useState<string | null>(null);
@@ -71,48 +69,13 @@ export function App() {
   const entryLoad = useRef<ReturnType<typeof loadEntry> | null>(null);
   const inFlight = useRef(false);
   const room = useRef(initialRoom);
-  const audio = useRef<ReturnType<typeof createGameAudio> | null>(null);
   const heard = useRef<{ roomId: string; sequence: number } | null>(null);
   const finalLobby = state?.match?.matchId === terminalLobby;
-  const phase = state?.match?.phase;
-  const inMine = Boolean(phase) && !finalLobby && phase !== "MATCH_FINISHED" && phase !== "ABANDONED";
-
-  function enableAudio(preview: boolean) {
-    try {
-      const player = audio.current ??= createGameAudio();
-      player.setEnabled(true);
-      player.setAmbience(inMine && !document.hidden);
-      void player.resume(preview).catch(() => {});
-    } catch {
-      // The room is still playable when a browser blocks Web Audio.
-    }
-  }
-
-  function toggleSound() {
-    const enabled = !sound;
-    setSound(enabled);
-    if (enabled) enableAudio(true);
-    else audio.current?.setEnabled(false);
-    try { localStorage.setItem(soundKey, enabled ? "on" : "off"); } catch { /* Apply for this page only. */ }
-  }
 
   const playGold = useCallback((event: JournalEntry) => {
     if (!document.hidden) audio.current?.playLatest([event], "", true);
-  }, []);
-
-  useEffect(() => {
-    if (sound) preloadGameSounds();
-  }, [sound]);
-
-  useEffect(() => {
-    const sync = () => audio.current?.setAmbience(inMine && sound && !document.hidden);
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => {
-      document.removeEventListener("visibilitychange", sync);
-      audio.current?.setAmbience(false);
-    };
-  }, [inMine, sound]);
+  }, [audio]);
+  const ownTurnChanged = useCallback((turnKey: string | null) => audio.current?.setOwnTurn(turnKey), [audio]);
 
   useEffect(() => {
     const previous = heard.current;
@@ -125,7 +88,7 @@ export function App() {
       state.room.mySeatId,
       state.match.outcome?.reason === "ore",
     );
-  }, [state, finalLobby]);
+  }, [state, finalLobby, audio]);
 
   const accept = useCallback((snapshot: RoomSnapshot) => {
     if (snapshot.room.roomId !== room.current) return;
@@ -275,7 +238,7 @@ export function App() {
       </div>
     </header>
     {state?.match && !finalLobby ? <Game key={state.match.matchId} snapshot={{ ...state, match: state.match }} pending={blocked} error={error} run={run} send={send}
-      openRules={() => setRules(true)} soundControl={soundControl} connectionStatus={connectionStatus} onGoldReveal={playGold}
+      openRules={() => setRules(true)} soundControl={soundControl} connectionStatus={connectionStatus} onGoldReveal={playGold} onTurnChange={ownTurnChanged}
       lobby={() => setTerminalLobby(state.match!.matchId)} exit={() => { setError(""); reset(true); }} />
       : state ? <>
         {connectionStatus && <p className="connection-status" role="status">{connectionStatus}</p>}
