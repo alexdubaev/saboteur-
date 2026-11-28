@@ -146,6 +146,8 @@ def main():
                         "-c:a", "libmp3lame", "-q:a", "5", str(OUTPUT / "mine.mp3")], check=True)
     (OUTPUT / "mine.json").write_text(json.dumps(offsets, separators=(",", ":")) + "\n", encoding="utf-8")
     write_media_tracks(offsets)
+    from generate_tonal_sounds import build as build_tonal_sounds
+    build_tonal_sounds()
 
 
 if __name__ == "__main__":

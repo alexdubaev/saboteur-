@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { App } from "./app.js";
 import "./styles.css";
+import "./expedition.css";
 
 const element = document.getElementById("root");
 if (!element) throw new Error("Missing game root");

@@ -9,9 +9,9 @@
 }
 
 @keyframes board-tile-landing {
-  0% { opacity: .45; transform: translateY(-13%) scale(1.13); box-shadow: 0 12px 20px #080610b5; }
-  57% { opacity: 1; transform: translateY(1%) scale(.98); box-shadow: 0 0 0 3px currentColor; }
-  100% { opacity: 1; transform: none; box-shadow: 0 0 0 9px transparent; }
+  0% { opacity: .45; transform: translateY(-9%) scale(1.08); box-shadow: 0 10px 18px #15110da0; }
+  65% { opacity: 1; transform: translateY(1%) scale(.99); box-shadow: 0 0 0 2px #e4c98c; }
+  100% { opacity: 1; transform: none; box-shadow: 0 0 0 7px transparent; }
 }
 
 .board-tile.tile-revealing {
@@ -67,7 +67,7 @@
 
 @keyframes board-gold-light {
   0%, 100% { box-shadow: 0 0 0 0 transparent; }
-  35% { box-shadow: 0 0 9px 4px #ffcf6e, 0 0 27px 10px #e6a34190; }
+  35% { box-shadow: 0 0 8px 3px #ffe4a0, 0 0 24px 8px #d69b45a0; }
 }
 
 .tile-collapse-dust {
@@ -95,4 +95,120 @@
   .tile-collapse-dust, .tile-face-closed { display: none; }
   .tile-revealing .tile-turnover,
   .tile-revealing .tile-face-open { animation: none; transform: none; }
+}
+
+/* Rock strata behind the cell-aligned grid. */
+.mine .board-viewport {
+  background-color: #27231e;
+  background-size: cover;
+  background-position: 50% 12%;
+}
+.mine .board-grid {
+  background-image:
+    linear-gradient(to right, #c3b3981c 1px, transparent 1px),
+    linear-gradient(to bottom, #c3b3981c 1px, transparent 1px),
+    linear-gradient(to right, #d9bd7c0b 1px, transparent 1px),
+    linear-gradient(to bottom, #d9bd7c0b 1px, transparent 1px);
+  background-size: 72px 108px, 72px 108px, 18px 27px, 18px 27px;
+  border-color: #c3b3981c;
+}
+.mine .tile-target { background: #c4a76b12; box-shadow: inset 0 0 0 2px #ddbd79b8; }
+.mine .tile-target:hover, .mine .tile-target:focus-visible { outline-color: #ffe0a0; box-shadow: inset 0 0 0 2px #ffe0a0, 0 0 14px #d5ae665c; }
+.mine .tile-empty { color: #e7ca91; font: 300 30px/1 Georgia, serif; }
+.mine .tile-empty:not(.tile-selected) { background: #e0bd7810; box-shadow: inset 0 0 0 1px #d9bd7caa, inset 0 0 0 5px #27231e80; }
+.mine .tile-empty:not(.tile-selected) > span { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #e4c88caa; border-radius: 50%; background: #27231edc; }
+.mine .tile-empty.tile-selected { box-shadow: inset 0 0 0 2px #f5d797, 0 0 15px #d2a95a50; }
+.mine .tile-empty.tile-selected .tile-image { opacity: .78; }
+.mine .tile-label { color: #f7dfae; text-shadow: 0 1px 3px #15110d, 0 -1px 3px #15110d, 1px 0 3px #15110d, -1px 0 3px #15110d; }
+.mine .collapsed-tile { background: radial-gradient(ellipse at center, #6c655366, #27231e22 70%); box-shadow: inset 0 0 0 1px #c7ad7a55; }
+
+/* Effects stay attached to the affected tile, leaving the rest of the map still. */
+.tile-collapse-dust {
+  background:
+    radial-gradient(ellipse at 28% 68%, #b9aa88bf 0%, transparent 46%),
+    radial-gradient(ellipse at 70% 55%, #d8c7a2a0 0%, transparent 52%),
+    radial-gradient(ellipse at 46% 26%, #746c5d 0%, transparent 46%);
+}
+
+/* A short, local burst of grit follows the new piece into the seam. */
+.tile-landing-dust, .tile-final-accent, .tile-gold-sparks {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+}
+.tile-landing-dust::before, .tile-landing-dust::after,
+.tile-collapse-dust::before, .tile-collapse-dust::after,
+.tile-gold-sparks::before, .tile-gold-sparks::after {
+  content: ""; position: absolute; pointer-events: none;
+}
+.tile-landing-dust::before {
+  inset: 15% 5%;
+  background: radial-gradient(ellipse at 50% 68%, #e6d1a6a8, #ac947354 42%, transparent 70%);
+  animation: seam-dust 680ms ease-out both;
+}
+.tile-landing-dust::after {
+  inset: 10%;
+  background: radial-gradient(circle at 18% 35%, #e2c998 0 2px, transparent 2.5px),
+    radial-gradient(circle at 78% 42%, #c6ae85 0 2px, transparent 2.5px),
+    radial-gradient(circle at 29% 75%, #e1caa2 0 1.5px, transparent 2px),
+    radial-gradient(circle at 70% 77%, #bfa681 0 2px, transparent 2.5px);
+  animation: seam-grit 650ms cubic-bezier(.15,.65,.35,1) both;
+}
+@keyframes seam-dust {
+  0% { opacity: 0; transform: scale(.55); }
+  25% { opacity: .85; }
+  100% { opacity: 0; transform: scale(1.25) translateY(-8%); }
+}
+@keyframes seam-grit {
+  0% { opacity: 0; transform: scale(.35) translateY(-15%); }
+  28% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.15) translateY(22%); }
+}
+/* Rubble breaks apart and falls inside the vacated cell. */
+.tile-collapse-dust { inset: 0; overflow: hidden; animation: collapse-cloud 850ms ease-out both; }
+.tile-collapse-dust::before, .tile-collapse-dust::after {
+  inset: 6%;
+  background: radial-gradient(ellipse at 24% 28%, #c6b18f 0 4px, transparent 4.5px),
+    radial-gradient(ellipse at 70% 20%, #98856b 0 5px, transparent 5.5px),
+    radial-gradient(ellipse at 48% 54%, #d4bf9a 0 3px, transparent 3.5px),
+    radial-gradient(ellipse at 79% 62%, #aa9476 0 3px, transparent 3.5px);
+  animation: collapse-rocks 820ms cubic-bezier(.28,.55,.6,1) both;
+}
+.tile-collapse-dust::after { transform: scale(.7); animation-delay: 70ms; filter: brightness(.7); }
+@keyframes collapse-cloud {
+  0% { opacity: 1; transform: scale(.8); }
+  40% { opacity: .8; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes collapse-rocks {
+  0% { opacity: 0; transform: translateY(-35%) scale(.65) rotate(-8deg); }
+  18% { opacity: 1; }
+  65% { opacity: 1; transform: translateY(20%) scale(1) rotate(8deg); }
+  100% { opacity: 0; transform: translateY(28%) scale(1) rotate(10deg); }
+}
+/* The deciding seam answers first; sparks follow the opening gold face. */
+.tile-final-accent {
+  inset: 9%; border: 2px solid #ffe0a3; box-shadow: inset 0 0 12px #ffd47a90, 0 0 14px #e6b45c80;
+  animation: final-seam 560ms ease-out both;
+}
+@keyframes final-seam {
+  0% { opacity: 0; transform: scale(.85); }
+  35% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+.tile-gold-sparks::before, .tile-gold-sparks::after {
+  inset: -12%;
+  background: radial-gradient(circle at 15% 23%, #fff3c4 0 2px, transparent 3px),
+    radial-gradient(circle at 83% 19%, #ffdc86 0 2px, transparent 3px),
+    radial-gradient(circle at 9% 72%, #f6bd59 0 2px, transparent 3px),
+    radial-gradient(circle at 91% 69%, #fff0ad 0 2px, transparent 3px),
+    radial-gradient(circle at 51% 7%, #ffe8a2 0 1.5px, transparent 2.5px);
+  animation: gold-sparks 850ms 800ms ease-out both;
+}
+.tile-gold-sparks::after { animation-delay: 930ms; rotate: 28deg; }
+@keyframes gold-sparks {
+  0% { opacity: 0; transform: scale(.42) rotate(-8deg); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.15) rotate(8deg) translateY(-8%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile-landing-dust, .tile-final-accent, .tile-gold-sparks, .tile-collapse-dust { display: none; }
 }

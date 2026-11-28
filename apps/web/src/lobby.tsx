@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { RoomSnapshot, WireCommand } from "../../../packages/protocol/src/index.js";
-import { junctionArt } from "./art.js";
+import { shaftArt } from "./art.js";
 import { Messages } from "./messages.js";
 import { ShareLink, shareUrl } from "./share-link.js";
 import { copy } from "./text.js";
@@ -49,11 +49,12 @@ export function Lobby({ snapshot, run, send, rename, pending, leave }: { snapsho
   const botCount = room.seats.filter((seat) => seat.bot).length;
   const freeSeats = maxParticipants - room.seats.length;
   const enoughPlayers = room.seats.length >= minParticipants;
-  const allReady = enoughPlayers && room.seats.every((seat) => seat.bot || (seat.ready && seat.present));
+  const readyCount = room.seats.filter((seat) => seat.bot || (seat.ready && seat.present)).length;
+  const allReady = enoughPlayers && readyCount === room.seats.length;
 
   return (
     <main className="lobby-shell" aria-label={copy.lobby}>
-      <section className="lobby-banner" style={{ backgroundImage: `linear-gradient(90deg,#171020 5%,#171020aa 64%,#17102011), url(${junctionArt})` }}>
+      <section className="lobby-banner" style={{ backgroundImage: `linear-gradient(90deg,#17100ded, #17100d66 60%,#17100d22), url(${shaftArt})` }}>
         <div>
           <p className="eyebrow">{copy.alpha} · {copy.profile}</p>
           <h1>{copy.lobby}</h1>
@@ -67,6 +68,12 @@ export function Lobby({ snapshot, run, send, rename, pending, leave }: { snapsho
       <div className="lobby-body">
         <section className="panel crew-panel" aria-label={copy.crew}>
           <div className="panel-heading"><h2>{copy.crew}</h2><span>{room.seats.length} / {maxParticipants}</span></div>
+          <div className="crew-readiness">
+            <strong>Готовы {readyCount} из {room.seats.length}</strong>
+            <span className="readiness-track" aria-hidden="true">
+              {room.seats.map(seat => <i key={seat.seatId} className={seat.bot || (seat.ready && seat.present) ? "ready" : ""} />)}
+            </span>
+          </div>
           <p className="soft-note" role="status">Людей {room.seats.length - botCount} · Ботов {botCount} · Свободных мест {freeSeats}</p>
           {!enoughPlayers && <p className="soft-note">Для старта нужно минимум {minParticipants} участника. {host && "Можно добавить ботов."}</p>}
           {host && enoughPlayers && !allReady && <p className="soft-note">Дождитесь готовности всех игроков.</p>}

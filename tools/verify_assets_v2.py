@@ -393,7 +393,11 @@ def main():
             if args.scope == "board":
                 errors = check_geometry(art, board_geometry(board), board_scope=True)
             else:
-                errors = check_dist(entries + replacements, args.dist)
+                scenes = read_json("data/scene-art.json")["variants"]
+                for entry in scenes:
+                    safe_path(entry["path"], "assets", ".webp")
+                    check_entry(entry)
+                errors = check_dist(entries + replacements + scenes, args.dist)
     except (BadZipFile, KeyError, OSError, ValueError) as error:
         print(f"Asset verification error: {error}", file=sys.stderr)
         return 1

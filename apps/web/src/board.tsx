@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import type { CardCommand, Position, PublicBoardTile } from "../../../packages/game-core/src/types.js";
-import { boardArt, junctionArt } from "./art.js";
+import { boardArt, mineRock } from "./art.js";
 import { copy } from "./text.js";
 import { Icon } from "./ui.js";
 import "./board-effects.css";
@@ -240,12 +240,12 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
       {status}
       <div
         ref={viewport} className={`board-viewport${panning ? " is-panning" : ""}`} tabIndex={0} role="region"
+        style={{ backgroundImage: `linear-gradient(100deg,#1b15102b,#1c171533), url("${mineRock}")` }}
         aria-label="Поле шахты. Стрелки перемещают поле, плюс и минус меняют масштаб, ноль показывает всё поле."
         onKeyDown={keyboard} onPointerDown={down} onPointerMove={move} onPointerUp={up}
         onPointerCancel={up} onLostPointerCapture={up}
         onPointerLeave={(event) => { if (!event.currentTarget.hasPointerCapture(event.pointerId)) up(event); }}
         onClickCapture={(event) => { if (dragged.current && event.detail !== 0) event.stopPropagation(); }}
-        style={{ backgroundImage: `linear-gradient(#1a132bf0,#15101feb), url(${junctionArt})` }}
       >
         <div className="board-world" style={{ transform: `translate(${view.x}px,${view.y}px) scale(${view.scale})`, visibility: size.width ? "visible" : "hidden" }}>
           <div className="board-grid" style={{ left: (bounds.minX - 1) * tileWidth, top: (bounds.minY - 1) * tileHeight, width: (bounds.maxX - bounds.minX + 3) * tileWidth, height: (bounds.maxY - bounds.minY + 3) * tileHeight }} />
@@ -278,9 +278,14 @@ export function Board({ tiles, authors, moves, staged, asset, last, choose, phon
                 <span className="tile-face tile-face-open">{front}</span>
               </span>
             ) : front;
+            const effectsLayer = <>
+              {landed && <span className="tile-landing-dust" key={`landing-${turnSequence}`} aria-hidden="true" />}
+              {finalTile && <span className="tile-final-accent" aria-hidden="true" />}
+              {golden && <span className="tile-gold-sparks" key={`gold-${turnSequence}`} aria-hidden="true" />}
+            </>;
             return action
-              ? <button key={key} className={`${className} tile-target`} data-turn-sequence={turnSequence} style={style} title={author ? name : undefined} onClick={() => choose(action)} aria-label={name} aria-pressed={Boolean(selected)}>{content}</button>
-              : <div key={key} className={className} data-turn-sequence={turnSequence} style={style} title={name}>{content}</div>;
+              ? <button key={key} className={`${className} tile-target`} data-turn-sequence={turnSequence} style={style} title={author ? name : undefined} onClick={() => choose(action)} aria-label={name} aria-pressed={Boolean(selected)}>{content}{effectsLayer}</button>
+              : <div key={key} className={className} data-turn-sequence={turnSequence} style={style} title={name}>{content}{effectsLayer}</div>;
           })}
           {moves.filter((action): action is Extract<BoardMove, { type: "PLAY_TUNNEL" }> => action.type === "PLAY_TUNNEL" && !byCell.has(cell(action))).map((action) => {
             const selected = staged?.type === "PLAY_TUNNEL" && same(staged, action);

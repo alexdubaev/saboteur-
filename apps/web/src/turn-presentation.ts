@@ -87,7 +87,8 @@ function nextPresentation(previous: Presentation, snapshot: MatchSnapshot): Pres
   return next;
 }
 
-export function useTurnPresentation(snapshot: MatchSnapshot) {
+export function useTurnPresentation(snapshot: MatchSnapshot, onGoldReveal?: (event: JournalEntry) => void) {
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const [saved, setSaved] = useState(() => initial(snapshot));
   const [finished, setFinished] = useState<Result | null>(null);
   const [faded, setFaded] = useState<ToolChange | null>(null);
@@ -104,13 +105,16 @@ export function useTurnPresentation(snapshot: MatchSnapshot) {
   const tool = current.tool !== faded ? current.tool : null;
   useEffect(() => {
     if (!result) return;
-    const timer = window.setTimeout(() => setFinished(result), result.gold ? 2740 : 760);
+    const timer = window.setTimeout(() => {
+      if (reducedMotion && result.gold) onGoldReveal?.(result.gold.event);
+      setFinished(result);
+    }, reducedMotion ? 0 : result.gold ? 2740 : 760);
     return () => window.clearTimeout(timer);
-  }, [result]);
+  }, [result, reducedMotion, onGoldReveal]);
   useEffect(() => {
     if (!tool) return;
     const timer = window.setTimeout(() => setFaded(tool), 2400);
     return () => window.clearTimeout(timer);
   }, [tool]);
-  return { board: current.board ?? undefined, tool, holdResults: Boolean(result), gold: result?.gold ?? null };
+  return { board: current.board ?? undefined, tool, holdResults: Boolean(result) && !reducedMotion, gold: reducedMotion ? null : result?.gold ?? null };
 }

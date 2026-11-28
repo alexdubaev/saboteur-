@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "variants": [
+    {
+      "path": "assets/board/deep-shaft.webp",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 190238,
+      "sha256": "a252b18ee4c460ad359c58d1b684f8069665a684363f4ee2495a380f249ced68"
+    },
+    {
+      "path": "assets/board/deep-shaft-compact.webp",
+      "width": 864,
+      "height": 576,
+      "bytes": 72404,
+      "sha256": "3792f7bf85e756a806e8c1f507dc34d208c0cd371231c6e8bcb3e69c12e2760a"
+    },
+    {
+      "path": "assets/branding/crew-portraits.webp",
+      "width": 960,
+      "height": 640,
+      "bytes": 113590,
+      "sha256": "33564d49f6990c689ae3cdf45a9ec94e00a818decca8ba7f6130d2cf3b408422"
+    },
+    {
+      "path": "assets/board/mine-rock.webp",
+      "width": 1200,
+      "height": 800,
+      "bytes": 75546,
+      "sha256": "cbd7f13519a0918bf4a96ba13372008a0f181a30c6db8e9c24b6c49c6d94bfb9"
+    }
+  ],
+  "sources": [
+    {
+      "path": "art-source/scenes/deep-shaft.png",
+      "sha256": "f4deecea80c508405e0e5f99a2bb16c701aa93d2de6b6321525d13ab3417da23",
+      "description": "Original generated underground gold mine with rails, timber supports and a safety lamp, 2026-11-28"
+    },
+    {
+      "path": "art-source/scenes/crew-portraits.png",
+      "sha256": "3a59f5b7d3910c172de30805a63cecb48cba03c54c7380e1d7a08b1b8cb32a80",
+      "description": "Six original role-neutral crew portraits, 3 columns by 2 rows, generated 2026-11-28"
+    },
+    {
+      "path": "art-source/scenes/mine-rock.png",
+      "sha256": "257f82c772d50b100bfcf6d01046cf585c027009f6d818945572baff1da42c61",
+      "description": "Original generated dry, gold-bearing rock face for the playing field, 2026-11-28"
+    }
+  ]
+}

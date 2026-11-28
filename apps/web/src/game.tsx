@@ -10,6 +10,7 @@ import { actions, cardLabels, copy, profileFor, reasons, roles, roundWinners, to
 import { GoldReveal, ToolFeedback } from "./turn-overlays.js";
 import { useTurnPresentation, type ToolChange } from "./turn-presentation.js";
 import { Avatar, Dialog, Icon, Notice } from "./ui.js";
+import "./table-design.css";
 
 export type MatchSnapshot = RoomSnapshot & { match: PlayerView };
 type Selection = { revision: number; instanceId: string; rotation: Rotation; staged: CardCommand | null };
@@ -46,7 +47,10 @@ function RoleCard({ snapshot, mandatory, close, run, pending, error }: { snapsho
   return (
     <Dialog title={copy.role} close={mandatory ? undefined : close}>
       <div className="role-card">
-        <img className="role-art" src={cardArt("role-" + role, "standard")} width={512} height={768} alt="" />
+        <span className={mandatory ? "role-illustration role-deal" : "role-illustration"} aria-hidden="true">
+          <img className="role-art" src={cardArt("role-" + role, "standard")} width={512} height={768} alt="" />
+          {mandatory && <img className="role-cover" src={cardArt("role-back")} width={256} height={384} alt="" />}
+        </span>
         <div>
           <span className="eyebrow">Видно только вам</span>
           <h3>{roles[role]}</h3>
@@ -89,7 +93,7 @@ function RoundResults({ snapshot, run, pending, error, stop }: { snapshot: Match
     <Dialog title={`Итоги раунда ${match.roundNo}`}>
       <p className="eyebrow">{roundWinners[match.outcome.winner]}</p>
       <p>{reason}.{match.requiredOre > 1 && ` Со входом связано ${match.outcome.connectedOre} из ${match.requiredOre} золотых жил.`}</p>
-      <ul className="result-grid">
+      <ul className="result-grid chamber-results">
         {match.board.filter((tile) => tile.kind === "goal" && tile.revealed).map((tile) => (
           <li key={tile.goalSlotId}>
             <img className="summary-art" src={cardArt(tile.assetId)} width={256} height={384} alt="" />
@@ -218,12 +222,12 @@ function TurnHeading({ label, turnKey, className }: { label: string; turnKey: st
 
 export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lobby, exit, openRules, fullscreenControl, soundControl, connectionStatus, onGoldReveal, onTurnChange }: GameProps) {
   const { match, room } = snapshot;
-  const presentation = useTurnPresentation(snapshot);
+  const presentation = useTurnPresentation(snapshot, onGoldReveal);
   const solo = !send;
   const phone = useSyncExternalStore(subscribeToPhoneLayout, () => window.matchMedia(phoneLayout).matches);
   const leaveLabel = solo ? "Выйти из партии" : copy.leave;
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [modal, setModal] = useState<"role" | "leave" | ScoutModal | { summaryRevision: number } | null>(null);
+  const [modal, setModal] = useState<"role" | "leave" | { cardId: string } | ScoutModal | { summaryRevision: number } | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const sendPhoneMessage = send ?? sendLocalMessage;
   const selected = selection?.revision === match.revision ? selection : null;
@@ -241,7 +245,8 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
   useEffect(() => () => {
     if (reportedTurn.current) onTurnChange?.(null);
   }, [onTurnChange]);
-  const handCard = match.self.hand.find((card) => card.instanceId === selected?.instanceId);
+  const inspectedCard = match.self.hand.find((card) => card.instanceId === selection?.instanceId);
+  const handCard = selected ? inspectedCard : undefined;
   const moves = match.moves.filter((move): move is CardCommand => "instanceId" in move && move.instanceId === selected?.instanceId);
   const tunnel = handCard?.typeId.startsWith("tunnel-") ?? false;
   const boardMoves = moves.filter((move): move is Extract<CardCommand, { type: "PLAY_TUNNEL" | "PLAY_COLLAPSE" | "PLAY_SCOUT" }> =>
@@ -323,6 +328,24 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
       <span>{caption}</span>
     </button>;
   });
+  const cardDetails = inspectedCard && <Dialog title="О карте" close={() => setModal(null)}>
+    <div className="card-details">
+      <img src={cardArt(inspectedCard.assetId)} width={256} height={384} alt="" />
+      <div>
+        <span className="eyebrow">Ваша карта</span>
+        <h3>{cardLabels[inspectedCard.typeId] ?? "Карта"}</h3>
+        <p>{inspectedCard.typeId.startsWith("tunnel-") ? "Часть шахты, которую можно соединить с другими туннелями." :
+          inspectedCard.typeId.startsWith("action-break") ? "Ломает инструмент участника и блокирует строительство до ремонта." :
+          inspectedCard.typeId.startsWith("action-repair") ? "Чинит подходящий сломанный инструмент участника." :
+          inspectedCard.typeId === "action-collapse" ? "Убирает обычный туннель с карты шахты." :
+          inspectedCard.typeId === "action-scout" ? "Позволяет тайно посмотреть содержимое закрытой камеры." : "Карта действия."}</p>
+        <strong className="card-details-label">Сейчас</strong>
+        <p>{hint}</p>
+        {me && moves.length > 0 && <ul>{Array.from(new Set(moves.map((move) => actions[move.type]))).map((action) => <li key={action}>{action}</li>)}</ul>}
+      </div>
+    </div>
+  </Dialog>;
+  const aboutCard = inspectedCard && <button className="card-details-trigger" aria-haspopup="dialog" onClick={() => setModal({ cardId: inspectedCard.instanceId })}>О карте</button>;
   const confirmButton = <button className="button primary" aria-label={copy.confirm} disabled={pending || !staged} onClick={() => void confirm()}>
     {!phone && <Icon name="confirm" />}{pending ? "Ожидаем…" : phone ? "Готово" : copy.confirm}
   </button>;
@@ -415,6 +438,7 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
             <div className="phone-hand-header" aria-live="polite" title={moveHint}>
               <h2>Рука <span>{match.self.hand.length}</span></h2>
               {!summary && !final && <span>{handCard ? cardLabels[handCard.typeId] ?? "Карта" : me ? "Выберите карту" : "Ход соперника"}</span>}
+              {aboutCard}
               {targetOptions.length > 0 && <TargetPicker key={handCard?.instanceId} options={targetOptions} disabled={pending}
                 activeId={stagedTarget < 0 ? undefined : String(stagedTarget)}
                 onSelect={(id) => { const target = phoneTargets[Number(id)]; if (target) choose(target); }} />}
@@ -422,12 +446,13 @@ export function Game({ snapshot, pending, error, run, send, sendLocalMessage, lo
             <div className="hand-cards">{cards()}</div>
             {actionsPanel}
           </> : <>
-            <div className="hand-heading"><div><p className="eyebrow">Личные карты</p><h2>Ваша рука <span>{match.self.hand.length}</span></h2></div><p className="soft-note" aria-live="polite">{moveHint}</p></div>
+            <div className="hand-heading"><div><p className="eyebrow">Личные карты</p><h2>Ваша рука <span>{match.self.hand.length}</span></h2></div><p className="soft-note" aria-live="polite">{moveHint}</p>{aboutCard}</div>
             <div className="hand-body"><div className="hand-cards">{cards()}</div>{actionsPanel}</div>
           </>}
         </section>
         {phone && sendPhoneMessage && <Messages snapshot={snapshot} send={sendPhoneMessage} authors={authors} split local={solo} />}
       </div>
+      {modal && typeof modal === "object" && "cardId" in modal && modal.cardId === inspectedCard?.instanceId && !rolePending && !summary && !final && cardDetails}
       {rolePending || (modal === "role" && !summary && !final) ? <RoleCard snapshot={snapshot} mandatory={rolePending} close={() => setModal(null)} run={run} pending={pending} error={error} /> : null}
       {!rolePending && !final && !presentation.gold && scout && <ScoutNotes snapshot={snapshot} goalSlotId={scout.goalSlotId} close={() => setModal(null)} />}
       {!rolePending && !final && (modal === "leave" || summaryLeave) && <Dialog title={leaveLabel} close={() => setModal(null)}>
